@@ -11,12 +11,24 @@
 #include <unordered_map>
 #include <variant>
 #include <vector>
-
-void LoongArch::ProgramBuilder::visit(ir::ir_reg &node) {                                   // 访问寄存器的逻辑已经不小心在其他地方实现了
-    // node.
+void LoongArch::ProgramBuilder::visit(ir::ir_reg &node) {
+    pass_reg = cur_mapping->transfer_reg(node);
 }
 
-void LoongArch::ProgramBuilder::visit(ir::ir_constant &node) {}                             // 访问常数的逻辑已经不小心在其他地方实现了
+void LoongArch::ProgramBuilder::visit(ir::ir_constant &node) {
+    auto optional_val = node.init_val;
+    if(optional_val.has_value()) {
+        auto variant_val = optional_val.value();
+        if(std::holds_alternative<int>(variant_val)) {
+            int val = std::get<int>(variant_val);
+            cur_block->instructions.push_back(std::make_shared<LoongArch::LoadImm>(using_reg, val));
+        } else if(std::holds_alternative<float>(variant_val)) {
+            float val = std::get<float>(variant_val);
+            cur_block->instructions.push_back(std::make_shared<LoongArch::LoadImm>(using_reg, val));
+        }
+    }
+    pass_reg = using_reg;
+}
 
 void LoongArch::ProgramBuilder::visit(ir::ir_basicblock &node) 
 {
@@ -259,6 +271,7 @@ void LoongArch::ProgramBuilder::visit(ir::ir_userfunc &node) {
 
         spill_idx = spill_base;
         for(auto reg :regs) {
+            reg->accept(*this);
             auto tar = Reg{spill_idx++};
             auto it = std::find(cur_mapping->spill_vec.begin(), cur_mapping->spill_vec.end(), reg);
             if(it != cur_mapping->spill_vec.end()) {
@@ -274,32 +287,38 @@ void LoongArch::ProgramBuilder::visit(ir::ir_userfunc &node) {
 }
 
 void LoongArch::ProgramBuilder::visit(ir::store &node) {
-    // auto reg_id = std::dynamic_pointer_cast<ir::ir_reg>(node.addr)->id;
-    auto ir_r = std::dynamic_pointer_cast<ir::ir_reg>(node.addr);
-    // auto reg = this->cur_mapping->reg_mapping[reg_id];
-    auto reg = this->cur_mapping->transfer_reg(*ir_r.get());
-    // auto offset = node.value;
-    auto constant = std::dynamic_pointer_cast<ir::ir_constant>(node.value);
-    if(constant != nullptr) {
-        auto optional_val = constant->init_val;
-        if(optional_val.has_value()) {
-            auto variant_val = optional_val.value();
-            if(std::holds_alternative<int>(variant_val)) {
-                int val = std::get<int>(variant_val);
-                cur_block->instructions.push_back(std::make_shared<LoongArch::RegImmInst>(RegImmInst::addi_w, reg, Reg{0}, val));
-            } else if(std::holds_alternative<float>(variant_val)) {
-                float val = std::get<float>(variant_val);
-                cur_block->instructions.push_back(std::make_shared<LoongArch::RegImmInst>(RegImmInst::addi_w, reg, Reg{0}, val));
-            }
-            // cur_block->instructions.push_back(std::make_shared<LoongArch::st>(Reg{reg}, Reg{fp}, this->cur_mapping->objoffset_mapping, st::st_w)); // TODO：添加区分字长逻辑
-        }
-        // cur_block->instructions.push_back(std::make_shared<LoongArch::RegImmInst>(RegImmInst::addi_w, Reg{reg}, Reg{0}, value));
-    }
-    else {
-        auto val_r = std::dynamic_pointer_cast<ir::ir_reg>(node.value);
-        auto val = cur_mapping->transfer_reg(*val_r.get());
-        cur_block->instructions.push_back(std::make_shared<LoongArch::RegRegInst>(RegRegInst::add_w, reg, Reg{0}, val));
-    }
+    node.addr->accept(*this);
+    Reg reg = pass_reg;
+    using_reg = const_reg_l;
+    node.value->accept(*this);
+    Reg dst = pass_reg;
+    cur_block->instructions.push_back(std::make_shared<LoongArch::RegRegInst>(RegRegInst::add_w, reg, Reg{0}, dst));
+    // // auto reg_id = std::dynamic_pointer_cast<ir::ir_reg>(node.addr)->id;
+    // auto ir_r = std::dynamic_pointer_cast<ir::ir_reg>(node.addr);
+    // // auto reg = this->cur_mapping->reg_mapping[reg_id];
+    // auto reg = this->cur_mapping->transfer_reg(*ir_r.get());
+    // // auto offset = node.value;
+    // auto constant = std::dynamic_pointer_cast<ir::ir_constant>(node.value);
+    // if(constant != nullptr) {
+    //     auto optional_val = constant->init_val;
+    //     if(optional_val.has_value()) {
+    //         auto variant_val = optional_val.value();
+    //         if(std::holds_alternative<int>(variant_val)) {
+    //             int val = std::get<int>(variant_val);
+    //             cur_block->instructions.push_back(std::make_shared<LoongArch::RegImmInst>(RegImmInst::addi_w, reg, Reg{0}, val));
+    //         } else if(std::holds_alternative<float>(variant_val)) {
+    //             float val = std::get<float>(variant_val);
+    //             cur_block->instructions.push_back(std::make_shared<LoongArch::RegImmInst>(RegImmInst::addi_w, reg, Reg{0}, val));
+    //         }
+    //         // cur_block->instructions.push_back(std::make_shared<LoongArch::st>(Reg{reg}, Reg{fp}, this->cur_mapping->objoffset_mapping, st::st_w)); // TODO：添加区分字长逻辑
+    //     }
+    //     // cur_block->instructions.push_back(std::make_shared<LoongArch::RegImmInst>(RegImmInst::addi_w, Reg{reg}, Reg{0}, value));
+    // }
+    // else {
+    //     auto val_r = std::dynamic_pointer_cast<ir::ir_reg>(node.value);
+    //     auto val = cur_mapping->transfer_reg(*val_r.get());
+    //     cur_block->instructions.push_back(std::make_shared<LoongArch::RegRegInst>(RegRegInst::add_w, reg, Reg{0}, val));
+    // }
 }
 
 void LoongArch::ProgramBuilder::visit(ir::jump &node) {
@@ -310,8 +329,8 @@ void LoongArch::ProgramBuilder::visit(ir::jump &node) {
 }
 
 void LoongArch::ProgramBuilder::visit(ir::br &node) {
-    auto cond_r = std::dynamic_pointer_cast<ir::ir_reg>(node.use_reg()[0]);
-    auto cond = (cur_mapping->transfer_reg(*cond_r.get()));
+    node.use_reg()[0]->accept(*this);
+    Reg cond = pass_reg;
     auto target_true = cur_mapping->blockmapping[node.get_target_true()];
     auto target_false = cur_mapping->blockmapping[node.get_target_false()];
     cur_block->instructions.push_back(std::make_shared<LoongArch::Br>(Br::bnez, cond, target_true.get()));
@@ -319,8 +338,8 @@ void LoongArch::ProgramBuilder::visit(ir::br &node) {
 }
 
 void LoongArch::ProgramBuilder::visit(ir::ret &node) {
-    auto ret_reg = std::dynamic_pointer_cast<ir::ir_reg>(node.value);
-    auto backend_reg = cur_mapping->transfer_reg(*ret_reg.get());
+    node.value->accept(*this);
+    Reg backend_reg = pass_reg;
     cur_block->instructions.push_back(
         std::make_shared<LoongArch::RegRegInst>(RegRegInst::orw,Reg{4},backend_reg,Reg{0})
     );
@@ -334,21 +353,21 @@ void LoongArch::ProgramBuilder::visit(ir::ret &node) {
 }
 
 void LoongArch::ProgramBuilder::visit(ir::load &node) {
-    auto src_r = std::dynamic_pointer_cast<ir::ir_reg>(node.addr);
-    auto src = cur_mapping->transfer_reg(*src_r.get());
-    auto dst_r = node.dst;
-    auto dst = cur_mapping->transfer_reg(*dst_r.get());
+    node.addr->accept(*this);
+    Reg src = pass_reg;
+    node.dst->accept(*this);
+    Reg dst = pass_reg;
     cur_block->instructions.push_back(std::make_shared<LoongArch::RegImmInst>(RegImmInst::addi_w, dst, src, 0));
 }
 
 void LoongArch::ProgramBuilder::visit(ir::alloc &node) {
-    auto regs = node.def_reg();
-    for(auto reg : regs) {
+// auto regs = node.def_reg();
+// for(auto reg : regs) {
         // auto id = std::dynamic_pointer_cast<ir::ir_reg>(reg)->id;
         // cur_mapping->reg_mapping[id] = cur_mapping->new_reg();
-        auto ir_r = std::dynamic_pointer_cast<ir::ir_reg>(reg);
+// auto ir_r = std::dynamic_pointer_cast<ir::ir_reg>(reg);
         // cur_mapping->transfer_reg(*ir_r.get());              /*有映射就不用啦*/
-    }
+// }
     // auto reg = this->cur_mapping->regn;
     // auto value = this->cur_mapping.
     // cur_block->instructions.push_back(std::make_shared<LoongArch::RegImmInst>(RegImmInst::addi_w, Reg{reg}, Reg{0},));
@@ -365,34 +384,13 @@ void LoongArch::ProgramBuilder::visit(ir::phi &node) {                  // 上�
 }
 
 void LoongArch::ProgramBuilder::visit(ir::unary_op_ins &node) {
-    auto dst_r = std::dynamic_pointer_cast<ir::ir_reg>(node.def_reg()[0]);       // 获取中间代码使用的目标虚拟寄存器
-    auto dst = cur_mapping->transfer_reg(*dst_r.get());
-    auto src_r = std::dynamic_pointer_cast<ir::ir_reg>(node.use_reg()[0]);       // 尝试将源地址对象转为虚拟寄存器
-    Reg src;                                                                                            // Reg：物理寄存器
-
-    if(src_r == nullptr) {                                                                              // 表示源地址对象不是虚拟寄存器，即
-                                                                                                        // 源地址对象为立即数
-
-        src = cur_mapping->new_reg();                                                                   // 暂时申请新的物理寄存器保存源地址
-        // src = const_reg_l;
-        auto optional_val = std::dynamic_pointer_cast<ir::ir_constant>(node.use_reg()[0])->init_val;
-        if(optional_val.has_value()) {
-            auto variant_val = optional_val.value();
-            if(std::holds_alternative<int>(variant_val)) {
-                int val = std::get<int>(variant_val);                                               // 获取到了源地址中的立即数
-                cur_block->instructions.push_back(std::make_shared<LoongArch::LoadImm>(src, val));   // 将立即数加载到申请的物理寄存器中
-            } else if(std::holds_alternative<float>(variant_val)) {                                  // 立即数为float类型，加载操作同上
-                float val = std::get<float>(variant_val);
-                cur_block->instructions.push_back(std::make_shared<LoongArch::LoadImm>(src, val));
-            }
-        }
-    }
-    else {                                                                                              // 源地址对象为虚拟寄存器，则直接映射转换
-        src = cur_mapping->transfer_reg(*src_r.get());
-    }
+    node.def_reg()[0]->accept(*this);
+    Reg dst = pass_reg;
+    using_reg = const_reg_l;
+    node.use_reg()[0]->accept(*this);
+    Reg src = pass_reg;                                                                                            // Reg：物理寄存器
     if(node.op == unaryop::minus) {                                                                     // 当op为“-”（取反指令）
-        auto negative = cur_mapping->new_reg();                                                    // 存储负号，也是暂时申请新的物理寄存器
-        // auto negative = const_reg_r;
+        auto negative = const_reg_r;
         cur_block->instructions.push_back(std::make_shared<LoongArch::LoadImm>(negative, -1));
         cur_block->instructions.push_back(std::make_shared<LoongArch::RegRegInst>(RegRegInst::mul_w, dst, src, negative));
     }
@@ -414,134 +412,27 @@ void LoongArch::ProgramBuilder::visit(ir::binary_op_ins &node) {
     };
     auto type = map[node.op];
     auto tar_r = std::dynamic_pointer_cast<ir::ir_reg>(node.dst);
-    auto tar = cur_mapping->transfer_reg(*tar_r.get());
-    auto exp1_r = std::dynamic_pointer_cast<ir::ir_reg>(node.src1);
-    // auto exp1 = cur_mapping->transfer_reg(*exp1_r.get());
-    // auto exp2_r = std::dynamic_pointer_cast<ir::ir_reg>(node.src2);
-
-    // if(exp1_r == nullptr && exp2_r != nullptr && node.op == binop::minus) {
-    //     int con = 1;
-    //     cur_block->instructions.push_back(std::make_shared<LoongArch::RegImmInst>(RegImmInst::addi_w, exp2, -con));
-    //     cur_block->instructions.push_back(std::make_shared<LoongArch::RegImmInst>(RegImmInst::addi_w, Reg{0}, ))
-    // }
-
-    // if(exp2_r == nullptr) {
-    //     auto optional_val = std::dynamic_pointer_cast<ir::ir_constant>(node.src2)->init_val;
-    //     if(optional_val.has_value()) {
-    //         auto variant_val = optional_val.value();
-    //         if(std::holds_alternative<int>(variant_val)) {
-    //             int val = std::get<int>(variant_val);
-    //             if(node.op == binop::minus)
-    //                 val = -val;
-    //             cur_block->instructions.push_back(std::make_shared<LoongArch::RegImmInst>(RegImmInst::addi_w, tar, exp1, val));
-    //         } else if(std::holds_alternative<float>(variant_val)) {
-    //             float val = std::get<float>(variant_val);
-    //             if(node.op == binop::minus)
-    //                 val = -val;
-    //             cur_block->instructions.push_back(std::make_shared<LoongArch::RegImmInst>(RegImmInst::addi_w, tar, exp1, val));
-    //         }
-    //         // cur_block->instructions.push_back(std::make_shared<LoongArch::st>(Reg{reg}, Reg{fp}, this->cur_mapping->objoffset_mapping, st::st_w)); // TODO：添加区分字长逻辑
-    //     }
-    // }
-    // else {
-    //     auto exp2 = cur_mapping->transfer_reg(*exp2_r.get());
-    //     cur_block->instructions.push_back(std::make_shared<LoongArch::RegRegInst>(type, tar, exp1, exp2));
-    // }
-
-    Reg exp1;
-    if(exp1_r == nullptr) {
-        // exp1 = cur_mapping->new_reg();
-        exp1 = const_reg_l;
-        auto optional_val = std::dynamic_pointer_cast<ir::ir_constant>(node.src1)->init_val;
-        if(optional_val.has_value()) {
-            auto variant_val = optional_val.value();
-            if(std::holds_alternative<int>(variant_val)) {
-                int val = std::get<int>(variant_val);
-                cur_block->instructions.push_back(std::make_shared<LoongArch::LoadImm>(exp1, val));
-            } else if(std::holds_alternative<float>(variant_val)) {
-                float val = std::get<float>(variant_val);
-                cur_block->instructions.push_back(std::make_shared<LoongArch::LoadImm>(exp1, val));
-            }
-            // cur_block->instructions.push_back(std::make_shared<LoongArch::st>(Reg{reg}, Reg{fp}, this->cur_mapping->objoffset_mapping, st::st_w)); // TODO：添加区分字长逻辑
-        }
-        // cur_block->instructions.push_back(std::make_shared<LoongArch::LoadImm>(exp1, exps[0]));
-    }
-    else {
-        exp1 = cur_mapping->transfer_reg(*exp1_r.get());
-    }
-    auto exp2_r = std::dynamic_pointer_cast<ir::ir_reg>(node.src2);
-    Reg exp2;
-    if(exp2_r == nullptr) {
-        // exp2 = cur_mapping->new_reg();
-        exp2 = const_reg_r;
-        auto optional_val = std::dynamic_pointer_cast<ir::ir_constant>(node.src2)->init_val;
-        if(optional_val.has_value()) {
-            auto variant_val = optional_val.value();
-            if(std::holds_alternative<int>(variant_val)) {
-                int val = std::get<int>(variant_val);
-                cur_block->instructions.push_back(std::make_shared<LoongArch::LoadImm>(exp2, val));
-            } else if(std::holds_alternative<float>(variant_val)) {
-                float val = std::get<float>(variant_val);
-                cur_block->instructions.push_back(std::make_shared<LoongArch::LoadImm>(exp2, val));
-            }
-            // cur_block->instructions.push_back(std::make_shared<LoongArch::st>(Reg{reg}, Reg{fp}, this->cur_mapping->objoffset_mapping, st::st_w)); // TODO：添加区分字长逻辑
-        }
-        // cur_block->instructions.push_back(std::make_shared<LoongArch::LoadImm>(exp2, exps[1]));
-    }
-    else {
-        exp2 = cur_mapping->transfer_reg(*exp2_r.get());
-    }
+    node.dst->accept(*this);
+    Reg tar = pass_reg;
+    using_reg = const_reg_r;
+    node.src1->accept(*this);
+    Reg exp1 = pass_reg;
+    using_reg = const_reg_r;
+    node.src2->accept(*this);
+    Reg exp2 = pass_reg;
     cur_block->instructions.push_back(std::make_shared<LoongArch::RegRegInst>(type, tar, exp1, exp2));
 }
 
 void LoongArch::ProgramBuilder::visit(ir::cmp_ins &node) {
-    // std::unordered_map<relop, RegRegInst::Type> map = {{relop::equal, RegRegInst::}}
-    auto dst = cur_mapping->transfer_reg(*std::dynamic_pointer_cast<ir::ir_reg>(node.def_reg()[0]).get());
+    node.def_reg()[0]->accept(*this);
+    Reg dst = pass_reg;
     auto exps = node.use_reg();
-    auto exp1_r = std::dynamic_pointer_cast<ir::ir_reg>(exps[0]);
-    Reg exp1;
-    if(exp1_r == nullptr) {
-        // exp1 = cur_mapping->new_reg();
-        exp1 = const_reg_l;
-        auto optional_val = std::dynamic_pointer_cast<ir::ir_constant>(exps[0])->init_val;
-        if(optional_val.has_value()) {
-            auto variant_val = optional_val.value();
-            if(std::holds_alternative<int>(variant_val)) {
-                int val = std::get<int>(variant_val);
-                cur_block->instructions.push_back(std::make_shared<LoongArch::LoadImm>(exp1, val));
-            } else if(std::holds_alternative<float>(variant_val)) {
-                float val = std::get<float>(variant_val);
-                cur_block->instructions.push_back(std::make_shared<LoongArch::LoadImm>(exp1, val));
-            }
-            // cur_block->instructions.push_back(std::make_shared<LoongArch::st>(Reg{reg}, Reg{fp}, this->cur_mapping->objoffset_mapping, st::st_w)); // TODO：添加区分字长逻辑
-        }
-        // cur_block->instructions.push_back(std::make_shared<LoongArch::LoadImm>(exp1, exps[0]));
-    }
-    else {
-        exp1 = cur_mapping->transfer_reg(*exp1_r.get());
-    }
-    auto exp2_r = std::dynamic_pointer_cast<ir::ir_reg>(exps[1]);
-    Reg exp2;
-    if(exp2_r == nullptr) {
-        // exp2 = cur_mapping->new_reg();
-        exp2 = const_reg_r;
-        auto optional_val = std::dynamic_pointer_cast<ir::ir_constant>(exps[1])->init_val;
-        if(optional_val.has_value()) {
-            auto variant_val = optional_val.value();
-            if(std::holds_alternative<int>(variant_val)) {
-                int val = std::get<int>(variant_val);
-                cur_block->instructions.push_back(std::make_shared<LoongArch::LoadImm>(exp2, val));
-            } else if(std::holds_alternative<float>(variant_val)) {
-                float val = std::get<float>(variant_val);
-                cur_block->instructions.push_back(std::make_shared<LoongArch::LoadImm>(exp2, val));
-            }
-            // cur_block->instructions.push_back(std::make_shared<LoongArch::st>(Reg{reg}, Reg{fp}, this->cur_mapping->objoffset_mapping, st::st_w)); // TODO：添加区分字长逻辑
-        }
-        // cur_block->instructions.push_back(std::make_shared<LoongArch::LoadImm>(exp2, exps[1]));
-    }
-    else {
-        exp2 = cur_mapping->transfer_reg(*exp2_r.get());
-    }
+    using_reg = const_reg_l;
+    exps[0]->accept(*this);
+    Reg exp1 = pass_reg;
+    using_reg = const_reg_r;
+    exps[1]->accept(*this);
+    Reg exp2 = pass_reg;
     if(node.op == relop::equal || node.op == relop::non_equal) {
         cur_block->instructions.push_back(std::make_shared<LoongArch::RegRegInst>(RegRegInst::sub_w, dst, exp1, exp2));
         cur_block->instructions.push_back(std::make_shared<LoongArch::RegImmInst>(RegImmInst::sltui, dst, dst, 1));
@@ -568,44 +459,12 @@ void LoongArch::ProgramBuilder::visit(ir::cmp_ins &node) {
 void LoongArch::ProgramBuilder::visit(ir::logic_ins &node) {
     auto dst = cur_mapping->transfer_reg(*std::dynamic_pointer_cast<ir::ir_reg>(node.def_reg()[0]).get());
     auto srcs = node.use_reg();
-    auto src1_r = std::dynamic_pointer_cast<ir::ir_reg>(srcs[0]);
-    Reg src1;
-    if(src1_r == nullptr) {
-        src1 = const_reg_l;
-        auto optional_val = std::dynamic_pointer_cast<ir::ir_constant>(srcs[0])->init_val;
-        if(optional_val.has_value()) {
-            auto variant_val = optional_val.value();
-            if(std::holds_alternative<int>(variant_val)) {
-                int val = std::get<int>(variant_val);
-                cur_block->instructions.push_back(std::make_shared<LoongArch::LoadImm>(src1, val));
-            } else if(std::holds_alternative<float>(variant_val)) {
-                float val = std::get<float>(variant_val);
-                cur_block->instructions.push_back(std::make_shared<LoongArch::LoadImm>(src1, val));
-            }
-        }
-    }
-    else {
-        src1 = cur_mapping->transfer_reg(*src1_r.get());
-    }
-    auto src2_r = std::dynamic_pointer_cast<ir::ir_reg>(srcs[1]);
-    Reg src2;
-    if(src2_r == nullptr) {
-        src2 = const_reg_r;
-        auto optional_val = std::dynamic_pointer_cast<ir::ir_constant>(srcs[1])->init_val;
-        if(optional_val.has_value()) {
-            auto variant_val = optional_val.value();
-            if(std::holds_alternative<int>(variant_val)) {
-                int val = std::get<int>(variant_val);
-                cur_block->instructions.push_back(std::make_shared<LoongArch::LoadImm>(src2, val));
-            } else if(std::holds_alternative<float>(variant_val)) {
-                float val = std::get<float>(variant_val);
-                cur_block->instructions.push_back(std::make_shared<LoongArch::LoadImm>(src2, val));
-            }
-        }
-    }
-    else {
-        src2 = cur_mapping->transfer_reg(*src2_r.get());
-    }
+    using_reg = const_reg_l;
+    srcs[0]->accept(*this);
+    Reg src1 = pass_reg;
+    using_reg = const_reg_r;
+    srcs[1]->accept(*this);
+    Reg src2 = pass_reg;
     if(node.op == relop::op_and) {
         cur_block->instructions.push_back(std::make_shared<LoongArch::RegRegInst>(RegRegInst::andw, dst, src1, src2));
     } else if(node.op == relop::op_or) {

@@ -44,6 +44,8 @@ protected:
     */
     Reg const_reg_l = Reg{15};      // 对应源操作数1
     Reg const_reg_r = Reg{16};      // 对应源操作数2
+    Reg using_reg = const_reg_l;
+    Reg pass_reg;
     int spill_base = 17;
 };
 } // namespace archLA
