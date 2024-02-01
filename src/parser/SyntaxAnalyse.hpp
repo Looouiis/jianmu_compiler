@@ -9,6 +9,7 @@ void SynataxAnalyseBlock(ast::block_syntax* &self, ast::block_syntax* block_item
 void SynataxAnalyseBlockItems(ast::block_syntax* &self,ast::block_syntax* block_items, ast::stmt_syntax* stmt);
 void SynataxAnalyseStmtReturn(ast::stmt_syntax* &self, ast::expr_syntax* exp);
 void SynataxAnalysePrimaryExpIntConst(ast::expr_syntax* &self, char* current_symbol);
+void SynataxAnalysePrimaryExpFloatConst(ast::expr_syntax *&self, char *current_symbol);
 //a-难度
 void SynataxAnalyseStmtBlock(ast::stmt_syntax* &self, ast::block_syntax *block);
 void SynataxAnalysePrimaryExpVar(ast::expr_syntax* &self, char* current_symbol);

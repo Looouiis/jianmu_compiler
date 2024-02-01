@@ -188,6 +188,7 @@ struct literal_syntax : expr_syntax
 {
     vartype restype;
     int intConst;
+    float floatConst;
     virtual void accept(syntax_tree_visitor &visitor) override final;
     virtual void print() override final;
 };

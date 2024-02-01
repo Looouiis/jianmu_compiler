@@ -44,7 +44,7 @@ int handle_token(int token) {
     yylval.current_symbol = new char[yylval.symbol_size];
     strcpy(yylval.current_symbol,yytext);
     column_end_number += strlen(yytext);//yytext是正则表达式匹配的部分
-    // print_msg(std::cout);
+    print_msg(std::cout);
     return token;
 }
 %}
@@ -69,6 +69,8 @@ int handle_token(int token) {
     column_end_number += strlen(yytext);
 }
 
+float { return handle_token(FLOAT);}
+
 int { return handle_token( INT);}
 void { return handle_token( VOID);}
 if { return handle_token( IF);}
@@ -76,6 +78,7 @@ else { return handle_token( ELSE);}
 return { return handle_token(RETURN);}
 [a-zA-Z_][a-zA-Z_0-9]* { return handle_token( Ident);}
 [0-9]+ { return handle_token( IntConst);}
+[0-9]+\.[0-9]+ {return handle_token(FloatConst);}
 "+" { return handle_token( ADD);}
 "-" { return handle_token( SUB); }
 "*" { return handle_token( MUL); }

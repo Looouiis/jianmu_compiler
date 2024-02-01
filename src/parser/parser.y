@@ -43,10 +43,10 @@
     enum vartype var_type;
 }
 
-%token <current_symbol> INT VOID IF ELSE RETURN Ident
+%token <current_symbol> INT FLOAT VOID IF ELSE RETURN Ident
 %token <current_symbol> ADD SUB MUL DIV MOD
 %token <current_symbol> LPAREN RPAREN LBRACKET RBRACKET LBRACE RBRACE
-%token <current_symbol> IntConst
+%token <current_symbol> IntConst FloatConst
 %token <current_symbol> LESS GREATER EQUAL NOT
 %token <current_symbol> LESS_EQUAL GREATER_EQUAL NOT_EQUAL AND OR
 %token <current_symbol> ASSIGN COMMA SEMICOLON
@@ -96,6 +96,7 @@
     FuncType
     :VOID { SynataxAnalyseFuncType($$,$1);}
     |INT { SynataxAnalyseFuncType($$,$1);}
+    |FLOAT { SynataxAnalyseFuncType($$,$1);}
 
     Block
     : LBRACE BlockItems RBRACE { SynataxAnalyseBlock($$,$2);}
@@ -144,6 +145,15 @@
     | Ident{
         SynataxAnalysePrimaryExpVar($$,$1);
     }
+
+        PrimaryExp
+    : FloatConst { SynataxAnalysePrimaryExpFloatConst($$,$1); }
+    | LPAREN Exp RPAREN{
+        $$=$2;
+    }
+    | Ident{
+        SynataxAnalysePrimaryExpVar($$,$1);
+    }
  /*--------------------*/
 
  /*a-难度---------------*/
@@ -153,6 +163,9 @@
 
     VarDecl: INT VarDef VarDefGroup SEMICOLON{
         SynataxAnalyseVarDecl($$,$2,$3);
+    }
+    | FLOAT VarDef VarDefGroup SEMICOLON {
+        SynataxAnalyseVarDecl($$, $2, $3);
     }
 
     VarDefGroup:  COMMA VarDef VarDefGroup{

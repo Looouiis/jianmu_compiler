@@ -55,36 +55,38 @@ extern int yydebug;
     YYerror = 256,                 /* error  */
     YYUNDEF = 257,                 /* "invalid token"  */
     INT = 258,                     /* INT  */
-    VOID = 259,                    /* VOID  */
-    IF = 260,                      /* IF  */
-    ELSE = 261,                    /* ELSE  */
-    RETURN = 262,                  /* RETURN  */
-    Ident = 263,                   /* Ident  */
-    ADD = 264,                     /* ADD  */
-    SUB = 265,                     /* SUB  */
-    MUL = 266,                     /* MUL  */
-    DIV = 267,                     /* DIV  */
-    MOD = 268,                     /* MOD  */
-    LPAREN = 269,                  /* LPAREN  */
-    RPAREN = 270,                  /* RPAREN  */
-    LBRACKET = 271,                /* LBRACKET  */
-    RBRACKET = 272,                /* RBRACKET  */
-    LBRACE = 273,                  /* LBRACE  */
-    RBRACE = 274,                  /* RBRACE  */
-    IntConst = 275,                /* IntConst  */
-    LESS = 276,                    /* LESS  */
-    GREATER = 277,                 /* GREATER  */
-    EQUAL = 278,                   /* EQUAL  */
-    NOT = 279,                     /* NOT  */
-    LESS_EQUAL = 280,              /* LESS_EQUAL  */
-    GREATER_EQUAL = 281,           /* GREATER_EQUAL  */
-    NOT_EQUAL = 282,               /* NOT_EQUAL  */
-    AND = 283,                     /* AND  */
-    OR = 284,                      /* OR  */
-    ASSIGN = 285,                  /* ASSIGN  */
-    COMMA = 286,                   /* COMMA  */
-    SEMICOLON = 287,               /* SEMICOLON  */
-    ERROR = 288                    /* ERROR  */
+    FLOAT = 259,                   /* FLOAT  */
+    VOID = 260,                    /* VOID  */
+    IF = 261,                      /* IF  */
+    ELSE = 262,                    /* ELSE  */
+    RETURN = 263,                  /* RETURN  */
+    Ident = 264,                   /* Ident  */
+    ADD = 265,                     /* ADD  */
+    SUB = 266,                     /* SUB  */
+    MUL = 267,                     /* MUL  */
+    DIV = 268,                     /* DIV  */
+    MOD = 269,                     /* MOD  */
+    LPAREN = 270,                  /* LPAREN  */
+    RPAREN = 271,                  /* RPAREN  */
+    LBRACKET = 272,                /* LBRACKET  */
+    RBRACKET = 273,                /* RBRACKET  */
+    LBRACE = 274,                  /* LBRACE  */
+    RBRACE = 275,                  /* RBRACE  */
+    IntConst = 276,                /* IntConst  */
+    FloatConst = 277,              /* FloatConst  */
+    LESS = 278,                    /* LESS  */
+    GREATER = 279,                 /* GREATER  */
+    EQUAL = 280,                   /* EQUAL  */
+    NOT = 281,                     /* NOT  */
+    LESS_EQUAL = 282,              /* LESS_EQUAL  */
+    GREATER_EQUAL = 283,           /* GREATER_EQUAL  */
+    NOT_EQUAL = 284,               /* NOT_EQUAL  */
+    AND = 285,                     /* AND  */
+    OR = 286,                      /* OR  */
+    ASSIGN = 287,                  /* ASSIGN  */
+    COMMA = 288,                   /* COMMA  */
+    SEMICOLON = 289,               /* SEMICOLON  */
+    ERROR = 290                    /* ERROR  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -113,7 +115,7 @@ union YYSTYPE
     struct ast::var_decl_stmt_syntax *var_decl_stmt;
     enum vartype var_type;
 
-#line 117 "parser.hpp"
+#line 119 "parser.hpp"
 
 };
 typedef union YYSTYPE YYSTYPE;

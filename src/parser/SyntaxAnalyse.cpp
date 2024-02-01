@@ -28,7 +28,7 @@ void SyntaxAnalyseFuncDef(ast::func_def_syntax * &self, vartype var_type, char *
 
 void SynataxAnalyseFuncType(vartype &self, char* type)
 {
-    self = ( !strcmp(type,"int") ? vartype::INT : vartype::VOID);
+    self = ( !strcmp(type,"int") ? vartype::INT : (!strcmp(type,"void") ? vartype::VOID : vartype::FLOAT));
 }
 
 void SynataxAnalyseBlock(ast::block_syntax *&self, ast::block_syntax *block_items)
@@ -68,6 +68,15 @@ void SynataxAnalysePrimaryExpIntConst(ast::expr_syntax *&self, char *current_sym
 {
     auto syntax = new ast::literal_syntax;
     syntax->intConst = std::stoi(current_symbol);
+    syntax->restype = vartype::INT;
+    self = static_cast<ast::expr_syntax*>(syntax);
+}
+
+void SynataxAnalysePrimaryExpFloatConst(ast::expr_syntax *&self, char *current_symbol)
+{
+    auto syntax = new ast::literal_syntax;
+    syntax->floatConst= std::stoi(current_symbol);
+    syntax->restype = vartype::FLOAT;
     self = static_cast<ast::expr_syntax*>(syntax);
 }
 //a-难度
