@@ -4,6 +4,9 @@
 //a--难度
 void SyntaxAnalyseCompUnit(ast::compunit_syntax* &self, ast::compunit_syntax* compunit, ast::syntax_tree_node* func_def);
 void SyntaxAnalyseFuncDef(ast::func_def_syntax* &self, vartype var_type, char* Ident,ast::block_syntax * block);
+void SyntaxAnalyseFuncFDef(ast::func_f_param_syntax *&self, vartype var_type, char* ident);
+void SyntaxAnalyseFuncFDecl(ast::func_def_syntax* &self, ast::func_f_param_syntax *var_def, ast::func_def_syntax *var_def_group);
+void SyntaxAnalyseFuncFDeclGroup(ast::func_def_syntax* &self, ast::func_f_param_syntax *var_def, ast::func_def_syntax *var_def_group);
 void SynataxAnalyseFuncType(vartype &self, char* type);
 void SynataxAnalyseBlock(ast::block_syntax* &self, ast::block_syntax* block_items);
 void SynataxAnalyseBlockItems(ast::block_syntax* &self,ast::block_syntax* block_items, ast::stmt_syntax* stmt);
@@ -14,7 +17,7 @@ void SynataxAnalysePrimaryExpFloatConst(ast::expr_syntax *&self, char *current_s
 void SynataxAnalyseStmtBlock(ast::stmt_syntax* &self, ast::block_syntax *block);
 void SynataxAnalysePrimaryExpVar(ast::expr_syntax* &self, char* current_symbol);
 void SynataxAnalyseVarType(vartype &self, char* type);
-void SynataxAnalyseVarDecl(ast::stmt_syntax* &self, ast::var_def_stmt_syntax *var_def,ast::var_decl_stmt_syntax *var_def_group);
+void SynataxAnalyseVarDecl(ast::stmt_syntax* &self, vartype var_type, ast::var_def_stmt_syntax *var_def,ast::var_decl_stmt_syntax *var_def_group);
 void SynataxAnalyseVarDefGroup(ast::var_decl_stmt_syntax * &self, ast::var_def_stmt_syntax *var_def,ast::var_decl_stmt_syntax *var_def_group);
 void SynataxAnalyseVarDef(ast::var_def_stmt_syntax *&self,char* ident,ast::expr_syntax* init);
 void SynataxAnalyseAddExp(ast::expr_syntax* &self,ast::expr_syntax* exp1,char * op,ast::expr_syntax* exp2);

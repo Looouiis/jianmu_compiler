@@ -2,6 +2,7 @@
 #include "cstring"
 #include "parser/SyntaxTree.hpp"
 #include <cstring>
+#include <memory>
 
 extern ast::SyntaxTree syntax_tree;
 void SyntaxAnalyseCompUnit(ast::compunit_syntax * &self, ast::compunit_syntax *compunit, ast::syntax_tree_node *def)
@@ -24,7 +25,33 @@ void SyntaxAnalyseFuncDef(ast::func_def_syntax * &self, vartype var_type, char *
     self = new ast::func_def_syntax;
     self->name = Ident;
     self->rettype = var_type;
+    
     self->body = std::shared_ptr<ast::block_syntax>(block);
+}
+
+void SyntaxAnalyseFuncFDef(ast::func_f_param_syntax *&self, vartype var_type, char* ident) {
+    auto syntax = new ast::func_f_param_syntax;
+    syntax->accept_type = var_type;
+    syntax->name = ident;
+    self = syntax;
+}
+
+void SyntaxAnalyseFuncFDecl(ast::func_def_syntax* &self, ast::func_f_param_syntax *var_def, ast::func_def_syntax *var_def_group) {
+    // auto syntax = new ast::func_def_syntax;
+    if(var_def_group) {
+        self->params = var_def_group->params;
+    }
+    self->params.insert(self->params.begin(), std::shared_ptr<ast::func_f_param_syntax>(var_def));
+    // self = syntax;
+}
+
+void SyntaxAnalyseFuncFDeclGroup(ast::func_def_syntax* &self, ast::func_f_param_syntax *var_def, ast::func_def_syntax *var_def_group) {
+    auto syntax = new ast::func_def_syntax;
+    if(var_def_group) {
+        syntax->params = var_def_group->params;
+    }
+    syntax->params.insert(syntax->params.begin(), std::shared_ptr<ast::func_f_param_syntax>(var_def));
+    self = syntax;
 }
 
 void SynataxAnalyseFuncType(vartype &self, char* type)
@@ -96,16 +123,19 @@ void SynataxAnalysePrimaryExpVar(ast::expr_syntax* &self, char* current_symbol)
 }
 
 void SynataxAnalyseVarType(vartype &self, char* type) {
-    // self = (!strcmp(type, "int") ? vartype::INT : vartype::FLOAT);
+    self = (!strcmp(type, "int") ? vartype::INT : vartype::FLOAT);
 }
 
-void SynataxAnalyseVarDecl(ast::stmt_syntax *&self, ast::var_def_stmt_syntax *var_def, ast::var_decl_stmt_syntax *var_def_group)
+void SynataxAnalyseVarDecl(ast::stmt_syntax *&self,vartype var_type, ast::var_def_stmt_syntax *var_def, ast::var_decl_stmt_syntax *var_def_group)
 {
     auto syntax = new ast::var_decl_stmt_syntax;
     if(var_def_group) {
         syntax->var_def_list = var_def_group->var_def_list;
     }
     syntax->var_def_list.insert(syntax->var_def_list.begin(), std::shared_ptr<ast::var_def_stmt_syntax>(var_def));
+    for(auto a : syntax->var_def_list) {
+        a->restype = var_type;
+    }
     self = static_cast<ast::stmt_syntax*>(syntax);
 }
 
@@ -126,7 +156,7 @@ void SynataxAnalyseVarDef(ast::var_def_stmt_syntax *&self, char *ident, ast::exp
         syntax->initializer = std::shared_ptr<ast::expr_syntax>(init);
     }
     syntax->name = ident;
-    syntax->restype = vartype::INT;
+    // syntax->restype = var_type;
     self = syntax;
 }
 

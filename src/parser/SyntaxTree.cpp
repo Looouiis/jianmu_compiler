@@ -75,10 +75,18 @@ void func_def_syntax::print()
     ast_printer.LevelPrint(std::cout,"FuncDef",false);
 
     ast_printer.cur_level++;
-    std::string type = (this->rettype == vartype::VOID ? "void" : "int");
+    std::string type = (this->rettype == vartype::INT ? "int" : (this->rettype == vartype::FLOAT ? "float" : "void"));
     ast_printer.LevelPrint(std::cout,type,true);
     ast_printer.LevelPrint(std::cout,this->name,true);
     ast_printer.LevelPrint(std::cout,"(",true);
+
+    ast_printer.cur_level++;
+    ast_printer.LevelPrint(std::cout, "func_param", false);
+    for(auto a : this->params) {
+        a->print();
+    }
+    ast_printer.cur_level--;
+
     ast_printer.LevelPrint(std::cout,")",true);
     ast_printer.LevelPrint(std::cout,"{",true);
     
@@ -243,6 +251,17 @@ void empty_stmt_syntax::accept(syntax_tree_visitor &visitor)
 
 void empty_stmt_syntax::print()
 {
+}
+
+void ast::func_f_param_syntax::accept(syntax_tree_visitor &visitor){
+
+}
+
+void ast::func_f_param_syntax::print() {
+    ast_printer.cur_level++;
+    ast_printer.LevelPrint(std::cout, this->accept_type == vartype::INT ? "int" : "float", true);
+    ast_printer.LevelPrint(std::cout, this->name , true);
+    ast_printer.cur_level--;
 }
 
 void ast::var_decl_stmt_syntax::accept(syntax_tree_visitor &visitor)

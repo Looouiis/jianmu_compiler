@@ -55,8 +55,10 @@
 
 %type <compunit> CompUnit
 %type <func_def> FuncDef
-%type <var_type> FuncType BType
+// %type <var_type> FuncType
+%type <var_type> BType
 %type <func_f_param> FuncFParam
+// %type <var_def_stmt> FuncFParam
 %type <block> Block
 %type <block> BlockItems
 %type <stmt> Stmt
@@ -66,6 +68,7 @@
 %type <stmt> ConstDecl
 %type <var_decl_stmt> VarDefGroup
 %type <var_decl_stmt> ConstDefGroup
+%type <func_def> FuncFParamsGroup
 %type <var_def_stmt> VarDef
 %type <var_def_stmt> ConstDef
 %type <expr> InitVal
@@ -73,6 +76,7 @@
 %type <expr> PrimaryExp
 %type <expr> MulExp
 %type <expr> UnaryExp
+%type <expr> Number
 %type <lval> Lval
 %type <expr> Cond
 %type <expr> LOrExp
@@ -96,18 +100,30 @@
     |Decl {SyntaxAnalyseCompUnit($$, nullptr, $1);}
 
     FuncDef: BType Ident LPAREN RPAREN Block { SyntaxAnalyseFuncDef($$,$1,$2,$5);}
-    | VOID Ident LPAREN RPAREN Block {}
-    | BType Ident LPAREN FuncFParam FuncFParamsGroup RPAREN Block {}
-    | VOID Ident LPAREN FuncFParam FuncFParamsGroup RPAREN Block {}
+    | VOID Ident LPAREN RPAREN Block {SyntaxAnalyseFuncDef($$, vartype::VOID, $2, $5);}
+    | BType Ident LPAREN FuncFParam FuncFParamsGroup RPAREN Block {
+        SyntaxAnalyseFuncDef($$, $1, $2, $7);
+        SyntaxAnalyseFuncFDecl($$, $4, $5);
+    }
+    | VOID Ident LPAREN FuncFParam FuncFParamsGroup RPAREN Block {
+        SyntaxAnalyseFuncDef($$, vartype::VOID, $2, $7);
+        SyntaxAnalyseFuncFDecl($$, $4, $5);
+    }
 
-    FuncFParam: BType Ident {}
+    FuncFParam: BType Ident {
+        SyntaxAnalyseFuncFDef($$, $1, $2);
+    }
     | BType Ident LBRACKET RBRACKET ExpGroup {}             // !!! Sysy上写明数组形参的第一维长度省去，即第一个[]应省略
 
     ExpGroup: LBRACKET Exp RBRACKET ExpGroup {}
     | %empty {}
 
-    FuncFParamsGroup: COMMA FuncFParam FuncFParamsGroup {}
-    | %empty {}
+    FuncFParamsGroup: COMMA FuncFParam FuncFParamsGroup {
+        SyntaxAnalyseFuncFDeclGroup($$, $2, $3);
+    }
+    | %empty {
+        $$ = nullptr;
+    }
 
     // FuncType: VOID { SynataxAnalyseFuncType($$,$1);}
     // |INT { SynataxAnalyseFuncType($$,$1);}
@@ -162,7 +178,9 @@
 //     | Ident{
 //         SynataxAnalysePrimaryExpVar($$,$1);
 //     }
-    PrimaryExp: Number {}
+    PrimaryExp: Number {
+        $$ = $1;
+    }
     | Lval {}
     // | IntConst { SynataxAnalysePrimaryExpIntConst($$,$1); }
     // | FloatConst { SynataxAnalysePrimaryExpFloatConst($$,$1); }
@@ -170,8 +188,8 @@
         $$=$2;
     }
 
-    Number: IntConst {}
-    | FloatConst {}
+    Number: IntConst {SynataxAnalysePrimaryExpIntConst($$,$1);}
+    | FloatConst {SynataxAnalysePrimaryExpFloatConst($$,$1);}
  /*--------------------*/
 
  /*a-难度---------------*/
@@ -183,7 +201,7 @@
     }
 
     VarDecl: BType VarDef VarDefGroup SEMICOLON{
-        SynataxAnalyseVarDecl($$,$2,$3);
+        SynataxAnalyseVarDecl($$, $1, $2, $3);
     }
 
     VarDefGroup:  COMMA VarDef VarDefGroup{
@@ -194,7 +212,7 @@
     }
 
     VarDef: Ident  {
-         SynataxAnalyseVarDef($$,$1,nullptr);
+        SynataxAnalyseVarDef($$,$1,nullptr);
     }
     | Ident ASSIGN InitVal{
         SynataxAnalyseVarDef($$,$1,$3);
@@ -212,7 +230,7 @@
     | %empty {}
 
     ConstDecl: CONST BType ConstDef ConstDefGroup SEMICOLON {
-        SynataxAnalyseVarDecl($$, $3, $4);
+        SynataxAnalyseVarDecl($$, $2, $3, $4);
     }
 
     ConstDefGroup: COMMA ConstDef ConstDefGroup {

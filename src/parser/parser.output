@@ -1,8 +1,3 @@
-Nonterminals useless in grammar
-
-    FuncType
-
-
 Terminals unused in grammar
 
     ERROR
@@ -206,7 +201,7 @@ Nonterminals, with rules where they appear
     ExpGroup (44)
         on left: 11 12
         on right: 10 11 71
-    FuncFParamsGroup (45)
+    FuncFParamsGroup <func_def> (45)
         on left: 13 14
         on right: 7 8 13
     Block <block> (46)
@@ -221,7 +216,7 @@ Nonterminals, with rules where they appear
     PrimaryExp <expr> (49)
         on left: 30 31 32
         on right: 85
-    Number (50)
+    Number <expr> (50)
         on left: 33 34
         on right: 30
     Decl <stmt> (51)
@@ -470,33 +465,6 @@ State 16
     $default   reduce using rule 40 (VarDef)
 
     ConstExpGroup  go to state 24
-
-    reduce/reduce conflict on tokens COMMA, SEMICOLON:
-       40 VarDef: Ident .
-       59 ConstExpGroup: %empty .
-      Example: BType Ident . SEMICOLON
-      First reduce derivation
-        VarDecl
-        `-> 37: BType VarDef          VarDefGroup    SEMICOLON
-                      `-> 40: Ident . `-> 37: %empty
-      Second reduce derivation
-        VarDecl
-        `-> 37: BType VarDef                         VarDefGroup    SEMICOLON
-                      `-> 42: Ident ConstExpGroup    `-> 37: %empty
-                                    `-> 59: %empty .
-
-    shift/reduce conflict on token ASSIGN:
-       59 ConstExpGroup: %empty .
-       41 VarDef: Ident . ASSIGN InitVal
-      Example: Ident . ASSIGN InitVal
-      Shift derivation
-        VarDef
-        `-> 41: Ident . ASSIGN InitVal
-      Reduce derivation
-        VarDef
-        `-> 43: Ident ConstExpGroup    ASSIGN InitVal
-                      `-> 59: %empty .
-
 
 
 State 17
@@ -946,33 +914,6 @@ State 55
     $default   reduce using rule 40 (VarDef)
 
     ConstExpGroup  go to state 24
-
-    reduce/reduce conflict on tokens COMMA, SEMICOLON:
-       40 VarDef: Ident .
-       59 ConstExpGroup: %empty .
-      Example: COMMA Ident .
-      First reduce derivation
-        VarDefGroup
-        `-> 38: COMMA VarDef          VarDefGroup
-                      `-> 40: Ident . `-> 38: %empty
-      Second reduce derivation
-        VarDefGroup
-        `-> 38: COMMA VarDef                         VarDefGroup
-                      `-> 42: Ident ConstExpGroup    `-> 38: %empty
-                                    `-> 59: %empty .
-
-    shift/reduce conflict on token ASSIGN:
-       59 ConstExpGroup: %empty .
-       41 VarDef: Ident . ASSIGN InitVal
-      Example: Ident . ASSIGN InitVal
-      Shift derivation
-        VarDef
-        `-> 41: Ident . ASSIGN InitVal
-      Reduce derivation
-        VarDef
-        `-> 43: Ident ConstExpGroup    ASSIGN InitVal
-                      `-> 59: %empty .
-
 
 
 State 56
@@ -2320,20 +2261,6 @@ State 167
 
     ELSE      [reduce using rule 23 (Stmt)]
     $default  reduce using rule 23 (Stmt)
-
-    shift/reduce conflict on token ELSE:
-       23 Stmt: IF LPAREN Cond RPAREN Stmt .
-       24 Stmt: IF LPAREN Cond RPAREN Stmt . ELSE Stmt
-      Example: IF LPAREN Cond RPAREN IF LPAREN Cond RPAREN Stmt . ELSE Stmt
-      Shift derivation
-        Stmt
-        `-> 23: IF LPAREN Cond RPAREN Stmt
-                                      `-> 24: IF LPAREN Cond RPAREN Stmt . ELSE Stmt
-      Reduce derivation
-        Stmt
-        `-> 24: IF LPAREN Cond RPAREN Stmt                                 ELSE Stmt
-                                      `-> 23: IF LPAREN Cond RPAREN Stmt .
-
 
 
 State 168

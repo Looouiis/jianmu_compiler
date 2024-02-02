@@ -123,6 +123,7 @@ struct func_def_syntax : syntax_tree_node
     std::string name;
     ptr<block_syntax> body;
     vartype rettype;
+    ptr_list<func_f_param_syntax> params;
     virtual void accept(syntax_tree_visitor &visitor) override final;
     virtual void print() override final;
 };

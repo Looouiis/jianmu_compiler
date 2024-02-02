@@ -7,7 +7,7 @@
 ast::SyntaxTree syntax_tree;
 int main(){
     ast::parse_file(std::cin);
-    // syntax_tree.print();
+    syntax_tree.print();
     // std::shared_ptr<ir::IrBuilder> irbuilder = std::make_shared<ir::IrBuilder>();
     // syntax_tree.accept(*irbuilder);
     
