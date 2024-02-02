@@ -41,6 +41,7 @@
     struct ast::var_def_stmt_syntax *var_def_stmt;
     struct ast::var_decl_stmt_syntax *var_decl_stmt;
     struct ast::func_f_param_syntax *func_f_param;
+    struct ast::var_dimension_syntax *var_dimension;
     enum vartype var_type;
 }
 
@@ -84,6 +85,7 @@
 %type <expr> EqExp
 %type <expr> RelExp
 %type <current_symbol> UnaryOp
+%type <var_dimension> ExpGroup
 
 
 
@@ -111,12 +113,18 @@
     }
 
     FuncFParam: BType Ident {
-        SyntaxAnalyseFuncFDef($$, $1, $2);
+        SyntaxAnalyseFuncFDef($$, $1, $2, nullptr);
     }
-    | BType Ident LBRACKET RBRACKET ExpGroup {}             // !!! Sysy上写明数组形参的第一维长度省去，即第一个[]应省略
+    | BType Ident LBRACKET RBRACKET ExpGroup {
+        SyntaxAnalyseFuncFDef($$, $1, $2, $5);
+    }             // !!! Sysy上写明数组形参的第一维长度省去，即第一个[]应省略
 
-    ExpGroup: LBRACKET Exp RBRACKET ExpGroup {}
-    | %empty {}
+    ExpGroup: LBRACKET Exp RBRACKET ExpGroup {
+        SyntaxAnalyseVarDimension($$, $2, $4);
+    }
+    | %empty {
+        $$ = nullptr;
+    }
 
     FuncFParamsGroup: COMMA FuncFParam FuncFParamsGroup {
         SyntaxAnalyseFuncFDeclGroup($$, $2, $3);

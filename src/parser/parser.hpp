@@ -118,9 +118,10 @@ union YYSTYPE
     struct ast::var_def_stmt_syntax *var_def_stmt;
     struct ast::var_decl_stmt_syntax *var_decl_stmt;
     struct ast::func_f_param_syntax *func_f_param;
+    struct ast::var_dimension_syntax *var_dimension;
     enum vartype var_type;
 
-#line 124 "parser.hpp"
+#line 125 "parser.hpp"
 
 };
 typedef union YYSTYPE YYSTYPE;

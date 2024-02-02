@@ -29,10 +29,14 @@ void SyntaxAnalyseFuncDef(ast::func_def_syntax * &self, vartype var_type, char *
     self->body = std::shared_ptr<ast::block_syntax>(block);
 }
 
-void SyntaxAnalyseFuncFDef(ast::func_f_param_syntax *&self, vartype var_type, char* ident) {
+void SyntaxAnalyseFuncFDef(ast::func_f_param_syntax *&self, vartype var_type, char* ident, ast::var_dimension_syntax* dimension) {
     auto syntax = new ast::func_f_param_syntax;
     syntax->accept_type = var_type;
     syntax->name = ident;
+    if(dimension) {
+        syntax->dimension = std::shared_ptr<ast::var_dimension_syntax>(dimension);
+        syntax->dimension->has_first_dim = false;
+    }
     self = syntax;
 }
 
@@ -103,7 +107,7 @@ void SynataxAnalysePrimaryExpIntConst(ast::expr_syntax *&self, char *current_sym
 void SynataxAnalysePrimaryExpFloatConst(ast::expr_syntax *&self, char *current_symbol)
 {
     auto syntax = new ast::literal_syntax;
-    syntax->floatConst= std::stoi(current_symbol);
+    syntax->floatConst= std::stof(current_symbol);
     syntax->restype = vartype::FLOAT;
     self = static_cast<ast::expr_syntax*>(syntax);
 }
@@ -292,5 +296,14 @@ void SynataxAnalyseUnaryExp(ast::expr_syntax *&self, char *op, ast::expr_syntax 
     }
     syntax->rhs = std::shared_ptr<ast::expr_syntax>(exp);
     syntax->restype = vartype::INT;
+    self = syntax;
+}
+
+void SyntaxAnalyseVarDimension(ast::var_dimension_syntax* &self, ast::expr_syntax* new_dimension, ast::var_dimension_syntax* current_dim) {
+    auto syntax = new ast::var_dimension_syntax;
+    if(current_dim) {
+        syntax->dimensions = current_dim->dimensions;
+    }
+    syntax->dimensions.push_back(std::shared_ptr<ast::expr_syntax>(new_dimension));
     self = syntax;
 }

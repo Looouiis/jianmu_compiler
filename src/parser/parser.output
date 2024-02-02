@@ -198,7 +198,7 @@ Nonterminals, with rules where they appear
     FuncFParam <func_f_param> (43)
         on left: 9 10
         on right: 7 8 13
-    ExpGroup (44)
+    ExpGroup <var_dimension> (44)
         on left: 11 12
         on right: 10 11 71
     FuncFParamsGroup <func_def> (45)

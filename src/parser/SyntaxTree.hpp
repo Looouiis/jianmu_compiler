@@ -72,6 +72,7 @@ struct return_stmt_syntax;
 struct var_def_stmt_syntax;
 struct var_decl_stmt_syntax;
 struct func_f_param_syntax;
+struct var_dimension_syntax;
 //访问者模板
 struct syntax_tree_visitor;//访问者模板
 //语法树本树
@@ -264,6 +265,14 @@ struct empty_stmt_syntax : stmt_syntax
 struct func_f_param_syntax : syntax_tree_node {
     vartype accept_type;
     std::string name;
+    ptr<ast::var_dimension_syntax> dimension;
+    virtual void accept(syntax_tree_visitor &visitor) override final;
+    virtual void print() override final;
+};
+
+struct var_dimension_syntax : syntax_tree_node {
+    bool has_first_dim = true;
+    ptr_list<ast::expr_syntax> dimensions;
     virtual void accept(syntax_tree_visitor &visitor) override final;
     virtual void print() override final;
 };
@@ -285,8 +294,10 @@ class syntax_tree_visitor
     virtual void visit(block_syntax &node) = 0;
     virtual void visit(if_stmt_syntax &node) = 0;
     virtual void visit(return_stmt_syntax &node) = 0;
+    virtual void visit(func_f_param_syntax &node) = 0;
 
     virtual void visit(var_decl_stmt_syntax &node) = 0;
+    virtual void visit(var_dimension_syntax &node) = 0;
 };
 
 void parse_file(string input_file_path);
