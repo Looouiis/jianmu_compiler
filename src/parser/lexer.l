@@ -70,11 +70,15 @@ int handle_token(int token) {
 }
 
 float { return handle_token(FLOAT);}
+const { return handle_token(CONST);}
 
 int { return handle_token( INT);}
 void { return handle_token( VOID);}
 if { return handle_token( IF);}
 else { return handle_token( ELSE);}
+while {return handle_token(WHILE);}
+break {return handle_token(BREAK);}
+continue {return handle_token(CONTINUE);}
 return { return handle_token(RETURN);}
 [a-zA-Z_][a-zA-Z_0-9]* { return handle_token( Ident);}
 [0-9]+ { return handle_token( IntConst);}

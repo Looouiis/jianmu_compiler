@@ -1,19 +1,20 @@
 #include "SyntaxAnalyse.hpp"
 #include "cstring"
 #include "parser/SyntaxTree.hpp"
+#include <cstring>
 
 extern ast::SyntaxTree syntax_tree;
-void SyntaxAnalyseCompUnit(ast::compunit_syntax * &self, ast::compunit_syntax *compunit, ast::func_def_syntax *func_def)
+void SyntaxAnalyseCompUnit(ast::compunit_syntax * &self, ast::compunit_syntax *compunit, ast::syntax_tree_node *def)
 {
     if(compunit){
         self = new ast::compunit_syntax;
         for(auto  i : compunit->global_defs){
-            self->global_defs.emplace_back(std::shared_ptr<ast::func_def_syntax>(i));
+            self->global_defs.emplace_back(std::shared_ptr<ast::syntax_tree_node>(i));
         }
-        self->global_defs.emplace_back(func_def);
+        self->global_defs.emplace_back(def);
     }else{
         self = new ast::compunit_syntax;
-        self->global_defs.emplace_back(func_def);
+        self->global_defs.emplace_back(def);
     }
     syntax_tree.root = self;
 }
@@ -92,6 +93,10 @@ void SynataxAnalysePrimaryExpVar(ast::expr_syntax* &self, char* current_symbol)
     syntax->name = current_symbol;
     syntax->restype = vartype::INT;
     self = static_cast<ast::expr_syntax*>(syntax);
+}
+
+void SynataxAnalyseVarType(vartype &self, char* type) {
+    // self = (!strcmp(type, "int") ? vartype::INT : vartype::FLOAT);
 }
 
 void SynataxAnalyseVarDecl(ast::stmt_syntax *&self, ast::var_def_stmt_syntax *var_def, ast::var_decl_stmt_syntax *var_def_group)

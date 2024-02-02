@@ -71,6 +71,7 @@ struct if_stmt_syntax;
 struct return_stmt_syntax;
 struct var_def_stmt_syntax;
 struct var_decl_stmt_syntax;
+struct func_f_param_syntax;
 //访问者模板
 struct syntax_tree_visitor;//访问者模板
 //语法树本树
@@ -110,7 +111,8 @@ class SyntaxTree {
 //编译单位，就是一个文件
 struct compunit_syntax : syntax_tree_node
 {
-    ptr_list<func_def_syntax> global_defs;
+    // ptr_list<func_def_syntax> global_defs;
+    ptr_list<syntax_tree_node> global_defs;         // 接受FuncDef和decl
     virtual void accept(syntax_tree_visitor &visitor) override final;
     virtual void print() override final;
 };
@@ -258,6 +260,12 @@ struct empty_stmt_syntax : stmt_syntax
     virtual void print() override final;
 };
 
+struct func_f_param_syntax : syntax_tree_node {
+    vartype accept_type;
+    std::string name;
+    virtual void accept(syntax_tree_visitor &visitor) override final;
+    virtual void print() override final;
+};
 
 //访问者模板
 class syntax_tree_visitor

@@ -59,34 +59,38 @@ extern int yydebug;
     VOID = 260,                    /* VOID  */
     IF = 261,                      /* IF  */
     ELSE = 262,                    /* ELSE  */
-    RETURN = 263,                  /* RETURN  */
-    Ident = 264,                   /* Ident  */
-    ADD = 265,                     /* ADD  */
-    SUB = 266,                     /* SUB  */
-    MUL = 267,                     /* MUL  */
-    DIV = 268,                     /* DIV  */
-    MOD = 269,                     /* MOD  */
-    LPAREN = 270,                  /* LPAREN  */
-    RPAREN = 271,                  /* RPAREN  */
-    LBRACKET = 272,                /* LBRACKET  */
-    RBRACKET = 273,                /* RBRACKET  */
-    LBRACE = 274,                  /* LBRACE  */
-    RBRACE = 275,                  /* RBRACE  */
-    IntConst = 276,                /* IntConst  */
-    FloatConst = 277,              /* FloatConst  */
-    LESS = 278,                    /* LESS  */
-    GREATER = 279,                 /* GREATER  */
-    EQUAL = 280,                   /* EQUAL  */
-    NOT = 281,                     /* NOT  */
-    LESS_EQUAL = 282,              /* LESS_EQUAL  */
-    GREATER_EQUAL = 283,           /* GREATER_EQUAL  */
-    NOT_EQUAL = 284,               /* NOT_EQUAL  */
-    AND = 285,                     /* AND  */
-    OR = 286,                      /* OR  */
-    ASSIGN = 287,                  /* ASSIGN  */
-    COMMA = 288,                   /* COMMA  */
-    SEMICOLON = 289,               /* SEMICOLON  */
-    ERROR = 290                    /* ERROR  */
+    WHILE = 263,                   /* WHILE  */
+    BREAK = 264,                   /* BREAK  */
+    CONTINUE = 265,                /* CONTINUE  */
+    RETURN = 266,                  /* RETURN  */
+    Ident = 267,                   /* Ident  */
+    CONST = 268,                   /* CONST  */
+    ADD = 269,                     /* ADD  */
+    SUB = 270,                     /* SUB  */
+    MUL = 271,                     /* MUL  */
+    DIV = 272,                     /* DIV  */
+    MOD = 273,                     /* MOD  */
+    LPAREN = 274,                  /* LPAREN  */
+    RPAREN = 275,                  /* RPAREN  */
+    LBRACKET = 276,                /* LBRACKET  */
+    RBRACKET = 277,                /* RBRACKET  */
+    LBRACE = 278,                  /* LBRACE  */
+    RBRACE = 279,                  /* RBRACE  */
+    IntConst = 280,                /* IntConst  */
+    FloatConst = 281,              /* FloatConst  */
+    LESS = 282,                    /* LESS  */
+    GREATER = 283,                 /* GREATER  */
+    EQUAL = 284,                   /* EQUAL  */
+    NOT = 285,                     /* NOT  */
+    LESS_EQUAL = 286,              /* LESS_EQUAL  */
+    GREATER_EQUAL = 287,           /* GREATER_EQUAL  */
+    NOT_EQUAL = 288,               /* NOT_EQUAL  */
+    AND = 289,                     /* AND  */
+    OR = 290,                      /* OR  */
+    ASSIGN = 291,                  /* ASSIGN  */
+    COMMA = 292,                   /* COMMA  */
+    SEMICOLON = 293,               /* SEMICOLON  */
+    ERROR = 294                    /* ERROR  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -113,9 +117,10 @@ union YYSTYPE
     struct ast::return_stmt_syntax *return_stmt;
     struct ast::var_def_stmt_syntax *var_def_stmt;
     struct ast::var_decl_stmt_syntax *var_decl_stmt;
+    struct ast::func_f_param_syntax *func_f_param;
     enum vartype var_type;
 
-#line 119 "parser.hpp"
+#line 124 "parser.hpp"
 
 };
 typedef union YYSTYPE YYSTYPE;
