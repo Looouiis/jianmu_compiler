@@ -86,6 +86,8 @@
 %type <expr> RelExp
 %type <current_symbol> UnaryOp
 %type <var_dimension> ExpGroup
+%type <expr> ConstExp
+%type <var_dimension> ConstExpGroup
 
 
 
@@ -220,13 +222,17 @@
     }
 
     VarDef: Ident  {
-        SynataxAnalyseVarDef($$,$1,nullptr);
+        SynataxAnalyseVarDef($$,$1, nullptr,nullptr);
     }
     | Ident ASSIGN InitVal{
-        SynataxAnalyseVarDef($$,$1,$3);
+        SynataxAnalyseVarDef($$,$1, nullptr,$3);
     }
-    | Ident ConstExpGroup {}
-    | Ident ConstExpGroup ASSIGN InitVal {}
+    | Ident ConstExpGroup {
+        SynataxAnalyseVarDef($$,$1, $2, nullptr);
+    }
+    | Ident ConstExpGroup ASSIGN InitVal {
+        SynataxAnalyseVarDef($$,$1, $2, $4);
+    }
 
     InitVal: Exp{
         $$=$1;
@@ -257,10 +263,16 @@
     ConstInitValGroup: COMMA ConstInitVal ConstInitValGroup {}
     | %empty {}
 
-    ConstExpGroup: LBRACKET ConstExp RBRACKET ConstExpGroup {}
-    | %empty {}
+    ConstExpGroup: LBRACKET ConstExp RBRACKET ConstExpGroup {
+        SyntaxAnalyseVarDimension($$, $2, $4);
+    }
+    | %empty {
+        $$ = nullptr;
+    }
 
-    ConstExp: AddExp {}
+    ConstExp: AddExp {
+        $$ = $1;
+    }
     
     BType: INT {SynataxAnalyseVarType($$, $1);}
     | FLOAT {SynataxAnalyseVarType($$, $1);}

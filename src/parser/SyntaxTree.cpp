@@ -168,6 +168,9 @@ void var_def_stmt_syntax::print()
         ast_printer.LevelPrint(std::cout,"=",true);
         this->initializer->print();
     }
+    if(this->dimension) {
+        this->dimension->print();
+    }
         
 }
 
@@ -261,6 +264,7 @@ void ast::func_f_param_syntax::print() {
     ast_printer.cur_level++;
     ast_printer.LevelPrint(std::cout, this->accept_type == vartype::INT ? "int" : "float", true);
     ast_printer.LevelPrint(std::cout, this->name , true);
+    this->dimension->print();
     ast_printer.cur_level--;
 }
 
@@ -270,7 +274,17 @@ void ast::var_dimension_syntax::accept(syntax_tree_visitor &visitor){
 
 void ast::var_dimension_syntax::print() {
     ast_printer.cur_level++;
-
+    if(!this->has_first_dim) {
+        ast_printer.LevelPrint(std::cout, "[", false);
+        ast_printer.LevelPrint(std::cout, "]", false);
+    }
+    for(auto a : this->dimensions) {
+        ast_printer.LevelPrint(std::cout, "[", false);
+        ast_printer.cur_level++;
+        a->print();
+        ast_printer.cur_level--;
+        ast_printer.LevelPrint(std::cout, "]", false);
+    }
     ast_printer.cur_level--;
 }
 

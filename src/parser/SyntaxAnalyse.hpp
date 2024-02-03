@@ -19,7 +19,7 @@ void SynataxAnalysePrimaryExpVar(ast::expr_syntax* &self, char* current_symbol);
 void SynataxAnalyseVarType(vartype &self, char* type);
 void SynataxAnalyseVarDecl(ast::stmt_syntax* &self, vartype var_type, ast::var_def_stmt_syntax *var_def,ast::var_decl_stmt_syntax *var_def_group);
 void SynataxAnalyseVarDefGroup(ast::var_decl_stmt_syntax * &self, ast::var_def_stmt_syntax *var_def,ast::var_decl_stmt_syntax *var_def_group);
-void SynataxAnalyseVarDef(ast::var_def_stmt_syntax *&self,char* ident,ast::expr_syntax* init);
+void SynataxAnalyseVarDef(ast::var_def_stmt_syntax *&self,char* ident, ast::var_dimension_syntax* dimension,ast::expr_syntax* init);
 void SynataxAnalyseAddExp(ast::expr_syntax* &self,ast::expr_syntax* exp1,char * op,ast::expr_syntax* exp2);
 //a难度
 void SynataxAnalyseMulExp(ast::expr_syntax* &self,ast::expr_syntax* exp1,char * op,ast::expr_syntax* exp2);

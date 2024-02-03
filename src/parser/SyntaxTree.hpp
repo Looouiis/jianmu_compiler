@@ -209,6 +209,7 @@ struct var_def_stmt_syntax : stmt_syntax
     vartype restype;
     std::string name;
     ptr<expr_syntax> initializer;
+    ptr<var_dimension_syntax> dimension;
     virtual void accept(syntax_tree_visitor &visitor) override final;
     virtual void print() override final;
 };

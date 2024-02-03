@@ -153,11 +153,14 @@ void SynataxAnalyseVarDefGroup(ast::var_decl_stmt_syntax *&self, ast::var_def_st
     self = syntax;
 }
 
-void SynataxAnalyseVarDef(ast::var_def_stmt_syntax *&self, char *ident, ast::expr_syntax *init)
+void SynataxAnalyseVarDef(ast::var_def_stmt_syntax *&self, char *ident, ast::var_dimension_syntax* current_dim, ast::expr_syntax *init)
 {
     auto syntax = new ast::var_def_stmt_syntax;
     if(init) {
         syntax->initializer = std::shared_ptr<ast::expr_syntax>(init);
+    }
+    if(current_dim) {
+        syntax->dimension = std::shared_ptr<ast::var_dimension_syntax>(current_dim);
     }
     syntax->name = ident;
     // syntax->restype = var_type;
@@ -304,6 +307,6 @@ void SyntaxAnalyseVarDimension(ast::var_dimension_syntax* &self, ast::expr_synta
     if(current_dim) {
         syntax->dimensions = current_dim->dimensions;
     }
-    syntax->dimensions.push_back(std::shared_ptr<ast::expr_syntax>(new_dimension));
+    syntax->dimensions.insert(syntax->dimensions.begin(), std::shared_ptr<ast::expr_syntax>(new_dimension));
     self = syntax;
 }

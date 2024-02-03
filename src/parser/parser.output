@@ -252,10 +252,10 @@ Nonterminals, with rules where they appear
     ConstInitValGroup (61)
         on left: 56 57
         on right: 54 56
-    ConstExpGroup (62)
+    ConstExpGroup <var_dimension> (62)
         on left: 58 59
         on right: 42 43 52 58
-    ConstExp (63)
+    ConstExp <expr> (63)
         on left: 60
         on right: 53 58
     BType <var_type> (64)
