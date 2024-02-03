@@ -307,7 +307,7 @@
     }
 
     Lval: Ident ExpGroup{
-        SynataxAnalyseLval($$,$1);
+        SynataxAnalyseLval($$,$1, $2);
     }
  /*--------------------*/
  

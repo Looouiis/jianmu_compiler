@@ -205,10 +205,14 @@ void SynataxAnalyseStmtAssign(ast::stmt_syntax *&self, ast::lval_syntax *target,
     self = static_cast<ast::stmt_syntax*>(syntax);
 }
 
-void SynataxAnalyseLval(ast::lval_syntax *&self, char *ident)
+void SynataxAnalyseLval(ast::lval_syntax *&self, char *ident, ast::var_dimension_syntax* current_dim)
 {
     auto syntax = new ast::lval_syntax;
     syntax->name = ident;
+    if(current_dim) {
+        syntax->dimension = std::shared_ptr<ast::var_dimension_syntax>(current_dim);
+        syntax->dimension->has_first_dim = true;
+    }
     syntax->restype = vartype::INT;
     self = syntax;
 }

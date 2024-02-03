@@ -1790,7 +1790,7 @@ yyreduce:
   case 72: /* Lval: Ident ExpGroup  */
 #line 309 "parser.y"
                         {
-        SynataxAnalyseLval((yyval.lval),(yyvsp[-1].current_symbol));
+        SynataxAnalyseLval((yyval.lval),(yyvsp[-1].current_symbol), (yyvsp[0].var_dimension));
     }
 #line 1796 "parser.cpp"
     break;

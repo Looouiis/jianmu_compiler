@@ -183,6 +183,7 @@ struct lval_syntax : expr_syntax
 {
     std::string name;
     vartype restype;
+    ptr<var_dimension_syntax> dimension;
     virtual void accept(syntax_tree_visitor &visitor) override final;
     virtual void print() override final;
 };

@@ -137,7 +137,9 @@ void lval_syntax::accept(syntax_tree_visitor &visitor)
 void lval_syntax::print()
 {
     ast_printer.LevelPrint(std::cout,this->name,true);
-
+    if(this->dimension) {
+        this->dimension->print();
+    }
 }
 
 void literal_syntax::accept(syntax_tree_visitor &visitor)
