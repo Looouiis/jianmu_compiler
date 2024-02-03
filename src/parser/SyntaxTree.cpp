@@ -269,7 +269,9 @@ void ast::func_f_param_syntax::print() {
     ast_printer.cur_level++;
     ast_printer.LevelPrint(std::cout, this->accept_type == vartype::INT ? "int" : "float", true);
     ast_printer.LevelPrint(std::cout, this->name , true);
-    this->dimension->print();
+    if(this->dimension) {
+        this->dimension->print();
+    }
     ast_printer.cur_level--;
 }
 
