@@ -165,13 +165,14 @@ void var_def_stmt_syntax::print()
 
     ast_printer.LevelPrint(std::cout,this->name,true);
     
+    if(this->dimension) {
+        this->dimension->print();
+    }
+    
     if(this->initializer)
     {
         ast_printer.LevelPrint(std::cout,"=",true);
         this->initializer->print();
-    }
-    if(this->dimension) {
-        this->dimension->print();
     }
         
 }
@@ -364,6 +365,21 @@ void init_syntax::print() {
     // ast_printer.cur_level--;
 }
 
+
+void func_call_syntax::accept(syntax_tree_visitor &visitor) {
+    visitor.visit(*this);
+}
+
+void func_call_syntax::print() {
+    ast_printer.LevelPrint(std::cout, "func_call", false);
+    ast_printer.cur_level++;
+    ast_printer.LevelPrint(std::cout, this->func_name, true);
+    for(auto a : this->params) {
+        a->print();
+    }
+    ast_printer.cur_level--;
+}
+
 void ast::var_decl_stmt_syntax::accept(syntax_tree_visitor &visitor)
 {
     visitor.visit(*this);
@@ -377,9 +393,13 @@ void ast::var_decl_stmt_syntax::print()
 
     auto type = this->var_def_list.back()->restype;
 
+    if(var_def_list.back()->is_const) {
+        ast_printer.LevelPrint(std::cout,"const",true);
+    }
+
     ast_printer.LevelPrint(std::cout,typeMapping[int(type)],true);
     for(int i = 0; i < this->var_def_list.size(); ++i){
-        
+
         var_def_list[i]->print();
 
         if(i != this->var_def_list.size() - 1){

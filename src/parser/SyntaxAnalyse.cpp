@@ -130,7 +130,7 @@ void SynataxAnalyseVarType(vartype &self, char* type) {
     self = (!strcmp(type, "int") ? vartype::INT : vartype::FLOAT);
 }
 
-void SynataxAnalyseVarDecl(ast::stmt_syntax *&self,vartype var_type, ast::var_def_stmt_syntax *var_def, ast::var_decl_stmt_syntax *var_def_group)
+void SynataxAnalyseVarDecl(ast::stmt_syntax *&self,vartype var_type, ast::var_def_stmt_syntax *var_def, ast::var_decl_stmt_syntax *var_def_group, bool is_const)
 {
     auto syntax = new ast::var_decl_stmt_syntax;
     if(var_def_group) {
@@ -139,6 +139,7 @@ void SynataxAnalyseVarDecl(ast::stmt_syntax *&self,vartype var_type, ast::var_de
     syntax->var_def_list.insert(syntax->var_def_list.begin(), ptr<ast::var_def_stmt_syntax>(var_def));
     for(auto a : syntax->var_def_list) {
         a->restype = var_type;
+        a->is_const = is_const;
     }
     self = static_cast<ast::stmt_syntax*>(syntax);
 }
@@ -372,5 +373,26 @@ void SynataxAnalyseInitValGroup(ast::init_syntax* &self, ast::init_syntax* new_i
     //     syntax->is_array = true;
     //     // syntax->initializer.push_back(ptr_list<ast::init_syntax>());
     // }
+    self = syntax;
+}
+
+void SyntaxAnalyseFuncCall(ast::expr_syntax* &self, char* func_name, ast::expr_syntax* param, ast::func_call_syntax* param_group) {
+    auto syntax = new ast::func_call_syntax;
+    if(param_group) {
+        syntax->params = param_group->params;
+    }
+    if(param) {
+        syntax->params.insert(syntax->params.begin(), ptr<ast::expr_syntax>(param));
+    }
+    syntax->func_name = func_name;
+    self = syntax;
+}
+
+void SyntaxAnalyseFuncCallGroup(ast::func_call_syntax* &self, ast::expr_syntax* param, ast::func_call_syntax* param_group) {
+    auto syntax = new ast::func_call_syntax;
+    if(param_group) {
+        syntax->params = param_group->params;
+    }
+    syntax->params.insert(syntax->params.begin(), ptr<ast::expr_syntax>(param));
     self = syntax;
 }

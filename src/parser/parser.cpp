@@ -586,16 +586,16 @@ static const yytype_int8 yytranslate[] =
 /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_int16 yyrline[] =
 {
-       0,   108,   108,   109,   110,   111,   113,   114,   115,   119,
-     124,   127,   131,   134,   138,   141,   151,   153,   154,   156,
-     161,   163,   166,   171,   176,   179,   182,   185,   189,   192,
-     196,   211,   214,   219,   223,   224,   228,   231,   235,   239,
-     242,   246,   249,   252,   255,   259,   262,   265,   269,   272,
-     276,   280,   283,   287,   289,   290,   291,   293,   294,   296,
-     299,   303,   307,   308,   310,   313,   316,   320,   326,   329,
-     332,   335,   339,   345,   349,   352,   356,   359,   363,   366,
-     369,   373,   376,   379,   382,   385,   392,   395,   398,   399,
-     401,   402,   404,   407,   410
+       0,   112,   112,   113,   114,   115,   117,   118,   119,   123,
+     128,   131,   135,   138,   142,   145,   155,   157,   158,   160,
+     165,   167,   170,   175,   180,   183,   186,   189,   193,   196,
+     200,   215,   218,   223,   227,   228,   232,   235,   239,   243,
+     246,   250,   253,   256,   259,   263,   266,   269,   273,   276,
+     280,   284,   287,   291,   295,   298,   301,   305,   308,   312,
+     315,   319,   323,   324,   326,   329,   332,   336,   342,   345,
+     348,   351,   355,   361,   365,   368,   372,   375,   379,   382,
+     385,   389,   392,   395,   398,   401,   408,   411,   414,   417,
+     421,   424,   428,   431,   434
 };
 #endif
 
@@ -1286,43 +1286,43 @@ yyreduce:
   switch (yyn)
     {
   case 2: /* CompUnit: CompUnit FuncDef  */
-#line 108 "parser.y"
+#line 112 "parser.y"
                       { SyntaxAnalyseCompUnit((yyval.compunit),(yyvsp[-1].compunit),(yyvsp[0].func_def));}
 #line 1292 "parser.cpp"
     break;
 
   case 3: /* CompUnit: CompUnit Decl  */
-#line 109 "parser.y"
+#line 113 "parser.y"
                    {SyntaxAnalyseCompUnit((yyval.compunit), (yyvsp[-1].compunit), (yyvsp[0].stmt));}
 #line 1298 "parser.cpp"
     break;
 
   case 4: /* CompUnit: FuncDef  */
-#line 110 "parser.y"
+#line 114 "parser.y"
              { SyntaxAnalyseCompUnit((yyval.compunit),nullptr,(yyvsp[0].func_def)); }
 #line 1304 "parser.cpp"
     break;
 
   case 5: /* CompUnit: Decl  */
-#line 111 "parser.y"
+#line 115 "parser.y"
           {SyntaxAnalyseCompUnit((yyval.compunit), nullptr, (yyvsp[0].stmt));}
 #line 1310 "parser.cpp"
     break;
 
   case 6: /* FuncDef: BType Ident LPAREN RPAREN Block  */
-#line 113 "parser.y"
+#line 117 "parser.y"
                                              { SyntaxAnalyseFuncDef((yyval.func_def),(yyvsp[-4].var_type),(yyvsp[-3].current_symbol),(yyvsp[0].block));}
 #line 1316 "parser.cpp"
     break;
 
   case 7: /* FuncDef: VOID Ident LPAREN RPAREN Block  */
-#line 114 "parser.y"
+#line 118 "parser.y"
                                      {SyntaxAnalyseFuncDef((yyval.func_def), vartype::VOID, (yyvsp[-3].current_symbol), (yyvsp[0].block));}
 #line 1322 "parser.cpp"
     break;
 
   case 8: /* FuncDef: BType Ident LPAREN FuncFParam FuncFParamsGroup RPAREN Block  */
-#line 115 "parser.y"
+#line 119 "parser.y"
                                                                   {
         SyntaxAnalyseFuncDef((yyval.func_def), (yyvsp[-6].var_type), (yyvsp[-5].current_symbol), (yyvsp[0].block));
         SyntaxAnalyseFuncFDecl((yyval.func_def), (yyvsp[-3].func_f_param), (yyvsp[-2].func_def));
@@ -1331,7 +1331,7 @@ yyreduce:
     break;
 
   case 9: /* FuncDef: VOID Ident LPAREN FuncFParam FuncFParamsGroup RPAREN Block  */
-#line 119 "parser.y"
+#line 123 "parser.y"
                                                                  {
         SyntaxAnalyseFuncDef((yyval.func_def), vartype::VOID, (yyvsp[-5].current_symbol), (yyvsp[0].block));
         SyntaxAnalyseFuncFDecl((yyval.func_def), (yyvsp[-3].func_f_param), (yyvsp[-2].func_def));
@@ -1340,7 +1340,7 @@ yyreduce:
     break;
 
   case 10: /* FuncFParam: BType Ident  */
-#line 124 "parser.y"
+#line 128 "parser.y"
                             {
         SyntaxAnalyseFuncFDef((yyval.func_f_param), (yyvsp[-1].var_type), (yyvsp[0].current_symbol), nullptr);
     }
@@ -1348,7 +1348,7 @@ yyreduce:
     break;
 
   case 11: /* FuncFParam: BType Ident LBRACKET RBRACKET ExpGroup  */
-#line 127 "parser.y"
+#line 131 "parser.y"
                                              {
         SyntaxAnalyseFuncFDef((yyval.func_f_param), (yyvsp[-4].var_type), (yyvsp[-3].current_symbol), (yyvsp[0].var_dimension));
     }
@@ -1356,7 +1356,7 @@ yyreduce:
     break;
 
   case 12: /* ExpGroup: LBRACKET Exp RBRACKET ExpGroup  */
-#line 131 "parser.y"
+#line 135 "parser.y"
                                              {
         SyntaxAnalyseVarDimension((yyval.var_dimension), (yyvsp[-2].expr), (yyvsp[0].var_dimension));
     }
@@ -1364,7 +1364,7 @@ yyreduce:
     break;
 
   case 13: /* ExpGroup: %empty  */
-#line 134 "parser.y"
+#line 138 "parser.y"
              {
         (yyval.var_dimension) = nullptr;
     }
@@ -1372,7 +1372,7 @@ yyreduce:
     break;
 
   case 14: /* FuncFParamsGroup: COMMA FuncFParam FuncFParamsGroup  */
-#line 138 "parser.y"
+#line 142 "parser.y"
                                                         {
         SyntaxAnalyseFuncFDeclGroup((yyval.func_def), (yyvsp[-1].func_f_param), (yyvsp[0].func_def));
     }
@@ -1380,7 +1380,7 @@ yyreduce:
     break;
 
   case 15: /* FuncFParamsGroup: %empty  */
-#line 141 "parser.y"
+#line 145 "parser.y"
              {
         (yyval.func_def) = nullptr;
     }
@@ -1388,25 +1388,25 @@ yyreduce:
     break;
 
   case 16: /* Block: LBRACE BlockItems RBRACE  */
-#line 151 "parser.y"
+#line 155 "parser.y"
                                     { SynataxAnalyseBlock((yyval.block),(yyvsp[-1].block));}
 #line 1394 "parser.cpp"
     break;
 
   case 17: /* BlockItems: BlockItems Stmt  */
-#line 153 "parser.y"
+#line 157 "parser.y"
                                 { SynataxAnalyseBlockItems((yyval.block),(yyvsp[-1].block),(yyvsp[0].stmt));}
 #line 1400 "parser.cpp"
     break;
 
   case 18: /* BlockItems: %empty  */
-#line 154 "parser.y"
+#line 158 "parser.y"
              { SynataxAnalyseBlockItems((yyval.block),nullptr,nullptr);}
 #line 1406 "parser.cpp"
     break;
 
   case 19: /* BlockItems: BlockItems Decl  */
-#line 156 "parser.y"
+#line 160 "parser.y"
                      {
         SynataxAnalyseBlockItems((yyval.block),(yyvsp[-1].block),(yyvsp[0].stmt));
     }
@@ -1414,13 +1414,13 @@ yyreduce:
     break;
 
   case 20: /* Stmt: RETURN Exp SEMICOLON  */
-#line 161 "parser.y"
+#line 165 "parser.y"
                                { SynataxAnalyseStmtReturn((yyval.stmt),(yyvsp[-1].expr));}
 #line 1420 "parser.cpp"
     break;
 
   case 21: /* Stmt: Block  */
-#line 163 "parser.y"
+#line 167 "parser.y"
            {
         SynataxAnalyseStmtBlock((yyval.stmt),(yyvsp[0].block));
     }
@@ -1428,7 +1428,7 @@ yyreduce:
     break;
 
   case 22: /* Stmt: RETURN SEMICOLON  */
-#line 166 "parser.y"
+#line 170 "parser.y"
                      {
         SynataxAnalyseStmtReturn((yyval.stmt),nullptr);
     }
@@ -1436,7 +1436,7 @@ yyreduce:
     break;
 
   case 23: /* Stmt: Lval ASSIGN Exp SEMICOLON  */
-#line 171 "parser.y"
+#line 175 "parser.y"
                                {
         SynataxAnalyseStmtAssign((yyval.stmt),(yyvsp[-3].lval),(yyvsp[-1].expr));
     }
@@ -1444,7 +1444,7 @@ yyreduce:
     break;
 
   case 24: /* Stmt: IF LPAREN Cond RPAREN Stmt  */
-#line 176 "parser.y"
+#line 180 "parser.y"
                                  {
         SynataxAnalyseStmtIf((yyval.stmt),(yyvsp[-2].expr),(yyvsp[0].stmt),nullptr);
     }
@@ -1452,7 +1452,7 @@ yyreduce:
     break;
 
   case 25: /* Stmt: IF LPAREN Cond RPAREN Stmt ELSE Stmt  */
-#line 179 "parser.y"
+#line 183 "parser.y"
                                           {
         SynataxAnalyseStmtIf((yyval.stmt),(yyvsp[-4].expr),(yyvsp[-2].stmt),(yyvsp[0].stmt));
     }
@@ -1460,7 +1460,7 @@ yyreduce:
     break;
 
   case 26: /* Stmt: Exp SEMICOLON  */
-#line 182 "parser.y"
+#line 186 "parser.y"
                     {
         SynataxAnalyseStmtExp((yyval.stmt), (yyvsp[-1].expr));
     }
@@ -1468,7 +1468,7 @@ yyreduce:
     break;
 
   case 27: /* Stmt: SEMICOLON  */
-#line 185 "parser.y"
+#line 189 "parser.y"
                {
         // SynataxAnalyseStmtEmpty($$);
         (yyval.stmt) = new ast::empty_stmt_syntax;
@@ -1477,7 +1477,7 @@ yyreduce:
     break;
 
   case 28: /* Stmt: WHILE LPAREN Cond RPAREN Stmt  */
-#line 189 "parser.y"
+#line 193 "parser.y"
                                     {
         SynataxAnalyseStmtWhile((yyval.stmt), (yyvsp[-2].expr), (yyvsp[0].stmt));
     }
@@ -1485,7 +1485,7 @@ yyreduce:
     break;
 
   case 29: /* Stmt: BREAK SEMICOLON  */
-#line 192 "parser.y"
+#line 196 "parser.y"
                       {
         // SynataxAnalyseStmtBoC(&&, $1);
         (yyval.stmt) = new ast::break_stmt_syntax;
@@ -1494,7 +1494,7 @@ yyreduce:
     break;
 
   case 30: /* Stmt: CONTINUE SEMICOLON  */
-#line 196 "parser.y"
+#line 200 "parser.y"
                          {
         // SynataxAnalyseStmtBoC(&&, $1);
         (yyval.stmt) = new ast::continue_stmt_syntax;
@@ -1503,7 +1503,7 @@ yyreduce:
     break;
 
   case 31: /* PrimaryExp: Number  */
-#line 211 "parser.y"
+#line 215 "parser.y"
                        {
         (yyval.expr) = (yyvsp[0].expr);
     }
@@ -1511,7 +1511,7 @@ yyreduce:
     break;
 
   case 32: /* PrimaryExp: Lval  */
-#line 214 "parser.y"
+#line 218 "parser.y"
            {
         (yyval.expr) = (yyvsp[0].lval);
     }
@@ -1519,7 +1519,7 @@ yyreduce:
     break;
 
   case 33: /* PrimaryExp: LPAREN Exp RPAREN  */
-#line 219 "parser.y"
+#line 223 "parser.y"
                        {
         (yyval.expr)=(yyvsp[-1].expr);
     }
@@ -1527,19 +1527,19 @@ yyreduce:
     break;
 
   case 34: /* Number: IntConst  */
-#line 223 "parser.y"
+#line 227 "parser.y"
                      {SynataxAnalysePrimaryExpIntConst((yyval.expr),(yyvsp[0].current_symbol));}
 #line 1533 "parser.cpp"
     break;
 
   case 35: /* Number: FloatConst  */
-#line 224 "parser.y"
+#line 228 "parser.y"
                  {SynataxAnalysePrimaryExpFloatConst((yyval.expr),(yyvsp[0].current_symbol));}
 #line 1539 "parser.cpp"
     break;
 
   case 36: /* Decl: VarDecl  */
-#line 228 "parser.y"
+#line 232 "parser.y"
                  {
         (yyval.stmt)=(yyvsp[0].stmt);
     }
@@ -1547,7 +1547,7 @@ yyreduce:
     break;
 
   case 37: /* Decl: ConstDecl  */
-#line 231 "parser.y"
+#line 235 "parser.y"
                 {
         (yyval.stmt) = (yyvsp[0].stmt);
     }
@@ -1555,15 +1555,15 @@ yyreduce:
     break;
 
   case 38: /* VarDecl: BType VarDef VarDefGroup SEMICOLON  */
-#line 235 "parser.y"
+#line 239 "parser.y"
                                                {
-        SynataxAnalyseVarDecl((yyval.stmt), (yyvsp[-3].var_type), (yyvsp[-2].var_def_stmt), (yyvsp[-1].var_decl_stmt));
+        SynataxAnalyseVarDecl((yyval.stmt), (yyvsp[-3].var_type), (yyvsp[-2].var_def_stmt), (yyvsp[-1].var_decl_stmt), true);
     }
 #line 1563 "parser.cpp"
     break;
 
   case 39: /* VarDefGroup: COMMA VarDef VarDefGroup  */
-#line 239 "parser.y"
+#line 243 "parser.y"
                                           {
         SynataxAnalyseVarDefGroup((yyval.var_decl_stmt),(yyvsp[-1].var_def_stmt),(yyvsp[0].var_decl_stmt));
     }
@@ -1571,7 +1571,7 @@ yyreduce:
     break;
 
   case 40: /* VarDefGroup: %empty  */
-#line 242 "parser.y"
+#line 246 "parser.y"
              {
         (yyval.var_decl_stmt)=nullptr;
     }
@@ -1579,7 +1579,7 @@ yyreduce:
     break;
 
   case 41: /* VarDef: Ident  */
-#line 246 "parser.y"
+#line 250 "parser.y"
                    {
         SynataxAnalyseVarDef((yyval.var_def_stmt),(yyvsp[0].current_symbol), nullptr,nullptr);
     }
@@ -1587,7 +1587,7 @@ yyreduce:
     break;
 
   case 42: /* VarDef: Ident ASSIGN InitVal  */
-#line 249 "parser.y"
+#line 253 "parser.y"
                           {
         SynataxAnalyseVarDef((yyval.var_def_stmt),(yyvsp[-2].current_symbol), nullptr,(yyvsp[0].init));
     }
@@ -1595,7 +1595,7 @@ yyreduce:
     break;
 
   case 43: /* VarDef: Ident ConstExpGroup  */
-#line 252 "parser.y"
+#line 256 "parser.y"
                           {
         SynataxAnalyseVarDef((yyval.var_def_stmt),(yyvsp[-1].current_symbol), (yyvsp[0].var_dimension), nullptr);
     }
@@ -1603,7 +1603,7 @@ yyreduce:
     break;
 
   case 44: /* VarDef: Ident ConstExpGroup ASSIGN InitVal  */
-#line 255 "parser.y"
+#line 259 "parser.y"
                                          {
         SynataxAnalyseVarDef((yyval.var_def_stmt),(yyvsp[-3].current_symbol), (yyvsp[-2].var_dimension), (yyvsp[0].init));
     }
@@ -1611,7 +1611,7 @@ yyreduce:
     break;
 
   case 45: /* InitVal: Exp  */
-#line 259 "parser.y"
+#line 263 "parser.y"
                 {
         SynataxAnalyseInitVal((yyval.init), (yyvsp[0].expr), nullptr, nullptr);
     }
@@ -1619,7 +1619,7 @@ yyreduce:
     break;
 
   case 46: /* InitVal: LBRACE InitVal InitValGroup RBRACE  */
-#line 262 "parser.y"
+#line 266 "parser.y"
                                          {
         SynataxAnalyseInitVal((yyval.init), nullptr, (yyvsp[-2].init), (yyvsp[-1].init));
     }
@@ -1627,7 +1627,7 @@ yyreduce:
     break;
 
   case 47: /* InitVal: LBRACE RBRACE  */
-#line 265 "parser.y"
+#line 269 "parser.y"
                     {
         SynataxAnalyseInitVal((yyval.init), nullptr, nullptr, nullptr);
     }
@@ -1635,7 +1635,7 @@ yyreduce:
     break;
 
   case 48: /* InitValGroup: COMMA InitVal InitValGroup  */
-#line 269 "parser.y"
+#line 273 "parser.y"
                                              {
         SynataxAnalyseInitValGroup((yyval.init), (yyvsp[-1].init), (yyvsp[0].init));
     }
@@ -1643,7 +1643,7 @@ yyreduce:
     break;
 
   case 49: /* InitValGroup: %empty  */
-#line 272 "parser.y"
+#line 276 "parser.y"
              {
         (yyval.init) = nullptr;
     }
@@ -1651,15 +1651,15 @@ yyreduce:
     break;
 
   case 50: /* ConstDecl: CONST BType ConstDef ConstDefGroup SEMICOLON  */
-#line 276 "parser.y"
+#line 280 "parser.y"
                                                             {
-        SynataxAnalyseVarDecl((yyval.stmt), (yyvsp[-3].var_type), (yyvsp[-2].var_def_stmt), (yyvsp[-1].var_decl_stmt));
+        SynataxAnalyseVarDecl((yyval.stmt), (yyvsp[-3].var_type), (yyvsp[-2].var_def_stmt), (yyvsp[-1].var_decl_stmt), true);
     }
 #line 1659 "parser.cpp"
     break;
 
   case 51: /* ConstDefGroup: COMMA ConstDef ConstDefGroup  */
-#line 280 "parser.y"
+#line 284 "parser.y"
                                                 {
         SynataxAnalyseVarDefGroup((yyval.var_decl_stmt), (yyvsp[-1].var_def_stmt), (yyvsp[0].var_decl_stmt));
     }
@@ -1667,7 +1667,7 @@ yyreduce:
     break;
 
   case 52: /* ConstDefGroup: %empty  */
-#line 283 "parser.y"
+#line 287 "parser.y"
              {
         (yyval.var_decl_stmt) = nullptr;
     }
@@ -1675,319 +1675,339 @@ yyreduce:
     break;
 
   case 53: /* ConstDef: Ident ConstExpGroup ASSIGN ConstInitVal  */
-#line 287 "parser.y"
-                                                      {}
-#line 1681 "parser.cpp"
+#line 291 "parser.y"
+                                                      {
+        SynataxAnalyseVarDef((yyval.var_def_stmt), (yyvsp[-3].current_symbol), (yyvsp[-2].var_dimension), (yyvsp[0].init));
+    }
+#line 1683 "parser.cpp"
     break;
 
   case 54: /* ConstInitVal: ConstExp  */
-#line 289 "parser.y"
-                           {}
-#line 1687 "parser.cpp"
+#line 295 "parser.y"
+                           {
+        SynataxAnalyseInitVal((yyval.init), (yyvsp[0].expr), nullptr, nullptr);
+    }
+#line 1691 "parser.cpp"
     break;
 
   case 55: /* ConstInitVal: LBRACE ConstInitVal ConstInitValGroup RBRACE  */
-#line 290 "parser.y"
-                                                   {}
-#line 1693 "parser.cpp"
-    break;
-
-  case 56: /* ConstInitVal: LBRACE RBRACE  */
-#line 291 "parser.y"
-                    {}
+#line 298 "parser.y"
+                                                   {
+        SynataxAnalyseInitVal((yyval.init), nullptr, (yyvsp[-2].init), (yyvsp[-1].init));
+    }
 #line 1699 "parser.cpp"
     break;
 
+  case 56: /* ConstInitVal: LBRACE RBRACE  */
+#line 301 "parser.y"
+                    {
+        SynataxAnalyseInitVal((yyval.init), nullptr, nullptr, nullptr);
+    }
+#line 1707 "parser.cpp"
+    break;
+
   case 57: /* ConstInitValGroup: COMMA ConstInitVal ConstInitValGroup  */
-#line 293 "parser.y"
-                                                            {}
-#line 1705 "parser.cpp"
+#line 305 "parser.y"
+                                                            {
+        SynataxAnalyseInitValGroup((yyval.init), (yyvsp[-1].init), (yyvsp[0].init));
+    }
+#line 1715 "parser.cpp"
     break;
 
   case 58: /* ConstInitValGroup: %empty  */
-#line 294 "parser.y"
-             {}
-#line 1711 "parser.cpp"
+#line 308 "parser.y"
+             {
+        (yyval.init) = nullptr;
+    }
+#line 1723 "parser.cpp"
     break;
 
   case 59: /* ConstExpGroup: LBRACKET ConstExp RBRACKET ConstExpGroup  */
-#line 296 "parser.y"
+#line 312 "parser.y"
                                                             {
         SyntaxAnalyseVarDimension((yyval.var_dimension), (yyvsp[-2].expr), (yyvsp[0].var_dimension));
     }
-#line 1719 "parser.cpp"
+#line 1731 "parser.cpp"
     break;
 
   case 60: /* ConstExpGroup: %empty  */
-#line 299 "parser.y"
+#line 315 "parser.y"
              {
         (yyval.var_dimension) = nullptr;
     }
-#line 1727 "parser.cpp"
+#line 1739 "parser.cpp"
     break;
 
   case 61: /* ConstExp: AddExp  */
-#line 303 "parser.y"
+#line 319 "parser.y"
                      {
         (yyval.expr) = (yyvsp[0].expr);
     }
-#line 1735 "parser.cpp"
-    break;
-
-  case 62: /* BType: INT  */
-#line 307 "parser.y"
-               {SynataxAnalyseVarType((yyval.var_type), (yyvsp[0].current_symbol));}
-#line 1741 "parser.cpp"
-    break;
-
-  case 63: /* BType: FLOAT  */
-#line 308 "parser.y"
-            {SynataxAnalyseVarType((yyval.var_type), (yyvsp[0].current_symbol));}
 #line 1747 "parser.cpp"
     break;
 
+  case 62: /* BType: INT  */
+#line 323 "parser.y"
+               {SynataxAnalyseVarType((yyval.var_type), (yyvsp[0].current_symbol));}
+#line 1753 "parser.cpp"
+    break;
+
+  case 63: /* BType: FLOAT  */
+#line 324 "parser.y"
+            {SynataxAnalyseVarType((yyval.var_type), (yyvsp[0].current_symbol));}
+#line 1759 "parser.cpp"
+    break;
+
   case 64: /* AddExp: MulExp  */
-#line 310 "parser.y"
+#line 326 "parser.y"
                   {
         (yyval.expr)=(yyvsp[0].expr);
     }
-#line 1755 "parser.cpp"
+#line 1767 "parser.cpp"
     break;
 
   case 65: /* AddExp: AddExp ADD MulExp  */
-#line 313 "parser.y"
+#line 329 "parser.y"
                        {
         SynataxAnalyseAddExp((yyval.expr),(yyvsp[-2].expr),(yyvsp[-1].current_symbol),(yyvsp[0].expr));
     }
-#line 1763 "parser.cpp"
+#line 1775 "parser.cpp"
     break;
 
   case 66: /* AddExp: AddExp SUB MulExp  */
-#line 316 "parser.y"
+#line 332 "parser.y"
                        {
         SynataxAnalyseAddExp((yyval.expr),(yyvsp[-2].expr),(yyvsp[-1].current_symbol),(yyvsp[0].expr));
     }
-#line 1771 "parser.cpp"
+#line 1783 "parser.cpp"
     break;
 
   case 67: /* Exp: AddExp  */
-#line 320 "parser.y"
+#line 336 "parser.y"
                {
         (yyval.expr)=(yyvsp[0].expr);
     }
-#line 1779 "parser.cpp"
+#line 1791 "parser.cpp"
     break;
 
   case 68: /* MulExp: UnaryExp  */
-#line 326 "parser.y"
+#line 342 "parser.y"
                     {
         (yyval.expr)=(yyvsp[0].expr);
     }
-#line 1787 "parser.cpp"
+#line 1799 "parser.cpp"
     break;
 
   case 69: /* MulExp: MulExp MUL UnaryExp  */
-#line 329 "parser.y"
+#line 345 "parser.y"
                           {
          SynataxAnalyseMulExp((yyval.expr),(yyvsp[-2].expr),(yyvsp[-1].current_symbol),(yyvsp[0].expr));
     }
-#line 1795 "parser.cpp"
+#line 1807 "parser.cpp"
     break;
 
   case 70: /* MulExp: MulExp DIV UnaryExp  */
-#line 332 "parser.y"
+#line 348 "parser.y"
                           {
          SynataxAnalyseMulExp((yyval.expr),(yyvsp[-2].expr),(yyvsp[-1].current_symbol),(yyvsp[0].expr));
     }
-#line 1803 "parser.cpp"
+#line 1815 "parser.cpp"
     break;
 
   case 71: /* MulExp: MulExp MOD UnaryExp  */
-#line 335 "parser.y"
+#line 351 "parser.y"
                           {
         SynataxAnalyseMulExp((yyval.expr), (yyvsp[-2].expr), (yyvsp[-1].current_symbol), (yyvsp[0].expr)); // TODO
     }
-#line 1811 "parser.cpp"
+#line 1823 "parser.cpp"
     break;
 
   case 72: /* Lval: Ident ExpGroup  */
-#line 339 "parser.y"
+#line 355 "parser.y"
                         {
         SynataxAnalyseLval((yyval.lval),(yyvsp[-1].current_symbol), (yyvsp[0].var_dimension));
     }
-#line 1819 "parser.cpp"
+#line 1831 "parser.cpp"
     break;
 
   case 73: /* Cond: LOrExp  */
-#line 345 "parser.y"
+#line 361 "parser.y"
                {
     (yyval.expr)=(yyvsp[0].expr);
    }
-#line 1827 "parser.cpp"
+#line 1839 "parser.cpp"
     break;
 
   case 74: /* LOrExp: LAndExp  */
-#line 349 "parser.y"
+#line 365 "parser.y"
                   {
     (yyval.expr)=(yyvsp[0].expr);
    }
-#line 1835 "parser.cpp"
+#line 1847 "parser.cpp"
     break;
 
   case 75: /* LOrExp: LOrExp OR LAndExp  */
-#line 352 "parser.y"
+#line 368 "parser.y"
                      {
     SynataxAnalyseLOrExp((yyval.expr),(yyvsp[-2].expr),(yyvsp[0].expr));
    }
-#line 1843 "parser.cpp"
+#line 1855 "parser.cpp"
     break;
 
   case 76: /* LAndExp: EqExp  */
-#line 356 "parser.y"
+#line 372 "parser.y"
                   {
         (yyval.expr)=(yyvsp[0].expr);
     }
-#line 1851 "parser.cpp"
+#line 1863 "parser.cpp"
     break;
 
   case 77: /* LAndExp: LAndExp AND EqExp  */
-#line 359 "parser.y"
+#line 375 "parser.y"
                         {
         SynataxAnalyseLAndExp((yyval.expr),(yyvsp[-2].expr),(yyvsp[0].expr));
     }
-#line 1859 "parser.cpp"
+#line 1871 "parser.cpp"
     break;
 
   case 78: /* EqExp: RelExp  */
-#line 363 "parser.y"
+#line 379 "parser.y"
                  {
         (yyval.expr)=(yyvsp[0].expr);
     }
-#line 1867 "parser.cpp"
+#line 1879 "parser.cpp"
     break;
 
   case 79: /* EqExp: EqExp EQUAL RelExp  */
-#line 366 "parser.y"
+#line 382 "parser.y"
                        {
         SynataxAnalyseEqExp((yyval.expr),(yyvsp[-2].expr),(yyvsp[-1].current_symbol),(yyvsp[0].expr));
     }
-#line 1875 "parser.cpp"
+#line 1887 "parser.cpp"
     break;
 
   case 80: /* EqExp: EqExp NOT_EQUAL RelExp  */
-#line 369 "parser.y"
+#line 385 "parser.y"
                            {
         SynataxAnalyseEqExp((yyval.expr),(yyvsp[-2].expr),(yyvsp[-1].current_symbol),(yyvsp[0].expr));
     }
-#line 1883 "parser.cpp"
+#line 1895 "parser.cpp"
     break;
 
   case 81: /* RelExp: AddExp  */
-#line 373 "parser.y"
+#line 389 "parser.y"
                   {
         (yyval.expr)=(yyvsp[0].expr);
     }
-#line 1891 "parser.cpp"
+#line 1903 "parser.cpp"
     break;
 
   case 82: /* RelExp: RelExp LESS AddExp  */
-#line 376 "parser.y"
+#line 392 "parser.y"
                          {
         SynataxAnalyseRelExp((yyval.expr),(yyvsp[-2].expr),(yyvsp[-1].current_symbol),(yyvsp[0].expr));
     }
-#line 1899 "parser.cpp"
+#line 1911 "parser.cpp"
     break;
 
   case 83: /* RelExp: RelExp GREATER AddExp  */
-#line 379 "parser.y"
+#line 395 "parser.y"
                             {
         SynataxAnalyseRelExp((yyval.expr),(yyvsp[-2].expr),(yyvsp[-1].current_symbol),(yyvsp[0].expr));
     }
-#line 1907 "parser.cpp"
+#line 1919 "parser.cpp"
     break;
 
   case 84: /* RelExp: RelExp LESS_EQUAL AddExp  */
-#line 382 "parser.y"
+#line 398 "parser.y"
                                {
         SynataxAnalyseRelExp((yyval.expr),(yyvsp[-2].expr),(yyvsp[-1].current_symbol),(yyvsp[0].expr));
     }
-#line 1915 "parser.cpp"
+#line 1927 "parser.cpp"
     break;
 
   case 85: /* RelExp: RelExp GREATER_EQUAL AddExp  */
-#line 385 "parser.y"
+#line 401 "parser.y"
                                   {
         SynataxAnalyseRelExp((yyval.expr),(yyvsp[-2].expr),(yyvsp[-1].current_symbol),(yyvsp[0].expr));
     }
-#line 1923 "parser.cpp"
+#line 1935 "parser.cpp"
     break;
 
   case 86: /* UnaryExp: PrimaryExp  */
-#line 392 "parser.y"
+#line 408 "parser.y"
                         {
         (yyval.expr)=(yyvsp[0].expr);
     }
-#line 1931 "parser.cpp"
+#line 1943 "parser.cpp"
     break;
 
   case 87: /* UnaryExp: UnaryOp UnaryExp  */
-#line 395 "parser.y"
+#line 411 "parser.y"
                       {
         SynataxAnalyseUnaryExp((yyval.expr),(yyvsp[-1].current_symbol),(yyvsp[0].expr));
     }
-#line 1939 "parser.cpp"
-    break;
-
-  case 88: /* UnaryExp: Ident LPAREN Exp FuncRParamsGroup RPAREN  */
-#line 398 "parser.y"
-                                               {}
-#line 1945 "parser.cpp"
-    break;
-
-  case 89: /* UnaryExp: Ident LPAREN RPAREN  */
-#line 399 "parser.y"
-                          {}
 #line 1951 "parser.cpp"
     break;
 
+  case 88: /* UnaryExp: Ident LPAREN Exp FuncRParamsGroup RPAREN  */
+#line 414 "parser.y"
+                                               {
+        SyntaxAnalyseFuncCall((yyval.expr), (yyvsp[-4].current_symbol), (yyvsp[-2].expr), (yyvsp[-1].func_call));
+    }
+#line 1959 "parser.cpp"
+    break;
+
+  case 89: /* UnaryExp: Ident LPAREN RPAREN  */
+#line 417 "parser.y"
+                          {
+        SyntaxAnalyseFuncCall((yyval.expr), (yyvsp[-2].current_symbol), nullptr, nullptr);
+    }
+#line 1967 "parser.cpp"
+    break;
+
   case 90: /* FuncRParamsGroup: COMMA Exp FuncRParamsGroup  */
-#line 401 "parser.y"
-                                                 {}
-#line 1957 "parser.cpp"
+#line 421 "parser.y"
+                                                 {
+        SyntaxAnalyseFuncCallGroup((yyval.func_call), (yyvsp[-1].expr), (yyvsp[0].func_call));
+    }
+#line 1975 "parser.cpp"
     break;
 
   case 91: /* FuncRParamsGroup: %empty  */
-#line 402 "parser.y"
-             {}
-#line 1963 "parser.cpp"
+#line 424 "parser.y"
+             {
+        (yyval.func_call) = nullptr;
+    }
+#line 1983 "parser.cpp"
     break;
 
   case 92: /* UnaryOp: ADD  */
-#line 404 "parser.y"
+#line 428 "parser.y"
                {
         (yyval.current_symbol)=(yyvsp[0].current_symbol);
     }
-#line 1971 "parser.cpp"
+#line 1991 "parser.cpp"
     break;
 
   case 93: /* UnaryOp: SUB  */
-#line 407 "parser.y"
+#line 431 "parser.y"
          {
         (yyval.current_symbol)=(yyvsp[0].current_symbol);
     }
-#line 1979 "parser.cpp"
+#line 1999 "parser.cpp"
     break;
 
   case 94: /* UnaryOp: NOT  */
-#line 410 "parser.y"
+#line 434 "parser.y"
          {
         (yyval.current_symbol)=(yyvsp[0].current_symbol);
     }
-#line 1987 "parser.cpp"
+#line 2007 "parser.cpp"
     break;
 
 
-#line 1991 "parser.cpp"
+#line 2011 "parser.cpp"
 
       default: break;
     }
@@ -2180,6 +2200,6 @@ yyreturnlab:
   return yyresult;
 }
 
-#line 415 "parser.y"
+#line 439 "parser.y"
 
 

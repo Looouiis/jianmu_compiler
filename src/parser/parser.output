@@ -246,10 +246,10 @@ Nonterminals, with rules where they appear
     ConstDef <var_def_stmt> (59)
         on left: 52
         on right: 49 50
-    ConstInitVal (60)
+    ConstInitVal <init> (60)
         on left: 53 54 55
         on right: 52 54 56
-    ConstInitValGroup (61)
+    ConstInitValGroup <init> (61)
         on left: 56 57
         on right: 54 56
     ConstExpGroup <var_dimension> (62)
@@ -291,7 +291,7 @@ Nonterminals, with rules where they appear
     UnaryExp <expr> (74)
         on left: 85 86 87 88
         on right: 67 68 69 70 86
-    FuncRParamsGroup (75)
+    FuncRParamsGroup <func_call> (75)
         on left: 89 90
         on right: 87 89
     UnaryOp <current_symbol> (76)

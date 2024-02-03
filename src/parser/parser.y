@@ -48,6 +48,7 @@
     struct ast::break_stmt_syntax *break_stmt;
     struct ast::continue_stmt_syntax *continue_stmt;
     struct ast::init_syntax *init;
+    struct ast::func_call_syntax *func_call;
     enum vartype var_type;
 }
 
@@ -79,6 +80,7 @@
 %type <var_def_stmt> VarDef
 %type <var_def_stmt> ConstDef
 %type <init> InitVal
+%type <init> ConstInitVal
 %type <expr> AddExp
 %type <expr> PrimaryExp
 %type <expr> MulExp
@@ -95,6 +97,8 @@
 %type <expr> ConstExp
 %type <var_dimension> ConstExpGroup
 %type <init> InitValGroup
+%type <init> ConstInitValGroup
+%type <func_call> FuncRParamsGroup
 
 
 
@@ -233,7 +237,7 @@
     }
 
     VarDecl: BType VarDef VarDefGroup SEMICOLON{
-        SynataxAnalyseVarDecl($$, $1, $2, $3);
+        SynataxAnalyseVarDecl($$, $1, $2, $3, true);
     }
 
     VarDefGroup:  COMMA VarDef VarDefGroup{
@@ -274,7 +278,7 @@
     }
 
     ConstDecl: CONST BType ConstDef ConstDefGroup SEMICOLON {
-        SynataxAnalyseVarDecl($$, $2, $3, $4);
+        SynataxAnalyseVarDecl($$, $2, $3, $4, true);
     }
 
     ConstDefGroup: COMMA ConstDef ConstDefGroup {
@@ -284,14 +288,26 @@
         $$ = nullptr;
     }
 
-    ConstDef: Ident ConstExpGroup ASSIGN ConstInitVal {}
+    ConstDef: Ident ConstExpGroup ASSIGN ConstInitVal {
+        SynataxAnalyseVarDef($$, $1, $2, $4);
+    }
 
-    ConstInitVal: ConstExp {}
-    | LBRACE ConstInitVal ConstInitValGroup RBRACE {}
-    | LBRACE RBRACE {}
+    ConstInitVal: ConstExp {
+        SynataxAnalyseInitVal($$, $1, nullptr, nullptr);
+    }
+    | LBRACE ConstInitVal ConstInitValGroup RBRACE {
+        SynataxAnalyseInitVal($$, nullptr, $2, $3);
+    }
+    | LBRACE RBRACE {
+        SynataxAnalyseInitVal($$, nullptr, nullptr, nullptr);
+    }
 
-    ConstInitValGroup: COMMA ConstInitVal ConstInitValGroup {}
-    | %empty {}
+    ConstInitValGroup: COMMA ConstInitVal ConstInitValGroup {
+        SynataxAnalyseInitValGroup($$, $2, $3);
+    }
+    | %empty {
+        $$ = nullptr;
+    }
 
     ConstExpGroup: LBRACKET ConstExp RBRACKET ConstExpGroup {
         SyntaxAnalyseVarDimension($$, $2, $4);
@@ -395,11 +411,19 @@
     | UnaryOp UnaryExp{
         SynataxAnalyseUnaryExp($$,$1,$2);
     }
-    | Ident LPAREN Exp FuncRParamsGroup RPAREN {}
-    | Ident LPAREN RPAREN {}
+    | Ident LPAREN Exp FuncRParamsGroup RPAREN {
+        SyntaxAnalyseFuncCall($$, $1, $3, $4);
+    }
+    | Ident LPAREN RPAREN {
+        SyntaxAnalyseFuncCall($$, $1, nullptr, nullptr);
+    }
 
-    FuncRParamsGroup: COMMA Exp FuncRParamsGroup {}
-    | %empty {}
+    FuncRParamsGroup: COMMA Exp FuncRParamsGroup {
+        SyntaxAnalyseFuncCallGroup($$, $2, $3);
+    }
+    | %empty {
+        $$ = nullptr;
+    }
 
     UnaryOp:ADD{
         $$=$1;
