@@ -34,3 +34,6 @@ void SynataxAnalyseRelExp(ast::expr_syntax* &self,ast::expr_syntax *cond1,char *
 //a++难度
 void SynataxAnalyseUnaryExp(ast::expr_syntax* &self,char * op,ast::expr_syntax* exp);
 void SyntaxAnalyseVarDimension(ast::var_dimension_syntax* &self, ast::expr_syntax* new_dimension, ast::var_dimension_syntax* current_dim);
+void SynataxAnalyseStmtExp(ast::stmt_syntax* &self, ast::expr_syntax *exp);
+// void SynataxAnalyseStmtEmpty(ast::stmt_syntax* &self);
+void SynataxAnalyseStmtWhile(ast::stmt_syntax* &self, ast::expr_syntax* cond, ast::stmt_syntax *while_body);

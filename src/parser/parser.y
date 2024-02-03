@@ -42,6 +42,11 @@
     struct ast::var_decl_stmt_syntax *var_decl_stmt;
     struct ast::func_f_param_syntax *func_f_param;
     struct ast::var_dimension_syntax *var_dimension;
+    struct ast::exp_stmt_syntax *exp_stmt;
+    struct ast::while_stmt_syntax *while_stmt;
+    struct ast::empty_stmt_syntax *empty_stmt;
+    struct ast::break_stmt_syntax *break_stmt;
+    struct ast::continue_stmt_syntax *continue_stmt;
     enum vartype var_type;
 }
 
@@ -172,11 +177,24 @@
     | IF LPAREN Cond RPAREN Stmt ELSE Stmt{
         SynataxAnalyseStmtIf($$,$3,$5,$7);
     }
-    | Exp SEMICOLON {}
-    | SEMICOLON{}
-    | WHILE LPAREN Cond RPAREN Stmt {}
-    | BREAK SEMICOLON {}
-    | CONTINUE SEMICOLON {}
+    | Exp SEMICOLON {
+        SynataxAnalyseStmtExp($$, $1);
+    }
+    | SEMICOLON{
+        // SynataxAnalyseStmtEmpty($$);
+        $$ = new ast::empty_stmt_syntax;
+    }
+    | WHILE LPAREN Cond RPAREN Stmt {
+        SynataxAnalyseStmtWhile($$, $3, $5);
+    }
+    | BREAK SEMICOLON {
+        // SynataxAnalyseStmtBoC(&&, $1);
+        $$ = new ast::break_stmt_syntax;
+    }
+    | CONTINUE SEMICOLON {
+        // SynataxAnalyseStmtBoC(&&, $1);
+        $$ = new ast::continue_stmt_syntax;
+    }
  /*--------------------*/
 
 //     PrimaryExp: IntConst { SynataxAnalysePrimaryExpIntConst($$,$1); }

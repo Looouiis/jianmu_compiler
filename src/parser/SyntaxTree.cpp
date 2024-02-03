@@ -250,15 +250,17 @@ void return_stmt_syntax::print()
     ast_printer.cur_level--;
 }
 
-void empty_stmt_syntax::accept(syntax_tree_visitor &visitor)
-{
+void empty_stmt_syntax::accept(syntax_tree_visitor &visitor) {
+    visitor.visit(*this);
 }
 
-void empty_stmt_syntax::print()
-{
+void empty_stmt_syntax::print() {
+    ast_printer.LevelPrint(std::cout, "empty_stmt", true);
+    // ast_printer.cur_level++;
+    // ast_printer.cur_level--;
 }
 
-void ast::func_f_param_syntax::accept(syntax_tree_visitor &visitor){
+void ast::func_f_param_syntax::accept(syntax_tree_visitor &visitor) {
     visitor.visit(*this);
 }
 
@@ -288,6 +290,57 @@ void ast::var_dimension_syntax::print() {
         ast_printer.LevelPrint(std::cout, "]", false);
     }
     ast_printer.cur_level--;
+}
+
+void ast::exp_stmt_syntax::accept(syntax_tree_visitor &visitor){
+    visitor.visit(*this);
+}
+
+void ast::exp_stmt_syntax::print() {
+    ast_printer.LevelPrint(std::cout, "exp_stmt", true);
+    ast_printer.cur_level++;
+    this->exp->print();
+    ast_printer.LevelPrint(std::cout, ";", false);
+    ast_printer.cur_level--;
+}
+
+void ast::while_stmt_syntax::accept(syntax_tree_visitor &visitor){
+    visitor.visit(*this);
+}
+
+void ast::while_stmt_syntax::print() {
+    ast_printer.LevelPrint(std::cout, "while_stmt", true);
+    ast_printer.cur_level++;
+    ast_printer.LevelPrint(std::cout,"(",true);
+    this->cond->print();
+    ast_printer.LevelPrint(std::cout,")",true);
+    ast_printer.LevelPrint(std::cout,"while_block",true);
+    ast_printer.cur_level++;
+    this->while_body->print();
+    ast_printer.cur_level--;
+    ast_printer.cur_level--;
+}
+
+void break_stmt_syntax::accept(syntax_tree_visitor &visitor) {
+    visitor.visit(*this);
+}
+
+void break_stmt_syntax::print() {
+    ast_printer.LevelPrint(std::cout, "break", true);
+    ast_printer.LevelPrint(std::cout, ";", true);
+    // ast_printer.cur_level++;
+    // ast_printer.cur_level--;
+}
+
+void continue_stmt_syntax::accept(syntax_tree_visitor &visitor) {
+    visitor.visit(*this);
+}
+
+void continue_stmt_syntax::print() {
+    ast_printer.LevelPrint(std::cout, "continue", true);
+    ast_printer.LevelPrint(std::cout, ";", true);
+    // ast_printer.cur_level++;
+    // ast_printer.cur_level--;
 }
 
 void ast::var_decl_stmt_syntax::accept(syntax_tree_visitor &visitor)

@@ -10,7 +10,7 @@ void SyntaxAnalyseCompUnit(ast::compunit_syntax * &self, ast::compunit_syntax *c
     if(compunit){
         self = new ast::compunit_syntax;
         for(auto  i : compunit->global_defs){
-            self->global_defs.emplace_back(std::shared_ptr<ast::syntax_tree_node>(i));
+            self->global_defs.emplace_back(ptr<ast::syntax_tree_node>(i));
         }
         self->global_defs.emplace_back(def);
     }else{
@@ -26,7 +26,7 @@ void SyntaxAnalyseFuncDef(ast::func_def_syntax * &self, vartype var_type, char *
     self->name = Ident;
     self->rettype = var_type;
     
-    self->body = std::shared_ptr<ast::block_syntax>(block);
+    self->body = ptr<ast::block_syntax>(block);
 }
 
 void SyntaxAnalyseFuncFDef(ast::func_f_param_syntax *&self, vartype var_type, char* ident, ast::var_dimension_syntax* dimension) {
@@ -34,7 +34,7 @@ void SyntaxAnalyseFuncFDef(ast::func_f_param_syntax *&self, vartype var_type, ch
     syntax->accept_type = var_type;
     syntax->name = ident;
     if(dimension) {
-        syntax->dimension = std::shared_ptr<ast::var_dimension_syntax>(dimension);
+        syntax->dimension = ptr<ast::var_dimension_syntax>(dimension);
         syntax->dimension->has_first_dim = false;
     }
     self = syntax;
@@ -45,7 +45,7 @@ void SyntaxAnalyseFuncFDecl(ast::func_def_syntax* &self, ast::func_f_param_synta
     if(var_def_group) {
         self->params = var_def_group->params;
     }
-    self->params.insert(self->params.begin(), std::shared_ptr<ast::func_f_param_syntax>(var_def));
+    self->params.insert(self->params.begin(), ptr<ast::func_f_param_syntax>(var_def));
     // self = syntax;
 }
 
@@ -54,7 +54,7 @@ void SyntaxAnalyseFuncFDeclGroup(ast::func_def_syntax* &self, ast::func_f_param_
     if(var_def_group) {
         syntax->params = var_def_group->params;
     }
-    syntax->params.insert(syntax->params.begin(), std::shared_ptr<ast::func_f_param_syntax>(var_def));
+    syntax->params.insert(syntax->params.begin(), ptr<ast::func_f_param_syntax>(var_def));
     self = syntax;
 }
 
@@ -92,7 +92,7 @@ void SynataxAnalyseStmtReturn(ast::stmt_syntax *&self, ast::expr_syntax *exp)
 {
     auto syntax = new ast::return_stmt_syntax;
     if(exp)
-        syntax->exp = std::shared_ptr<ast::expr_syntax>(exp);
+        syntax->exp = ptr<ast::expr_syntax>(exp);
     self = static_cast<ast::stmt_syntax*>(syntax);
 }
 
@@ -136,7 +136,7 @@ void SynataxAnalyseVarDecl(ast::stmt_syntax *&self,vartype var_type, ast::var_de
     if(var_def_group) {
         syntax->var_def_list = var_def_group->var_def_list;
     }
-    syntax->var_def_list.insert(syntax->var_def_list.begin(), std::shared_ptr<ast::var_def_stmt_syntax>(var_def));
+    syntax->var_def_list.insert(syntax->var_def_list.begin(), ptr<ast::var_def_stmt_syntax>(var_def));
     for(auto a : syntax->var_def_list) {
         a->restype = var_type;
     }
@@ -149,7 +149,7 @@ void SynataxAnalyseVarDefGroup(ast::var_decl_stmt_syntax *&self, ast::var_def_st
     if(var_def_group) {
         syntax->var_def_list = var_def_group->var_def_list;
     }
-    syntax->var_def_list.insert(syntax->var_def_list.begin(), std::shared_ptr<ast::var_def_stmt_syntax>(var_def));
+    syntax->var_def_list.insert(syntax->var_def_list.begin(), ptr<ast::var_def_stmt_syntax>(var_def));
     self = syntax;
 }
 
@@ -157,10 +157,10 @@ void SynataxAnalyseVarDef(ast::var_def_stmt_syntax *&self, char *ident, ast::var
 {
     auto syntax = new ast::var_def_stmt_syntax;
     if(init) {
-        syntax->initializer = std::shared_ptr<ast::expr_syntax>(init);
+        syntax->initializer = ptr<ast::expr_syntax>(init);
     }
     if(current_dim) {
-        syntax->dimension = std::shared_ptr<ast::var_dimension_syntax>(current_dim);
+        syntax->dimension = ptr<ast::var_dimension_syntax>(current_dim);
     }
     syntax->name = ident;
     // syntax->restype = var_type;
@@ -176,8 +176,8 @@ void SynataxAnalyseAddExp(ast::expr_syntax *&self, ast::expr_syntax *exp1, char 
     else if(*op == '-') {
         syntax->op = binop::minus;
     }
-    syntax->lhs = std::shared_ptr<ast::expr_syntax>(exp1);
-    syntax->rhs = std::shared_ptr<ast::expr_syntax>(exp2);
+    syntax->lhs = ptr<ast::expr_syntax>(exp1);
+    syntax->rhs = ptr<ast::expr_syntax>(exp2);
     syntax->restype = vartype::INT;
     self = static_cast<ast::expr_syntax*>(syntax);
 }
@@ -191,8 +191,8 @@ void SynataxAnalyseMulExp(ast::expr_syntax *&self, ast::expr_syntax *exp1, char 
     else if(*op == '/') {
         syntax->op = binop::divide;
     }
-    syntax->lhs = std::shared_ptr<ast::expr_syntax>(exp1);
-    syntax->rhs = std::shared_ptr<ast::expr_syntax>(exp2);
+    syntax->lhs = ptr<ast::expr_syntax>(exp1);
+    syntax->rhs = ptr<ast::expr_syntax>(exp2);
     syntax->restype = vartype::INT;
     self = static_cast<ast::expr_syntax*>(syntax);
 }
@@ -200,8 +200,8 @@ void SynataxAnalyseMulExp(ast::expr_syntax *&self, ast::expr_syntax *exp1, char 
 void SynataxAnalyseStmtAssign(ast::stmt_syntax *&self, ast::lval_syntax *target, ast::expr_syntax *value)
 {
     auto syntax = new ast::assign_stmt_syntax;
-    syntax->value = std::shared_ptr<ast::expr_syntax>(value);
-    syntax->target = std::shared_ptr<ast::lval_syntax>(target);
+    syntax->value = ptr<ast::expr_syntax>(value);
+    syntax->target = ptr<ast::lval_syntax>(target);
     self = static_cast<ast::stmt_syntax*>(syntax);
 }
 
@@ -210,7 +210,7 @@ void SynataxAnalyseLval(ast::lval_syntax *&self, char *ident, ast::var_dimension
     auto syntax = new ast::lval_syntax;
     syntax->name = ident;
     if(current_dim) {
-        syntax->dimension = std::shared_ptr<ast::var_dimension_syntax>(current_dim);
+        syntax->dimension = ptr<ast::var_dimension_syntax>(current_dim);
         syntax->dimension->has_first_dim = true;
     }
     syntax->restype = vartype::INT;
@@ -220,41 +220,41 @@ void SynataxAnalyseLval(ast::lval_syntax *&self, char *ident, ast::var_dimension
 void SynataxAnalyseStmtIf(ast::stmt_syntax *&self, ast::expr_syntax *cond, ast::stmt_syntax *then_body, ast::stmt_syntax *else_body)
 {
     auto syntax = new ast::if_stmt_syntax;
-    syntax->pred = std::shared_ptr<ast::expr_syntax>(cond);
-    syntax->then_body = std::shared_ptr<ast::stmt_syntax>(then_body);
-    syntax->else_body = std::shared_ptr<ast::stmt_syntax>(else_body);
+    syntax->pred = ptr<ast::expr_syntax>(cond);
+    syntax->then_body = ptr<ast::stmt_syntax>(then_body);
+    syntax->else_body = ptr<ast::stmt_syntax>(else_body);
     self = syntax;
 }
 
 void SynataxAnalyseLOrExp(ast::expr_syntax *&self, ast::expr_syntax *cond1, ast::expr_syntax *cond2)
 {
     auto syntax = new ast::logic_cond_syntax;
-    syntax->lhs = std::shared_ptr<ast::expr_syntax>(cond1);
+    syntax->lhs = ptr<ast::expr_syntax>(cond1);
     syntax->op = relop::op_or;
-    syntax->rhs = std::shared_ptr<ast::expr_syntax>(cond2);
+    syntax->rhs = ptr<ast::expr_syntax>(cond2);
     self = syntax;
 }
 
 void SynataxAnalyseLAndExp(ast::expr_syntax *&self, ast::expr_syntax *cond1, ast::expr_syntax *cond2)
 {
     auto syntax = new ast::logic_cond_syntax;
-    syntax->lhs = std::shared_ptr<ast::expr_syntax>(cond1);
+    syntax->lhs = ptr<ast::expr_syntax>(cond1);
     syntax->op = relop::op_and;
-    syntax->rhs = std::shared_ptr<ast::expr_syntax>(cond2);
+    syntax->rhs = ptr<ast::expr_syntax>(cond2);
     self = syntax;
 }
 
 void SynataxAnalyseEqExp(ast::expr_syntax *&self, ast::expr_syntax *cond1, char *op, ast::expr_syntax *cond2)
 {
     auto syntax = new ast::rel_cond_syntax;
-    syntax->lhs = std::shared_ptr<ast::expr_syntax>(cond1);
+    syntax->lhs = ptr<ast::expr_syntax>(cond1);
     if(op[0] == '=' && op[1] == '=') {
         syntax->op = relop::equal;
     }
     else if(op[0] == '!' && op[1] == '=') {
         syntax->op = relop::non_equal;
     }
-    syntax->rhs = std::shared_ptr<ast::expr_syntax>(cond2);
+    syntax->rhs = ptr<ast::expr_syntax>(cond2);
     self = syntax;
 }
 
@@ -262,7 +262,7 @@ void SynataxAnalyseEqExp(ast::expr_syntax *&self, ast::expr_syntax *cond1, char 
 void SynataxAnalyseRelExp(ast::expr_syntax *&self, ast::expr_syntax *cond1, char *op, ast::expr_syntax *exp)
 {
     auto syntax = new ast::rel_cond_syntax;
-    syntax->lhs = std::shared_ptr<ast::expr_syntax>(cond1);
+    syntax->lhs = ptr<ast::expr_syntax>(cond1);
     if(op[0] == '=' && op[1] == '=') {
         syntax->op = relop::equal;
     }
@@ -285,7 +285,7 @@ void SynataxAnalyseRelExp(ast::expr_syntax *&self, ast::expr_syntax *cond1, char
             syntax->op = relop::less_equal;
         }
     }
-    syntax->rhs = std::shared_ptr<ast::expr_syntax>(exp);
+    syntax->rhs = ptr<ast::expr_syntax>(exp);
     self = syntax;
 }
 
@@ -301,7 +301,7 @@ void SynataxAnalyseUnaryExp(ast::expr_syntax *&self, char *op, ast::expr_syntax 
     else if(*op == '!') {
         syntax->op = unaryop::op_not;
     }
-    syntax->rhs = std::shared_ptr<ast::expr_syntax>(exp);
+    syntax->rhs = ptr<ast::expr_syntax>(exp);
     syntax->restype = vartype::INT;
     self = syntax;
 }
@@ -311,6 +311,24 @@ void SyntaxAnalyseVarDimension(ast::var_dimension_syntax* &self, ast::expr_synta
     if(current_dim) {
         syntax->dimensions = current_dim->dimensions;
     }
-    syntax->dimensions.insert(syntax->dimensions.begin(), std::shared_ptr<ast::expr_syntax>(new_dimension));
+    syntax->dimensions.insert(syntax->dimensions.begin(), ptr<ast::expr_syntax>(new_dimension));
+    self = syntax;
+}
+
+void SynataxAnalyseStmtExp(ast::stmt_syntax* &self, ast::expr_syntax *exp) {
+    auto syntax = new ast::exp_stmt_syntax;
+    syntax->exp = ptr<ast::expr_syntax>(exp);
+    self = syntax;
+}
+
+// void SynataxAnalyseStmtEmpty(ast::stmt_syntax* &self) {
+//     auto syntax = new ast::empty_stmt_syntax;
+//     self = syntax;
+// }
+
+void SynataxAnalyseStmtWhile(ast::stmt_syntax* &self, ast::expr_syntax* cond, ast::stmt_syntax *while_body) {
+    auto syntax = new ast::while_stmt_syntax;
+    syntax->cond = ptr<ast::expr_syntax>(cond);
+    syntax->while_body = ptr<ast::stmt_syntax>(while_body);
     self = syntax;
 }
