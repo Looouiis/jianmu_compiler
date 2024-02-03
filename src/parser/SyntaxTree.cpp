@@ -297,10 +297,10 @@ void ast::exp_stmt_syntax::accept(syntax_tree_visitor &visitor){
 }
 
 void ast::exp_stmt_syntax::print() {
-    ast_printer.LevelPrint(std::cout, "exp_stmt", true);
+    ast_printer.LevelPrint(std::cout, "exp_stmt", false);
     ast_printer.cur_level++;
     this->exp->print();
-    ast_printer.LevelPrint(std::cout, ";", false);
+    ast_printer.LevelPrint(std::cout, ";", true);
     ast_printer.cur_level--;
 }
 
@@ -309,7 +309,7 @@ void ast::while_stmt_syntax::accept(syntax_tree_visitor &visitor){
 }
 
 void ast::while_stmt_syntax::print() {
-    ast_printer.LevelPrint(std::cout, "while_stmt", true);
+    ast_printer.LevelPrint(std::cout, "while_stmt", false);
     ast_printer.cur_level++;
     ast_printer.LevelPrint(std::cout,"(",true);
     this->cond->print();
@@ -340,6 +340,27 @@ void continue_stmt_syntax::print() {
     ast_printer.LevelPrint(std::cout, "continue", true);
     ast_printer.LevelPrint(std::cout, ";", true);
     // ast_printer.cur_level++;
+    // ast_printer.cur_level--;
+}
+
+void init_syntax::accept(syntax_tree_visitor &visitor) {
+    visitor.visit(*this);
+}
+
+void init_syntax::print() {
+    // ast_printer.LevelPrint(std::cout, "init_stmt", false);
+    // ast_printer.cur_level++;
+    if(this->is_array) {
+        ast_printer.LevelPrint(std::cout, "{", true);
+    }
+    ast_printer.cur_level++;
+    for(auto a : this->initializer) {
+        a->print();
+    }
+    ast_printer.cur_level--;
+    if(this->is_array) {
+        ast_printer.LevelPrint(std::cout, "}", true);
+    }
     // ast_printer.cur_level--;
 }
 

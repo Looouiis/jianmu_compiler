@@ -78,6 +78,7 @@ struct while_stmt_syntax;
 struct empty_stmt_syntax;
 struct break_stmt_syntax;
 struct continue_stmt_syntax;
+struct init_syntax;
 //访问者模板
 struct syntax_tree_visitor;//访问者模板
 //语法树本树
@@ -214,7 +215,7 @@ struct var_def_stmt_syntax : stmt_syntax
 {
     vartype restype;
     std::string name;
-    ptr<expr_syntax> initializer;
+    ptr<init_syntax> initializer;
     ptr<var_dimension_syntax> dimension;
     virtual void accept(syntax_tree_visitor &visitor) override final;
     virtual void print() override final;
@@ -309,6 +310,14 @@ struct continue_stmt_syntax : stmt_syntax
     virtual void print() override final;
 };
 
+struct init_syntax : expr_syntax
+{
+    bool is_array = false;
+    ptr_list<expr_syntax> initializer;
+    virtual void accept(syntax_tree_visitor &visitor) override final;
+    virtual void print() override final;
+};
+
 //访问者模板
 class syntax_tree_visitor
 {
@@ -335,6 +344,7 @@ class syntax_tree_visitor
     virtual void visit(empty_stmt_syntax &node) = 0;
     virtual void visit(break_stmt_syntax &node) = 0;
     virtual void visit(continue_stmt_syntax &node) = 0;
+    virtual void visit(init_syntax &node) = 0;
 };
 
 void parse_file(string input_file_path);

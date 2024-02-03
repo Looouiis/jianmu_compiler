@@ -153,11 +153,11 @@ void SynataxAnalyseVarDefGroup(ast::var_decl_stmt_syntax *&self, ast::var_def_st
     self = syntax;
 }
 
-void SynataxAnalyseVarDef(ast::var_def_stmt_syntax *&self, char *ident, ast::var_dimension_syntax* current_dim, ast::expr_syntax *init)
+void SynataxAnalyseVarDef(ast::var_def_stmt_syntax *&self, char *ident, ast::var_dimension_syntax* current_dim, ast::init_syntax *init)
 {
     auto syntax = new ast::var_def_stmt_syntax;
     if(init) {
-        syntax->initializer = ptr<ast::expr_syntax>(init);
+        syntax->initializer = ptr<ast::init_syntax>(init);
     }
     if(current_dim) {
         syntax->dimension = ptr<ast::var_dimension_syntax>(current_dim);
@@ -330,5 +330,47 @@ void SynataxAnalyseStmtWhile(ast::stmt_syntax* &self, ast::expr_syntax* cond, as
     auto syntax = new ast::while_stmt_syntax;
     syntax->cond = ptr<ast::expr_syntax>(cond);
     syntax->while_body = ptr<ast::stmt_syntax>(while_body);
+    self = syntax;
+}
+
+void SynataxAnalyseInitVal(ast::init_syntax* &self, ast::expr_syntax* exp, ast::init_syntax* new_init, ast::init_syntax* init_group) {
+    auto syntax = new ast::init_syntax;
+    if(exp) {
+        syntax->is_array = false;
+        // syntax->initializer.push_back(ptr<ast::expr_syntax>(exp));
+        syntax->initializer.insert(syntax->initializer.begin(), ptr<ast::expr_syntax>(exp));
+    }
+    else if(new_init) {
+        syntax->is_array = true;
+            // if(init_group->is_array) {
+                // syntax->initializer.insert(syntax->initializer.begin(), ptr<ast::init_syntax>(init_group));
+            // }
+            // else {
+                if(init_group) {
+                    syntax->initializer = init_group->initializer;
+                }
+            // }
+        syntax->initializer.insert(syntax->initializer.begin(), ptr<ast::init_syntax>(new_init));
+    }
+    else {
+        syntax->is_array = true;
+        // syntax->initializer.push_back(ptr_list<ast::init_syntax>());
+    }
+    self = syntax;
+}
+
+void SynataxAnalyseInitValGroup(ast::init_syntax* &self, ast::init_syntax* new_init, ast::init_syntax* init_group) {
+    auto syntax = new ast::init_syntax;
+    // if(new_init) {
+        syntax->is_array = false;
+        if(init_group) {
+            syntax->initializer = init_group->initializer;
+        }
+        syntax->initializer.insert(syntax->initializer.begin(), ptr<ast::init_syntax>(new_init));
+    // }
+    // else {
+    //     syntax->is_array = true;
+    //     // syntax->initializer.push_back(ptr_list<ast::init_syntax>());
+    // }
     self = syntax;
 }

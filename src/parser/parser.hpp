@@ -124,9 +124,10 @@ union YYSTYPE
     struct ast::empty_stmt_syntax *empty_stmt;
     struct ast::break_stmt_syntax *break_stmt;
     struct ast::continue_stmt_syntax *continue_stmt;
+    struct ast::init_syntax *init;
     enum vartype var_type;
 
-#line 130 "parser.hpp"
+#line 131 "parser.hpp"
 
 };
 typedef union YYSTYPE YYSTYPE;

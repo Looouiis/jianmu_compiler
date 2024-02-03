@@ -47,6 +47,7 @@
     struct ast::empty_stmt_syntax *empty_stmt;
     struct ast::break_stmt_syntax *break_stmt;
     struct ast::continue_stmt_syntax *continue_stmt;
+    struct ast::init_syntax *init;
     enum vartype var_type;
 }
 
@@ -77,7 +78,7 @@
 %type <func_def> FuncFParamsGroup
 %type <var_def_stmt> VarDef
 %type <var_def_stmt> ConstDef
-%type <expr> InitVal
+%type <init> InitVal
 %type <expr> AddExp
 %type <expr> PrimaryExp
 %type <expr> MulExp
@@ -93,6 +94,7 @@
 %type <var_dimension> ExpGroup
 %type <expr> ConstExp
 %type <var_dimension> ConstExpGroup
+%type <init> InitValGroup
 
 
 
@@ -209,7 +211,9 @@
     PrimaryExp: Number {
         $$ = $1;
     }
-    | Lval {}
+    | Lval {
+        $$ = $1;
+    }
     // | IntConst { SynataxAnalysePrimaryExpIntConst($$,$1); }
     // | FloatConst { SynataxAnalysePrimaryExpFloatConst($$,$1); }
     | LPAREN Exp RPAREN{
@@ -253,13 +257,21 @@
     }
 
     InitVal: Exp{
-        $$=$1;
+        SynataxAnalyseInitVal($$, $1, nullptr, nullptr);
     }
-    | LBRACE InitVal InitValGroup RBRACE {}
-    | LBRACE RBRACE {}
+    | LBRACE InitVal InitValGroup RBRACE {
+        SynataxAnalyseInitVal($$, nullptr, $2, $3);
+    }
+    | LBRACE RBRACE {
+        SynataxAnalyseInitVal($$, nullptr, nullptr, nullptr);
+    }
 
-    InitValGroup: COMMA InitVal InitValGroup {}
-    | %empty {}
+    InitValGroup: COMMA InitVal InitValGroup {
+        SynataxAnalyseInitValGroup($$, $2, $3);
+    }
+    | %empty {
+        $$ = nullptr;
+    }
 
     ConstDecl: CONST BType ConstDef ConstDefGroup SEMICOLON {
         SynataxAnalyseVarDecl($$, $2, $3, $4);
