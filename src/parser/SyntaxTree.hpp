@@ -323,6 +323,8 @@ struct init_syntax : expr_syntax
 {
     bool is_array = false;
     ptr_list<expr_syntax> initializer;
+    ptr<expr_syntax> designed_size;
+    int transed_size;
     virtual void accept(syntax_tree_visitor &visitor) override final;
     virtual void print() override final;
     virtual int calc_res() override final;

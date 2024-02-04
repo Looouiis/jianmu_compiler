@@ -162,6 +162,30 @@ void SynataxAnalyseVarDef(ast::var_def_stmt_syntax *&self, char *ident, ast::var
     }
     if(current_dim) {
         syntax->dimension = ptr<ast::var_dimension_syntax>(current_dim);
+        ptr_list<ast::init_syntax> nxt_arrays;
+        ptr_list<ast::init_syntax> new_arrays;
+        if(init && syntax->dimension->has_first_dim) {
+            nxt_arrays.push_back(syntax->initializer);
+            for(auto a : syntax->dimension->dimensions) {
+                for(auto ini : nxt_arrays) {
+                    ini->designed_size = a;
+                    ini->transed_size = a->calc_res();
+                    for(auto child : ini->initializer) {
+                        auto is_ini = std::dynamic_pointer_cast<ast::init_syntax>(child);
+                        if(is_ini && is_ini->is_array) {
+                            new_arrays.push_back(is_ini);
+                        }
+                    }
+                }
+                nxt_arrays = new_arrays;
+                new_arrays.clear();
+                // syntax->initializer->designed_size = a;
+                // auto is_ini = std::dynamic_pointer_cast<ast::init_syntax>(a);
+                // if(is_ini && is_ini->is_array) {
+                //     nxt_arrays.push_back(is_ini);
+                // }
+            }
+        }
     }
     syntax->name = ident;
     // syntax->restype = var_type;

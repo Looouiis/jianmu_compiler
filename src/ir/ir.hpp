@@ -107,6 +107,7 @@ protected:
     std::string name;
     int size;
     std::shared_ptr<ir_reg> addr;
+    ptr<ast::var_dimension_syntax> dim;
 public:
     ptr<ir_reg> get_addr() { return this->addr;};
     int get_size() {return this->size;}

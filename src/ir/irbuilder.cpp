@@ -171,12 +171,23 @@ void ir::IrBuilder::visit(ast::literal_syntax &node)
 void ir::IrBuilder::visit(ast::var_def_stmt_syntax &node)       // self5
 {
     auto obj = cur_func->new_obj(node.name);
+    if(node.dimension) {
+        obj->dim = node.dimension;
+    }
     this->scope.push_var(node.name, obj);
     cur_block->push_back(std::make_shared<ir::alloc>(obj));
     if(node.initializer != nullptr) {
         node.initializer->accept(*this);
-        auto ini_value = pass_value;
-        cur_block->push_back(std::make_shared<ir::store>(obj->get_addr(), ini_value));
+        if(pass_value) {
+            auto ini_value = pass_value;
+            cur_block->push_back(std::make_shared<ir::store>(obj->get_addr(), ini_value));
+        }
+        else {
+            pass_list.clear();
+            for(auto a : pass_list) {
+
+            }
+        }
         // map[node.name] = ptr<ir::ir_value>(pass_value);
     }
     else {
@@ -284,6 +295,9 @@ void ir::IrBuilder::visit(ast::func_f_param_syntax &node) {
     // else {
         mem = this->cur_func->new_obj(node.name);
     // }
+    if(node.dimension) {
+        mem->dim = node.dimension;
+    }
     this->scope.push_var(node.name, mem);
     this->cur_func->func_args.push_back(mem);
 }
@@ -293,5 +307,17 @@ void ir::IrBuilder::visit(ast::while_stmt_syntax &node) {}
 void ir::IrBuilder::visit(ast::empty_stmt_syntax &node) {}
 void ir::IrBuilder::visit(ast::break_stmt_syntax &node) {}
 void ir::IrBuilder::visit(ast::continue_stmt_syntax &node) {}
-void ir::IrBuilder::visit(ast::init_syntax &node) {}
+void ir::IrBuilder::visit(ast::init_syntax &node) {
+    if(node.is_array) {
+        // pass_list.clear();
+        for(auto a : node.initializer) {
+            a->accept(*this);
+            pass_list.push_back(pass_value);
+        }
+        pass_value = nullptr;
+    }
+    else {
+        node.initializer.front()->accept(*this);
+    }
+}
 void ir::IrBuilder::visit(ast::func_call_syntax &node) {}

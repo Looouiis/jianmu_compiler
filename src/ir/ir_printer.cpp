@@ -98,7 +98,16 @@ void ir::IrPrinter::visit(alloc &node)
     out<<"\t"<<"%";
     out<<"r"<< node.var->addr->id;
     out<<" = "<<"alloca ";
-    out<<base_type[node.var->addr->type]<<", align 4";
+
+    if(node.var->dim && node.var->dim->has_first_dim) {
+        out << "[" << node.var->dim->dimensions.size() << " x ";
+    }
+    out<<base_type[node.var->addr->type];
+    if(node.var->dim && node.var->dim->has_first_dim) {
+        out << "]";
+    }
+
+    out << " , align 4";
     out<<std::endl;
 }
 
