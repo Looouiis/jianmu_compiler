@@ -100,11 +100,19 @@ void ir::IrPrinter::visit(alloc &node)
     out<<" = "<<"alloca ";
 
     if(node.var->dim && node.var->dim->has_first_dim) {
-        out << "[" << node.var->dim->dimensions.size() << " x ";
+        for(auto a : node.var->dim->dimensions) {
+            out << "[" << a->calc_res() << " x ";
+            if(a == node.var->dim->dimensions.back()) {
+                out<<base_type[node.var->addr->type];
+            }
+            // out << "]";
+        }
+        for(auto a : node.var->dim->dimensions) {
+            out << "]";
+        }
     }
-    out<<base_type[node.var->addr->type];
-    if(node.var->dim && node.var->dim->has_first_dim) {
-        out << "]";
+    else {
+        out<<base_type[node.var->addr->type];
     }
 
     out << " , align 4";
@@ -188,6 +196,41 @@ void ir::IrPrinter::visit(logic_ins &node)
     out << "\t" << "%r" << dst->id << " = " << mapping[node.op] << " ";
     out << "i1 ";
     out << "%r" << get_value(node.src1) << ", %r" << get_value(node.src2);
+    out << "\n";
+}
+
+void ir::IrPrinter::visit(get_element_ptr &node)
+{
+    auto dst = std::dynamic_pointer_cast<ir::ir_reg>(node.dst);
+    out << "\t" << "%r" << dst->id << " = getelementptr ";
+    // for(auto a : node.base->dim->dimensions) {
+    for(auto a : node.base->dim->dimensions) {
+        out << "[" << a->calc_res() << " x ";
+        if(a == node.base->dim->dimensions.back()) {
+            out<<base_type[node.base->addr->type];
+        }
+        // out << "]";
+    }
+    for(auto a : node.base->dim->dimensions) {
+        out << "]";
+    }
+    // }
+    out << ", ";
+    // for(auto a : node.base->dim->dimensions) {
+    for(auto a : node.base->dim->dimensions) {
+        out << "[" << a->calc_res() << " x ";
+        if(a == node.base->dim->dimensions.back()) {
+            out<<base_type[node.base->addr->type];
+        }
+        // out << "]";
+    }
+    for(auto a : node.base->dim->dimensions) {
+        out << "]";
+    }
+    // }
+    out << "* ";
+    out << get_value(node.base->get_addr()) << ", i32 ";
+    out << ", i32 " << node.obj_offset;
     out << "\n";
 }
 

@@ -458,3 +458,20 @@ std::vector<ptr<ir::ir_value>> ir::control_ins::use_reg() {
 std::vector<ptr<ir::ir_value>> ir::control_ins::def_reg() {
   return std::vector<ptr<ir::ir_value>>();
 }
+
+void ir::get_element_ptr::accept(ir_visitor &visitor)
+{
+    visitor.visit(*this);
+}
+
+void ir::get_element_ptr::print(std::ostream &out)
+{
+}
+
+std::vector<ptr<ir::ir_value>> ir::get_element_ptr::use_reg() {
+  return {this->base->get_addr()};
+}
+
+std::vector<ptr<ir::ir_value>> ir::get_element_ptr::def_reg() {
+  return {this->dst};
+}

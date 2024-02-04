@@ -177,15 +177,17 @@ void ir::IrBuilder::visit(ast::var_def_stmt_syntax &node)       // self5
     this->scope.push_var(node.name, obj);
     cur_block->push_back(std::make_shared<ir::alloc>(obj));
     if(node.initializer != nullptr) {
+        pass_list.clear();
         node.initializer->accept(*this);
-        if(pass_value) {
+        if(pass_list.empty()) {
             auto ini_value = pass_value;
             cur_block->push_back(std::make_shared<ir::store>(obj->get_addr(), ini_value));
         }
         else {
-            pass_list.clear();
-            for(auto a : pass_list) {
-
+            for(int i = 0; i < pass_list.size(); i++) {
+                auto dst = cur_func->new_reg(obj->get_addr()->type);
+                cur_block->push_back(std::make_shared<ir::get_element_ptr>(obj, dst, i));
+                cur_block->push_back(std::make_shared<ir::store>(dst, pass_list[i]));
             }
         }
         // map[node.name] = ptr<ir::ir_value>(pass_value);
@@ -310,9 +312,23 @@ void ir::IrBuilder::visit(ast::continue_stmt_syntax &node) {}
 void ir::IrBuilder::visit(ast::init_syntax &node) {
     if(node.is_array) {
         // pass_list.clear();
-        for(auto a : node.initializer) {
-            a->accept(*this);
-            pass_list.push_back(pass_value);
+        // for(auto a : node.initializer) {
+        //     a->accept(*this);
+        //     pass_list.push_back(pass_value);
+        // }
+        for(int i = 0; i < node.initializer.size() ; i++) {
+            // if(i < node.transed_size) {
+                node.initializer[i]->accept(*this);
+                if(pass_value != nullptr) {
+                    pass_list.push_back(pass_value);
+                }
+            // }
+            // else {
+                // pass_list.push_back(std::make_shared<ir_constant>(0));
+            // }
+        }
+        for(int i = node.initializer.size(); i < node.transed_size; i++) {
+            pass_list.push_back(std::make_shared<ir_constant>(0));
         }
         pass_value = nullptr;
     }

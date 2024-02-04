@@ -50,6 +50,8 @@ class ret;
 class cmp_ins;
 class control_ins;
 
+class get_element_ptr;
+
 class printable {
     virtual void accept(ir_visitor& visitor) = 0;
     virtual void print(std::ostream & out = std::cout) = 0;
@@ -405,8 +407,22 @@ public:
     virtual void visit(binary_op_ins &node) = 0;
     virtual void visit(cmp_ins &node) = 0;
     virtual void visit(logic_ins &node) = 0;
+    virtual void visit(get_element_ptr &node) = 0;
 };
 
+class get_element_ptr : public ir_instr {
+    friend IrPrinter;
+private:
+    ptr<ir_memobj> base;
+    ptr<ir_reg> dst;
+    int obj_offset;
+public:
+    get_element_ptr(ptr<ir_memobj> base, ptr<ir_reg> dst, int offset) : base(base), dst(dst), obj_offset(offset) {}
+    virtual void accept(ir_visitor& visitor) override final;
+    virtual void print(std::ostream & out = std::cout) override final;
+    virtual std::vector<ptr<ir::ir_value>> use_reg() override final;
+    virtual std::vector<ptr<ir::ir_value>> def_reg() override final;
+};
 
 } // namespace ir
 
