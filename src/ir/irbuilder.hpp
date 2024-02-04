@@ -54,6 +54,16 @@ class IrBuilder : public ast::syntax_tree_visitor {
     virtual void visit(ast::if_stmt_syntax &node) override final;
     virtual void visit(ast::return_stmt_syntax &node) override final;
     virtual void visit(ast::var_decl_stmt_syntax &node) override final;
+    
+    virtual void visit(ast::func_f_param_syntax &node) override final;
+    virtual void visit(ast::var_dimension_syntax &node) override final;
+    virtual void visit(ast::exp_stmt_syntax &node) override final;
+    virtual void visit(ast::while_stmt_syntax &node) override final;
+    virtual void visit(ast::empty_stmt_syntax &node) override final;
+    virtual void visit(ast::break_stmt_syntax &node) override final;
+    virtual void visit(ast::continue_stmt_syntax &node) override final;
+    virtual void visit(ast::init_syntax &node) override final;
+    virtual void visit(ast::func_call_syntax &node) override final;
     ptr<ir::ir_reg> get_value(ptr<ir::ir_reg> addr);
 };
 

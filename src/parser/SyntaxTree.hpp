@@ -141,6 +141,7 @@ struct expr_syntax : virtual syntax_tree_node
 {
     virtual void accept(syntax_tree_visitor &visitor) = 0;
     virtual void print() = 0;
+    virtual int calc_res() = 0;
 };
 
 //条件表达式
@@ -151,6 +152,7 @@ struct logic_cond_syntax: expr_syntax
     ptr<expr_syntax> rhs;
     virtual void accept(syntax_tree_visitor &visitor) override final;
     virtual void print() override final;
+    virtual int calc_res() override final;
 };
 struct rel_cond_syntax: expr_syntax
 {
@@ -159,6 +161,7 @@ struct rel_cond_syntax: expr_syntax
     ptr<expr_syntax> rhs;
     virtual void accept(syntax_tree_visitor &visitor) override final;
     virtual void print() override final;
+    virtual int calc_res() override final;
 };
 
 
@@ -172,6 +175,7 @@ struct binop_expr_syntax : expr_syntax
     int intConst;
     virtual void accept(syntax_tree_visitor &visitor) override final;
     virtual void print() override final;
+    virtual int calc_res() override final;
 };
 
 //单元算术表达式
@@ -183,6 +187,7 @@ struct unaryop_expr_syntax : expr_syntax
     int intConst;
     virtual void accept(syntax_tree_visitor &visitor) override final;
     virtual void print() override final;
+    virtual int calc_res() override final;
 };
 
 //求值表达式，比如算术表达式中的一个变量a
@@ -193,6 +198,7 @@ struct lval_syntax : expr_syntax
     ptr<var_dimension_syntax> dimension;
     virtual void accept(syntax_tree_visitor &visitor) override final;
     virtual void print() override final;
+    virtual int calc_res() override final;
 };
 
 //常数
@@ -203,6 +209,7 @@ struct literal_syntax : expr_syntax
     float floatConst;
     virtual void accept(syntax_tree_visitor &visitor) override final;
     virtual void print() override final;
+    virtual int calc_res() override final;
 };
 
 //比如if,定义，赋值
@@ -318,6 +325,7 @@ struct init_syntax : expr_syntax
     ptr_list<expr_syntax> initializer;
     virtual void accept(syntax_tree_visitor &visitor) override final;
     virtual void print() override final;
+    virtual int calc_res() override final;
 };
 
 struct func_call_syntax : expr_syntax {
@@ -325,6 +333,7 @@ struct func_call_syntax : expr_syntax {
     ptr_list<expr_syntax> params;
     virtual void accept(syntax_tree_visitor &visitor) override final;
     virtual void print() override final;
+    virtual int calc_res() override final;
 };
 
 //访问者模板

@@ -160,7 +160,7 @@ class ir_func : public printable {
 protected:
     std::string name;
     vartype rettype;
-    std::unordered_map<int,ir_func_arg> args;
+    std::unordered_map<int,ir_func_arg> args;                   // TODO: 我没有采用这个args
 public:
     ir_func(std::string name) : name(name) {}
     bool set_retype(vartype rettype);
@@ -208,6 +208,7 @@ private:
     std::unordered_map<std::shared_ptr<ir::ir_instr>,int> instLineNumber;
     std::unordered_map<std::shared_ptr<ir::ir_reg>,int> regAllocateOut;
 
+    std::vector<ptr<ir::ir_memobj>> func_args;
     std::vector<std::shared_ptr<ir::ir_reg>> regSpill;
 public:
     ir_userfunc(std::string name); 

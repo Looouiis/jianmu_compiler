@@ -2,6 +2,7 @@
 #include "lexer.hpp"
 #include "parser.hpp"
 
+#include <cstdlib>
 #include <fstream>
 #include <iostream>
 #include <memory>
@@ -443,4 +444,93 @@ void ast::rel_cond_syntax::print()
     ast_printer.LevelPrint(std::cout,op[int(this->op)],true);
     this->rhs->print();
     ast_printer.cur_level--;
+}
+
+int ast::logic_cond_syntax::calc_res() {
+    auto l = this->lhs->calc_res();
+    auto r = this->rhs->calc_res();
+    switch (this->op) {
+        case relop::equal: return l == r;
+        case relop::non_equal: return l != r;
+        case relop::less: return l < r;
+        case relop::less_equal: return l <= r;
+        case relop::greater: return l > r;
+        case relop::greater_equal: return l >= r;
+        case relop::op_and: return l && r;
+        case relop::op_or: return l || r;
+        break;
+    }
+    return -1;
+}
+
+int ast::rel_cond_syntax::calc_res() {
+    auto l = this->lhs->calc_res();
+    auto r = this->rhs->calc_res();
+    switch (this->op) {
+        case relop::equal: return l == r;
+        case relop::non_equal: return l != r;
+        case relop::less: return l < r;
+        case relop::less_equal: return l <= r;
+        case relop::greater: return l > r;
+        case relop::greater_equal: return l >= r;
+        case relop::op_and: return l && r;
+        case relop::op_or: return l || r;
+        break;
+    }
+    return -1;
+}
+
+int ast::binop_expr_syntax::calc_res() {
+    auto l = this->lhs->calc_res();
+    auto r = this->rhs->calc_res();
+    switch (this->op) {
+        case binop::plus: return l + r;
+        case binop::minus: return l - r;
+        case binop::multiply: return l * r;
+        case binop::divide: return l / r;
+        case binop::modulo: return l % r;
+        break;
+    }
+    return -1;
+}
+
+int ast::unaryop_expr_syntax::calc_res() {
+    auto r = this->rhs->calc_res();
+    switch (this->op) {
+        case unaryop::plus: return +r;
+        case unaryop::minus: return -r;
+        case unaryop::op_not: return !r;
+        break;
+    }
+    return -1;
+}
+
+int ast::lval_syntax::calc_res() {
+    // calc_res只是用来计算常量表达式
+    std::abort();
+    return -1;
+}
+
+int ast::literal_syntax::calc_res() {
+    switch (this->restype) {
+        case vartype::INT: return this->intConst;
+        case vartype::FLOAT: return this->floatConst;
+        case vartype::VOID:
+        case vartype::FLOATADDR:
+        case vartype::INTADDR: std::abort(); // calc_res只是用来计算常量表达式
+        break;
+    }
+    return -1;
+}
+
+int ast::init_syntax::calc_res() {
+    // calc_res只是用来计算常量表达式
+    std::abort();
+    return -1;
+}
+
+int ast::func_call_syntax::calc_res() {
+    // calc_res只是用来计算常量表达式
+    std::abort();
+    return -1;
 }

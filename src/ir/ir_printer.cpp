@@ -36,7 +36,14 @@ void ir::IrPrinter::visit(ir_module& node){
 void ir::IrPrinter::visit(ir_userfunc &node)
 {    
     out << "define" << " " << "dso_local" << " " << mapping[node.rettype]
-    <<  " " << "@" << node.name <<"()"<< " " <<"{" << std::endl;
+    <<  " " << "@" << node.name <<"(";
+    for(auto a : node.func_args) {
+        if(a != node.func_args.front()) {
+            out << ", ";
+        }
+        out << mapping[a->addr->type] << " %r" << a->addr->id;
+    }
+    out << ")"<< " " <<"{" << std::endl;
     for(auto & bb : node.bbs)
         bb->accept(*this);
     out << "}" << std::endl;

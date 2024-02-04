@@ -1,4 +1,7 @@
 #include "ir/irbuilder.hpp"
+#include "ir/ir.hpp"
+#include "parser/SyntaxTree.hpp"
+#include <memory>
 
 void ir::IrBuilder::visit(ast::compunit_syntax &node)
 {
@@ -28,11 +31,13 @@ void ir::IrBuilder::visit(ast::func_def_syntax &node){
     this->found_main = false;
     this->return_bb = nullptr;
     this->return_value.clear();
+
     /*
         first we should register this function in symbol table
     */
     cur_func = compunit->new_func(name);
     this->functions.push_func(name,cur_func);
+
     /*
         next we should deal with entry module
         in this module, we should insert instructions which is responsible for args.  
@@ -43,6 +48,13 @@ void ir::IrBuilder::visit(ast::func_def_syntax &node){
         this->found_main = true;
     }
     return_bb = cur_func->new_block();
+
+
+    this->scope.enter();
+    for(auto a : node.params) {
+        a->accept(*this);
+    }
+    
     /*
         deal with block
     */
@@ -71,7 +83,8 @@ void ir::IrBuilder::visit(ast::func_def_syntax &node){
             /*
                 add a phi inst
             */
-            auto ret_dst = cur_func->new_reg(vartype::INT);
+            // auto ret_dst = cur_func->new_reg(vartype::INT);
+            auto ret_dst = cur_func->new_reg(rettype);
             auto phi_inst = std::make_shared<ir::phi>(ret_dst);
             phi_inst->uses = return_value;
             return_bb->push_back(phi_inst);
@@ -79,6 +92,7 @@ void ir::IrBuilder::visit(ast::func_def_syntax &node){
         }
         break;
     }
+    this->scope.exit();
 }
 
 void ir::IrBuilder::visit(ast::rel_cond_syntax &node)           // self1
@@ -144,7 +158,13 @@ void ir::IrBuilder::visit(ast::lval_syntax &node)                   // self4----
 
 void ir::IrBuilder::visit(ast::literal_syntax &node)
 {
-    auto constant = std::make_shared<ir::ir_constant>(node.intConst);
+    ptr<ir::ir_constant> constant;
+    if(node.restype == vartype::INT) {
+        constant = std::make_shared<ir::ir_constant>(node.intConst);
+    }
+    else {
+        constant = std::make_shared<ir::ir_constant>(node.floatConst);
+    }
     pass_value = constant;
 }
 
@@ -176,12 +196,12 @@ void ir::IrBuilder::visit(ast::assign_stmt_syntax &node)        // self6
 void ir::IrBuilder::visit(ast::block_syntax &node)
 {
     //由于我们的函数没有参数，所以，直接让block来处理scope的事情
-    this->scope.enter();
+    // this->scope.enter();
     for(auto i :node.body)
     {
         i->accept(*this);
     }
-    this->scope.exit();
+    // this->scope.exit();
 }
 
 void ir::IrBuilder::visit(ast::if_stmt_syntax &node)
@@ -250,3 +270,28 @@ void ir::IrBuilder::visit(ast::var_decl_stmt_syntax &node)
         i->accept(*this);
     }
 }
+
+void ir::IrBuilder::visit(ast::func_f_param_syntax &node) {
+    ptr<ir_memobj> mem;
+    // if(!node.dimension) {
+    //     auto reg = this->cur_func->new_reg(node.accept_type);
+    //     // int size = 0;
+    //     // for(auto a : node.dimension->dimensions) {
+    //     //     a->calc_res();
+    //     // }
+    //     mem = std::make_shared<ir_memobj>(node.name, reg, i32_size);
+    // }
+    // else {
+        mem = this->cur_func->new_obj(node.name);
+    // }
+    this->scope.push_var(node.name, mem);
+    this->cur_func->func_args.push_back(mem);
+}
+void ir::IrBuilder::visit(ast::var_dimension_syntax &node) {}
+void ir::IrBuilder::visit(ast::exp_stmt_syntax &node) {}
+void ir::IrBuilder::visit(ast::while_stmt_syntax &node) {}
+void ir::IrBuilder::visit(ast::empty_stmt_syntax &node) {}
+void ir::IrBuilder::visit(ast::break_stmt_syntax &node) {}
+void ir::IrBuilder::visit(ast::continue_stmt_syntax &node) {}
+void ir::IrBuilder::visit(ast::init_syntax &node) {}
+void ir::IrBuilder::visit(ast::func_call_syntax &node) {}
