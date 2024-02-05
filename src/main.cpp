@@ -3,11 +3,23 @@
 #include "ir/ir_printer.hpp"
 #include "loongarch/program_builder.hpp"
 #include <fstream>
+#include <iostream>
 #include <stdlib.h>
 ast::SyntaxTree syntax_tree;
 int main(){
+    int a[3][3][3] = {{1, 2}, {3}};
+    for(int i = 0; i < 3; i++) {
+        for(int j = 0; j < 3; j++) {
+            for(int k = 0; k < 3; k++) {
+                std::cout << a[i][j][k] << " ";
+            }
+    std::cout << std::endl;
+        }
+    std::cout << std::endl;
+    }
+    std::cout << std::endl;
     ast::parse_file(std::cin);
-    syntax_tree.print();
+    // syntax_tree.print();
     std::shared_ptr<ir::IrBuilder> irbuilder = std::make_shared<ir::IrBuilder>();
     syntax_tree.accept(*irbuilder);
     

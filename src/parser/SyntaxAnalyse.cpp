@@ -1,8 +1,11 @@
 #include "SyntaxAnalyse.hpp"
 #include "cstring"
 #include "parser/SyntaxTree.hpp"
+#include <cstdlib>
 #include <cstring>
+#include <iterator>
 #include <memory>
+#include <vector>
 
 extern ast::SyntaxTree syntax_tree;
 void SyntaxAnalyseCompUnit(ast::compunit_syntax * &self, ast::compunit_syntax *compunit, ast::syntax_tree_node *def)
@@ -154,6 +157,101 @@ void SynataxAnalyseVarDefGroup(ast::var_decl_stmt_syntax *&self, ast::var_def_st
     self = syntax;
 }
 
+// ptr<ast::init_syntax> origin;
+// vector<int> pointer = {0};
+// ptr<ast::init_syntax> reorganize_init(ast::var_dimension_syntax* dim, ptr_list<ast::expr_syntax>::iterator it) {
+//     ptr<ast::init_syntax> new_init = std::make_shared<ast::init_syntax>();
+//     int what = (*(dim->dimensions.end() - 1))->calc_res();
+//     if(it != dim->dimensions.end() - 1) {
+//         for(int i = 0; i < (*it)->calc_res(); i++) {
+//             new_init->initializer.push_back(reorganize_init(dim, it + 1));
+//         }
+//         return new_init;
+//     }
+//     for(int i = 0; i < (*it)->calc_res(); ) {
+//         auto current_ini = origin;
+//         for(int j = 0; j < pointer.size(); j++) {
+//             if(j == pointer.size() - 1) {
+                
+//             }
+//             else {
+//                 current_ini = std::dynamic_pointer_cast<ast::init_syntax>(current_ini->initializer[pointer[j]]);
+//                 if(current_ini == nullptr)
+//                     abort();
+//             }
+//         }
+//         int idx = pointer.back();
+//         pointer.pop_back();
+//         if(idx == current_ini->initializer.size()) {
+//             if(pointer.size() == 0 && idx == origin->initializer.size()) {
+//                 auto zero = std::make_shared<ast::literal_syntax>();
+//                 zero->intConst = 0;
+//                 zero->restype = vartype::INT;
+//                 new_init->initializer.push_back(zero);
+//                 pointer.push_back(idx);
+//                 i++;
+//             }
+//             else {
+//                 int nxt = pointer.back();
+//                 pointer.pop_back();
+//                 pointer.push_back(nxt + 1);
+//                 i--;
+//             }
+//             continue;
+//             // return reorganize_init(dim, it);
+//         }
+//         auto current = current_ini->initializer[idx];
+//         auto is_ini = std::dynamic_pointer_cast<ast::init_syntax>(current);
+//         if(is_ini->is_array) {
+//             if(i != 0 && is_ini->initializer.size() > 1) {
+//                 abort();    // 参照cpp的情况
+//             }
+//             auto loop = is_ini->initializer.front();
+//             auto loop_ini = std::dynamic_pointer_cast<ast::init_syntax>(loop);
+//             ptr<ast::init_syntax> last = current_ini;
+//             if(/*loop_ini->is_array && */!(i != 0 && loop_ini->initializer.size() > 1)) {
+//                 pointer.push_back(idx);
+//                 pointer.push_back(0);
+//             }
+//             while(loop_ini->is_array) {
+//                 if(i != 0 && loop_ini->initializer.size() > 1) {
+//                     abort();
+//                 }
+//                 loop = loop_ini->initializer.front();
+//                 last = loop_ini;
+//                 loop_ini = std::dynamic_pointer_cast<ast::init_syntax>(loop);
+//                 pointer.push_back(0);
+//             }
+//             current_ini = last;
+//             idx = pointer.back();
+//             pointer.pop_back();
+//             new_init->initializer.push_back(loop_ini->initializer.front());
+//             i++;
+//         }
+//         else {
+//             new_init->initializer.push_back(is_ini->initializer.front());
+//             i++;
+//             // pointer.push_back(idx + 1);
+//         }
+//         if(idx + 1 == current_ini->initializer.size()) {
+//             for(; i < (*it)->calc_res(); i++) {
+//                 auto zero = std::make_shared<ast::literal_syntax>();
+//                 zero->intConst = 0;
+//                 zero->restype = vartype::INT;
+//                 new_init->initializer.push_back(zero);
+//             }
+
+//             // int nxt = pointer.back();
+//             // pointer.pop_back();
+//             // pointer.push_back(nxt + 1);
+//         }
+//         // else {
+//             pointer.push_back(idx + 1);
+//         // }
+//     }
+//     return new_init;
+// }
+
 void SynataxAnalyseVarDef(ast::var_def_stmt_syntax *&self, char *ident, ast::var_dimension_syntax* current_dim, ast::init_syntax *init)
 {
     auto syntax = new ast::var_def_stmt_syntax;
@@ -161,21 +259,30 @@ void SynataxAnalyseVarDef(ast::var_def_stmt_syntax *&self, char *ident, ast::var
         syntax->initializer = ptr<ast::init_syntax>(init);
     }
     if(current_dim) {
+        // origin = ptr<ast::init_syntax>(init);
+        // reorganize_init(current_dim, current_dim->dimensions.begin())->print();
+
         syntax->dimension = ptr<ast::var_dimension_syntax>(current_dim);
         ptr_list<ast::init_syntax> nxt_arrays;
         ptr_list<ast::init_syntax> new_arrays;
         if(init && syntax->dimension->has_first_dim) {
             nxt_arrays.push_back(syntax->initializer);
-            for(auto a : syntax->dimension->dimensions) {
+            // for(auto a : syntax->dimension->dimensions) {
+            for(int i = 0; i < syntax->dimension->dimensions.size(); i++) {
+                auto a = syntax->dimension->dimensions[i];
                 for(auto ini : nxt_arrays) {
                     ini->designed_size = a;
                     ini->transed_size = a->calc_res();
+                    ini->to_bottom = syntax->dimension->dimensions.size() - i;
                     for(auto child : ini->initializer) {
                         auto is_ini = std::dynamic_pointer_cast<ast::init_syntax>(child);
                         if(is_ini && is_ini->is_array) {
                             new_arrays.push_back(is_ini);
                         }
                     }
+                }
+                if(new_arrays.empty()) {
+                    break;
                 }
                 nxt_arrays = new_arrays;
                 new_arrays.clear();

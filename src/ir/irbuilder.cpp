@@ -171,8 +171,12 @@ void ir::IrBuilder::visit(ast::literal_syntax &node)
 void ir::IrBuilder::visit(ast::var_def_stmt_syntax &node)       // self5
 {
     auto obj = cur_func->new_obj(node.name);
+    int total_cnt = 1;
     if(node.dimension) {
         obj->dim = node.dimension;
+        for(auto dim : node.dimension->dimensions) {
+            total_cnt *= dim->calc_res();
+        }
     }
     this->scope.push_var(node.name, obj);
     cur_block->push_back(std::make_shared<ir::alloc>(obj));
@@ -188,6 +192,12 @@ void ir::IrBuilder::visit(ast::var_def_stmt_syntax &node)       // self5
                 auto dst = cur_func->new_reg(obj->get_addr()->type);
                 cur_block->push_back(std::make_shared<ir::get_element_ptr>(obj, dst, i));
                 cur_block->push_back(std::make_shared<ir::store>(dst, pass_list[i]));
+            }
+            auto zero = std::make_shared<ir::ir_constant>(0);
+            for(int i = pass_list.size(); i < total_cnt; i++) {
+                auto dst = cur_func->new_reg(obj->get_addr()->type);
+                cur_block->push_back(std::make_shared<ir::get_element_ptr>(obj, dst, i));
+                cur_block->push_back(std::make_shared<ir::store>(dst, zero));
             }
         }
         // map[node.name] = ptr<ir::ir_value>(pass_value);
@@ -328,7 +338,17 @@ void ir::IrBuilder::visit(ast::init_syntax &node) {
             // }
         }
         for(int i = node.initializer.size(); i < node.transed_size; i++) {
-            pass_list.push_back(std::make_shared<ir_constant>(0));
+            if(node.to_bottom > 0) {
+                pass_list.push_back(std::make_shared<ir_constant>(0));
+            }
+            else {
+                auto empty_ini = std::make_shared<ast::init_syntax>();
+                empty_ini->is_array = true;
+                empty_ini->transed_size = node.transed_size;
+                empty_ini->designed_size = node.designed_size;
+                empty_ini->to_bottom = node.to_bottom - 1;
+                empty_ini->accept(*this); 
+            }
         }
         pass_value = nullptr;
     }

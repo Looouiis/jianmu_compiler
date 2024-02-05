@@ -552,7 +552,7 @@ int handle_token(int token) {
     yylval.current_symbol = new char[yylval.symbol_size];
     strcpy(yylval.current_symbol,yytext);
     column_end_number += strlen(yytext);//yytext是正则表达式匹配的部分
-    print_msg(std::cout);
+    // print_msg(std::cout);
     return token;
 }
 #line 558 "lexer.cpp"
