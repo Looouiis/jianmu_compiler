@@ -30,7 +30,8 @@ class IrBuilder : public ast::syntax_tree_visitor {
     ptr<ir::ir_userfunc> cur_func;//当前函数的IR对象
     ptr<ir::ir_basicblock> cur_block, return_bb;//当前BB，当前函数的return BB
     ptr<ir::ir_value> pass_value;//用于
-    ptr_list<ir::ir_value> pass_list;
+    // ptr_list<ir::ir_value> pass_list;
+    ptr<ir::ir_memobj> pass_obj;
     std::vector<std::pair<ptr<ir::ir_value>, ptr<ir::ir_basicblock >>> return_value;//可能的返回值和对应的BB
     ptr<ir::ir_memobj> ir_value;
     bool found_main;//是否找到了主函数

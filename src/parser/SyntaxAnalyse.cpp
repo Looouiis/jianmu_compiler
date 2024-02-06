@@ -1,6 +1,7 @@
 #include "SyntaxAnalyse.hpp"
 #include "cstring"
 #include "parser/SyntaxTree.hpp"
+#include <cassert>
 #include <cstdlib>
 #include <cstring>
 #include <iterator>
@@ -252,47 +253,132 @@ void SynataxAnalyseVarDefGroup(ast::var_decl_stmt_syntax *&self, ast::var_def_st
 //     return new_init;
 // }
 
+ptr<ast::init_syntax> reorganize_init(ptr<ast::init_syntax> init, ptr_list<ast::expr_syntax> dim, std::vector<int> current_dim) {
+    auto ret = std::make_shared<ast::init_syntax>();
+    ret->is_array = true;
+    ret->designed_size = dim.front();
+    ret->transed_size = dim.front()->calc_res();
+    ret->current_dim = current_dim;
+
+    auto zero = std::make_shared<ast::literal_syntax>();
+    zero->intConst = 0;
+    zero->restype = vartype::INT;
+
+    int pointer = 0;
+    if(dim.size() > 1) {    // 仍未到最后一个维度
+        for(int i = 0; i < dim.front()->calc_res(); i++) {
+            assert(init->is_array);
+            vector<int> nxt_cur_dim = current_dim;
+            nxt_cur_dim.push_back(i);
+            if(pointer < init->initializer.size()) {
+                auto cur = std::dynamic_pointer_cast<ast::init_syntax>(init->initializer[pointer]);
+                assert(cur);
+                ptr_list<ast::expr_syntax> nxt_dim(dim.begin() + 1, dim.end());
+                if(cur->is_array) {
+                    pointer++;
+                    ret->initializer.push_back(reorganize_init(cur, nxt_dim, nxt_cur_dim));
+                }
+                else {
+                    int nxt_cnt = 1;
+                    auto nxt_ini = std::make_shared<ast::init_syntax>();
+                    nxt_ini->is_array = true;
+                    for(auto it = dim.begin() + 1; it != dim.end(); it++) {
+                        nxt_cnt *= (*it)->calc_res();
+                    }
+                    for(int j = 0; j < nxt_cnt; j++) {
+                        if(pointer < init->initializer.size()) {
+                            auto check = std::dynamic_pointer_cast<ast::init_syntax>(init->initializer[pointer]);
+                            if(!check || check->is_array) {
+                                abort();
+                            }
+                            assert(check);
+                            assert(!check->is_array);
+                            nxt_ini->initializer.push_back(init->initializer[pointer++]);
+                        }
+                        else {
+                            auto zero_ini = std::make_shared<ast::init_syntax>();
+                            zero_ini->is_array = false;
+                            zero_ini->initializer.push_back(zero);
+                            nxt_ini->initializer.push_back(zero_ini);
+                        }
+                    }
+                    ret->initializer.push_back(reorganize_init(nxt_ini, nxt_dim, nxt_cur_dim));
+                }
+            }
+            else {
+                auto nxt_ini = std::make_shared<ast::init_syntax>();
+                nxt_ini->is_array = true;
+                ptr_list<ast::expr_syntax> nxt_dim(dim.begin() + 1, dim.end());
+                ret->initializer.push_back(reorganize_init(nxt_ini, nxt_dim, nxt_cur_dim));
+            }
+        }
+    }
+    else {      // 到达最后一个维度：能插入的只能是exp，而不是init_syntax
+        for(int i = 0; i < dim.front()->calc_res(); i++) {
+            if(pointer < init->initializer.size()) {
+                auto cur = std::dynamic_pointer_cast<ast::init_syntax>(init->initializer[pointer++]);
+                if(cur && !cur->is_array) {
+                    cur->current_dim = current_dim;
+                    cur->current_dim.push_back(i);
+                    ret->initializer.push_back(cur/*->initializer.front()*/);
+                }
+                else {
+                    abort();
+                }
+            }
+            else {
+                auto exp_zero = std::make_shared<ast::init_syntax>();
+                exp_zero->is_array = false;
+                exp_zero->initializer.push_back(zero);
+                exp_zero->current_dim = current_dim;
+                exp_zero->current_dim.push_back(i);
+                ret->initializer.push_back(exp_zero);
+            }
+        }
+    }
+    return ret;
+}
+
 void SynataxAnalyseVarDef(ast::var_def_stmt_syntax *&self, char *ident, ast::var_dimension_syntax* current_dim, ast::init_syntax *init)
 {
     auto syntax = new ast::var_def_stmt_syntax;
     if(init) {
-        syntax->initializer = ptr<ast::init_syntax>(init);
+        auto res = reorganize_init(std::shared_ptr<ast::init_syntax>(init), current_dim->dimensions, {});
+        res->print();
+        syntax->initializer = ptr<ast::init_syntax>(res);
     }
     if(current_dim) {
-        // origin = ptr<ast::init_syntax>(init);
-        // reorganize_init(current_dim, current_dim->dimensions.begin())->print();
-
         syntax->dimension = ptr<ast::var_dimension_syntax>(current_dim);
-        ptr_list<ast::init_syntax> nxt_arrays;
-        ptr_list<ast::init_syntax> new_arrays;
-        if(init && syntax->dimension->has_first_dim) {
-            nxt_arrays.push_back(syntax->initializer);
-            // for(auto a : syntax->dimension->dimensions) {
-            for(int i = 0; i < syntax->dimension->dimensions.size(); i++) {
-                auto a = syntax->dimension->dimensions[i];
-                for(auto ini : nxt_arrays) {
-                    ini->designed_size = a;
-                    ini->transed_size = a->calc_res();
-                    ini->to_bottom = syntax->dimension->dimensions.size() - i;
-                    for(auto child : ini->initializer) {
-                        auto is_ini = std::dynamic_pointer_cast<ast::init_syntax>(child);
-                        if(is_ini && is_ini->is_array) {
-                            new_arrays.push_back(is_ini);
-                        }
-                    }
-                }
-                if(new_arrays.empty()) {
-                    break;
-                }
-                nxt_arrays = new_arrays;
-                new_arrays.clear();
-                // syntax->initializer->designed_size = a;
-                // auto is_ini = std::dynamic_pointer_cast<ast::init_syntax>(a);
-                // if(is_ini && is_ini->is_array) {
-                //     nxt_arrays.push_back(is_ini);
-                // }
-            }
-        }
+        // ptr_list<ast::init_syntax> nxt_arrays;
+        // ptr_list<ast::init_syntax> new_arrays;
+        // if(init && syntax->dimension->has_first_dim) {
+        //     nxt_arrays.push_back(syntax->initializer);
+        //     // for(auto a : syntax->dimension->dimensions) {
+        //     for(int i = 0; i < syntax->dimension->dimensions.size(); i++) {
+        //         auto a = syntax->dimension->dimensions[i];
+        //         for(auto ini : nxt_arrays) {
+        //             ini->designed_size = a;
+        //             ini->transed_size = a->calc_res();
+        //             // ini->to_bottom = syntax->dimension->dimensions.size() - i;
+        //             for(auto child : ini->initializer) {
+        //                 auto is_ini = std::dynamic_pointer_cast<ast::init_syntax>(child);
+        //                 if(is_ini && is_ini->is_array) {
+        //                     new_arrays.push_back(is_ini);
+        //                 }
+        //             }
+        //         }
+        //         if(new_arrays.empty()) {
+        //             break;
+        //         }
+        //         nxt_arrays = new_arrays;
+        //         new_arrays.clear();
+        //         // syntax->initializer->designed_size = a;
+        //         // auto is_ini = std::dynamic_pointer_cast<ast::init_syntax>(a);
+        //         // if(is_ini && is_ini->is_array) {
+        //         //     nxt_arrays.push_back(is_ini);
+        //         // }
+        //     }
+        // }
     }
     syntax->name = ident;
     // syntax->restype = var_type;

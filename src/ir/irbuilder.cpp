@@ -181,25 +181,27 @@ void ir::IrBuilder::visit(ast::var_def_stmt_syntax &node)       // self5
     this->scope.push_var(node.name, obj);
     cur_block->push_back(std::make_shared<ir::alloc>(obj));
     if(node.initializer != nullptr) {
-        pass_list.clear();
+        // pass_list.clear();
+        // node.initializer = obj
+        pass_obj = obj;
         node.initializer->accept(*this);
-        if(pass_list.empty()) {
-            auto ini_value = pass_value;
-            cur_block->push_back(std::make_shared<ir::store>(obj->get_addr(), ini_value));
-        }
-        else {
-            for(int i = 0; i < pass_list.size(); i++) {
-                auto dst = cur_func->new_reg(obj->get_addr()->type);
-                cur_block->push_back(std::make_shared<ir::get_element_ptr>(obj, dst, i));
-                cur_block->push_back(std::make_shared<ir::store>(dst, pass_list[i]));
-            }
-            auto zero = std::make_shared<ir::ir_constant>(0);
-            for(int i = pass_list.size(); i < total_cnt; i++) {
-                auto dst = cur_func->new_reg(obj->get_addr()->type);
-                cur_block->push_back(std::make_shared<ir::get_element_ptr>(obj, dst, i));
-                cur_block->push_back(std::make_shared<ir::store>(dst, zero));
-            }
-        }
+        // if(pass_list.empty()) {
+        //     auto ini_value = pass_value;
+        //     cur_block->push_back(std::make_shared<ir::store>(obj->get_addr(), ini_value));
+        // }
+        // else {
+        //     for(int i = 0; i < pass_list.size(); i++) {
+        //         auto dst = cur_func->new_reg(obj->get_addr()->type);
+        //         cur_block->push_back(std::make_shared<ir::get_element_ptr>(obj, dst, i));
+        //         cur_block->push_back(std::make_shared<ir::store>(dst, pass_list[i]));
+        //     }
+        //     auto zero = std::make_shared<ir::ir_constant>(0);
+        //     for(int i = pass_list.size(); i < total_cnt; i++) {
+        //         auto dst = cur_func->new_reg(obj->get_addr()->type);
+        //         cur_block->push_back(std::make_shared<ir::get_element_ptr>(obj, dst, i));
+        //         cur_block->push_back(std::make_shared<ir::store>(dst, zero));
+        //     }
+        // }
         // map[node.name] = ptr<ir::ir_value>(pass_value);
     }
     else {
@@ -321,39 +323,54 @@ void ir::IrBuilder::visit(ast::break_stmt_syntax &node) {}
 void ir::IrBuilder::visit(ast::continue_stmt_syntax &node) {}
 void ir::IrBuilder::visit(ast::init_syntax &node) {
     if(node.is_array) {
-        // pass_list.clear();
-        // for(auto a : node.initializer) {
-        //     a->accept(*this);
-        //     pass_list.push_back(pass_value);
-        // }
-        for(int i = 0; i < node.initializer.size() ; i++) {
-            // if(i < node.transed_size) {
-                node.initializer[i]->accept(*this);
-                if(pass_value != nullptr) {
-                    pass_list.push_back(pass_value);
-                }
-            // }
-            // else {
-                // pass_list.push_back(std::make_shared<ir_constant>(0));
-            // }
+        for(auto ini : node.initializer) {
+            ini->accept(*this);
         }
-        for(int i = node.initializer.size(); i < node.transed_size; i++) {
-            if(node.to_bottom > 0) {
-                pass_list.push_back(std::make_shared<ir_constant>(0));
-            }
-            else {
-                auto empty_ini = std::make_shared<ast::init_syntax>();
-                empty_ini->is_array = true;
-                empty_ini->transed_size = node.transed_size;
-                empty_ini->designed_size = node.designed_size;
-                empty_ini->to_bottom = node.to_bottom - 1;
-                empty_ini->accept(*this); 
-            }
-        }
-        pass_value = nullptr;
     }
     else {
         node.initializer.front()->accept(*this);
+        auto val = pass_value;
+        auto obj = pass_obj;
+        auto dst = cur_func->new_reg(obj->get_addr()->type);
+        cur_block->push_back(std::make_shared<get_element_ptr>(obj, dst, node.current_dim));
+        cur_block->push_back(std::make_shared<ir::store>(dst, val));
     }
 }
+// void ir::IrBuilder::visit(ast::init_syntax &node) {
+//     if(node.is_array) {
+//         // pass_list.clear();
+//         // for(auto a : node.initializer) {
+//         //     a->accept(*this);
+//         //     pass_list.push_back(pass_value);
+//         // }
+//         for(int i = 0; i < node.initializer.size() ; i++) {
+//             // if(i < node.transed_size) {
+//                 node.initializer[i]->accept(*this);
+//                 if(pass_value != nullptr) {
+//                     pass_list.push_back(pass_value);
+//                 }
+//             // }
+//             // else {
+//                 // pass_list.push_back(std::make_shared<ir_constant>(0));
+//             // }
+//         }
+//         for(int i = node.initializer.size(); i < node.transed_size; i++) {
+//             // if(node.to_bottom > 0) {
+//                 pass_list.push_back(std::make_shared<ir_constant>(0));
+//             // }
+//             // else {
+//                 // auto empty_ini = std::make_shared<ast::init_syntax>();
+//                 // empty_ini->is_array = true;
+//                 // empty_ini->transed_size = node.transed_size;
+//                 // empty_ini->designed_size = node.designed_size;
+//                 // empty_ini->to_bottom = node.to_bottom - 1;
+//                 // empty_ini->accept(*this); 
+//             // }
+//         }
+//         pass_value = nullptr;
+//     }
+//     else {
+//         node.initializer.front()->accept(*this);
+//     }
+// }
 void ir::IrBuilder::visit(ast::func_call_syntax &node) {}

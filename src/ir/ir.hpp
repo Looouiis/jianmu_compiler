@@ -9,6 +9,7 @@
 #include <queue>
 #include <algorithm>
 #include <functional>
+#include <vector>
 
 const int i32_size = 4;
 namespace LoongArch{
@@ -415,9 +416,9 @@ class get_element_ptr : public ir_instr {
 private:
     ptr<ir_memobj> base;
     ptr<ir_reg> dst;
-    int obj_offset;
+    std::vector<int> obj_offset;
 public:
-    get_element_ptr(ptr<ir_memobj> base, ptr<ir_reg> dst, int offset) : base(base), dst(dst), obj_offset(offset) {}
+    get_element_ptr(ptr<ir_memobj> base, ptr<ir_reg> dst, std::vector<int> offset) : base(base), dst(dst), obj_offset(offset) {}
     virtual void accept(ir_visitor& visitor) override final;
     virtual void print(std::ostream & out = std::cout) override final;
     virtual std::vector<ptr<ir::ir_value>> use_reg() override final;

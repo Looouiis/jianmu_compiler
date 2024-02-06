@@ -229,8 +229,10 @@ void ir::IrPrinter::visit(get_element_ptr &node)
     }
     // }
     out << "* ";
-    out << get_value(node.base->get_addr()) << ", i32 ";
-    out << ", i32 " << node.obj_offset;
+    out << get_value(node.base->get_addr()) << ", i32 0";
+    for(auto offset : node.obj_offset) {
+        out << ", i32 " << offset;
+    }
     out << "\n";
 }
 
