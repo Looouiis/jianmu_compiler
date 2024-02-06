@@ -475,3 +475,5 @@ void LoongArch::ProgramBuilder::visit(ir::logic_ins &node) {
 void LoongArch::ProgramBuilder::visit(ir::get_element_ptr& node) {}
 
 void LoongArch::ProgramBuilder::visit(ir::while_loop& node) {}
+
+void LoongArch::ProgramBuilder::visit(ir::break_or_continue& node) {}

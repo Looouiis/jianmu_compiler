@@ -239,6 +239,10 @@ void ir::IrPrinter::visit(ir::while_loop &node) {
     out<<"\t"<<"br "<<"label "<<"%"<<node.cond_from->name<<std::endl;
 }
 
+void ir::IrPrinter::visit(ir::break_or_continue &node) {
+    out<<"\t"<<"br "<<"label "<<"%"<<node.target->name<<std::endl;
+}
+
 std::string ir::IrPrinter::get_value(const ptr<ir::ir_value> &val)
 {
     std::string ans;

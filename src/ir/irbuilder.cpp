@@ -1,6 +1,7 @@
 #include "ir/irbuilder.hpp"
 #include "ir/ir.hpp"
 #include "parser/SyntaxTree.hpp"
+#include <cstdlib>
 #include <memory>
 
 void ir::IrBuilder::visit(ast::compunit_syntax &node)
@@ -221,12 +222,12 @@ void ir::IrBuilder::visit(ast::assign_stmt_syntax &node)        // self6
 void ir::IrBuilder::visit(ast::block_syntax &node)
 {
     //由于我们的函数没有参数，所以，直接让block来处理scope的事情
-    // this->scope.enter();
+    this->scope.enter();
     for(auto i :node.body)
     {
         i->accept(*this);
     }
-    // this->scope.exit();
+    this->scope.exit();
 }
 
 void ir::IrBuilder::visit(ast::if_stmt_syntax &node)
@@ -316,11 +317,15 @@ void ir::IrBuilder::visit(ast::func_f_param_syntax &node) {
     this->cur_func->func_args.push_back(mem);
 }
 void ir::IrBuilder::visit(ast::var_dimension_syntax &node) {}
-void ir::IrBuilder::visit(ast::exp_stmt_syntax &node) {}
+void ir::IrBuilder::visit(ast::exp_stmt_syntax &node) {
+    node.exp->accept(*this);
+}
 void ir::IrBuilder::visit(ast::while_stmt_syntax &node) {
     auto while_start = this->cur_func->new_block();
     auto while_body = this->cur_func->new_block();
     auto out_block = this->cur_func->new_block();
+    break_list.push_back(out_block);
+    continue_list.push_back(while_start);
     cur_block->push_back(std::make_shared<ir::jump>(while_start));
     cur_block = while_start;
     node.cond->accept(*this);
@@ -330,10 +335,22 @@ void ir::IrBuilder::visit(ast::while_stmt_syntax &node) {
     node.while_body->accept(*this);
     cur_block->push_back(std::make_shared<ir::while_loop>(while_start, while_body, out_block));
     cur_block = out_block;
+    break_list.pop_back();
+    continue_list.pop_back();
 }
 void ir::IrBuilder::visit(ast::empty_stmt_syntax &node) {}
-void ir::IrBuilder::visit(ast::break_stmt_syntax &node) {}
-void ir::IrBuilder::visit(ast::continue_stmt_syntax &node) {}
+void ir::IrBuilder::visit(ast::break_stmt_syntax &node) {
+    if(break_list.empty()) {
+        abort();
+    }
+    cur_block->push_back(std::make_shared<ir::break_or_continue>(break_list.back()));
+}
+void ir::IrBuilder::visit(ast::continue_stmt_syntax &node) {
+    if(break_list.empty()) {
+        abort();
+    }
+    cur_block->push_back(std::make_shared<ir::break_or_continue>(continue_list.back()));
+}
 void ir::IrBuilder::visit(ast::init_syntax &node) {
     if(!pass_obj->dim) {
         node.initializer.front()->accept(*this);

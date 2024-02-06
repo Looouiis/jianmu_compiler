@@ -492,3 +492,20 @@ std::vector<ptr<ir::ir_value>> ir::while_loop::use_reg() {
 std::vector<ptr<ir::ir_value>> ir::while_loop::def_reg() {
   return {};
 }
+
+void ir::break_or_continue::accept(ir_visitor &visitor)
+{
+    visitor.visit(*this);
+}
+
+void ir::break_or_continue::print(std::ostream &out)
+{
+}
+
+std::vector<ptr<ir::ir_value>> ir::break_or_continue::use_reg() {
+  return {};
+}
+
+std::vector<ptr<ir::ir_value>> ir::break_or_continue::def_reg() {
+  return {};
+}

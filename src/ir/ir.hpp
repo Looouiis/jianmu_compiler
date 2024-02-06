@@ -53,6 +53,7 @@ class control_ins;
 
 class get_element_ptr;
 class while_loop;
+class break_or_continue;
 
 class printable {
     virtual void accept(ir_visitor& visitor) = 0;
@@ -411,6 +412,7 @@ public:
     virtual void visit(logic_ins &node) = 0;
     virtual void visit(get_element_ptr &node) = 0;
     virtual void visit(while_loop &node) = 0;
+    virtual void visit(break_or_continue &node) = 0;
 };
 
 class get_element_ptr : public ir_instr {
@@ -440,6 +442,20 @@ public:
     virtual void print(std::ostream & out = std::cout) override final;
     virtual std::vector<ptr<ir::ir_value>> use_reg() override final;
     virtual std::vector<ptr<ir::ir_value>> def_reg() override final;
+};
+
+class break_or_continue : public control_ins {
+    friend IrPrinter;
+    friend LoongArch::ProgramBuilder;
+    friend LoongArch::ColoringAllocator;
+    ptr<ir_basicblock> target;
+public:
+    break_or_continue(ptr<ir_basicblock> target):target(target){}
+    virtual void accept(ir_visitor& visitor) override final;
+    virtual void print(std::ostream & out = std::cout) override final;
+    virtual std::vector<ptr<ir::ir_value>> use_reg() override final;
+    virtual std::vector<ptr<ir::ir_value>> def_reg() override final;
+    std::shared_ptr<ir::ir_basicblock> getTarget();
 };
 
 } // namespace ir
