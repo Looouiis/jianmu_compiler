@@ -475,3 +475,20 @@ std::vector<ptr<ir::ir_value>> ir::get_element_ptr::use_reg() {
 std::vector<ptr<ir::ir_value>> ir::get_element_ptr::def_reg() {
   return {this->dst};
 }
+
+void ir::while_loop::accept(ir_visitor &visitor)
+{
+    visitor.visit(*this);
+}
+
+void ir::while_loop::print(std::ostream &out)
+{
+}
+
+std::vector<ptr<ir::ir_value>> ir::while_loop::use_reg() {
+  return {};
+}
+
+std::vector<ptr<ir::ir_value>> ir::while_loop::def_reg() {
+  return {};
+}

@@ -471,3 +471,7 @@ void LoongArch::ProgramBuilder::visit(ir::logic_ins &node) {
         cur_block->instructions.push_back(std::make_shared<LoongArch::RegRegInst>(RegRegInst::orw, dst, src1, src2));
     }
 }
+
+void LoongArch::ProgramBuilder::visit(ir::get_element_ptr& node) {}
+
+void LoongArch::ProgramBuilder::visit(ir::while_loop& node) {}

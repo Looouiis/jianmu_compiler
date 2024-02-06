@@ -343,9 +343,14 @@ void SynataxAnalyseVarDef(ast::var_def_stmt_syntax *&self, char *ident, ast::var
 {
     auto syntax = new ast::var_def_stmt_syntax;
     if(init) {
-        auto res = reorganize_init(std::shared_ptr<ast::init_syntax>(init), current_dim->dimensions, {});
-        res->print();
-        syntax->initializer = ptr<ast::init_syntax>(res);
+        if(current_dim) {
+            auto res = reorganize_init(std::shared_ptr<ast::init_syntax>(init), current_dim->dimensions, {});
+            res->print();
+            syntax->initializer = res;
+        }
+        else {
+            syntax->initializer = ptr<ast::init_syntax>(init);
+        }
     }
     if(current_dim) {
         syntax->dimension = ptr<ast::var_dimension_syntax>(current_dim);

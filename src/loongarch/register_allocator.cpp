@@ -157,6 +157,7 @@ LoongArch::ColoringAllocator::ColoringAllocator(std::shared_ptr<ir::ir_userfunc>
       // }
       auto jump_ins = std::dynamic_pointer_cast<ir::jump>(instruction);
       auto br_ins = std::dynamic_pointer_cast<ir::br>(instruction);
+      auto while_ins = std::dynamic_pointer_cast<ir::while_loop>(instruction);
       if(jump_ins != nullptr) {
         auto tar = jump_ins->target;
         successor[tar].push_back(block);
@@ -167,6 +168,11 @@ LoongArch::ColoringAllocator::ColoringAllocator(std::shared_ptr<ir::ir_userfunc>
         successor[tar].push_back(block);
         nxt[block].push_back(tar);
         tar = br_ins->get_target_false();
+        successor[tar].push_back(block);
+        nxt[block].push_back(tar);
+      }
+      if(while_ins != nullptr) {                                          // TODO: 检查分析逻辑
+        auto tar = while_ins->out_block;
         successor[tar].push_back(block);
         nxt[block].push_back(tar);
       }

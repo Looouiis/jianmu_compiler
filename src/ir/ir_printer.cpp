@@ -199,8 +199,7 @@ void ir::IrPrinter::visit(logic_ins &node)
     out << "\n";
 }
 
-void ir::IrPrinter::visit(get_element_ptr &node)
-{
+void ir::IrPrinter::visit(get_element_ptr &node) {
     auto dst = std::dynamic_pointer_cast<ir::ir_reg>(node.dst);
     out << "\t" << "%r" << dst->id << " = getelementptr ";
     // for(auto a : node.base->dim->dimensions) {
@@ -234,6 +233,10 @@ void ir::IrPrinter::visit(get_element_ptr &node)
         out << ", i32 " << offset;
     }
     out << "\n";
+}
+
+void ir::IrPrinter::visit(ir::while_loop &node) {
+    out<<"\t"<<"br "<<"label "<<"%"<<node.cond_from->name<<std::endl;
 }
 
 std::string ir::IrPrinter::get_value(const ptr<ir::ir_value> &val)

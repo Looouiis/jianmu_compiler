@@ -7,17 +7,17 @@
 #include <stdlib.h>
 ast::SyntaxTree syntax_tree;
 int main(){
-    int a[3][3][3] = {{1, 2}, {3}};
-    for(int i = 0; i < 3; i++) {
-        for(int j = 0; j < 3; j++) {
-            for(int k = 0; k < 3; k++) {
-                std::cout << a[i][j][k] << " ";
-            }
-    std::cout << std::endl;
-        }
-    std::cout << std::endl;
-    }
-    std::cout << std::endl;
+    // int a[3][3][3] = {{1, 2}, {3}};
+    // for(int i = 0; i < 3; i++) {
+    //     for(int j = 0; j < 3; j++) {
+    //         for(int k = 0; k < 3; k++) {
+    //             std::cout << a[i][j][k] << " ";
+    //         }
+    // std::cout << std::endl;
+    //     }
+    // std::cout << std::endl;
+    // }
+    // std::cout << std::endl;
     ast::parse_file(std::cin);
     // syntax_tree.print();
     std::shared_ptr<ir::IrBuilder> irbuilder = std::make_shared<ir::IrBuilder>();
@@ -26,10 +26,10 @@ int main(){
     std::shared_ptr<ir::IrPrinter> irprinter = std::make_shared<ir::IrPrinter>();
     irbuilder->compunit->accept(*irprinter);
 
-    // //下面是后端的部分
-    // std::shared_ptr<LoongArch::ProgramBuilder> progbuilder= std::make_shared<LoongArch::ProgramBuilder>();
-    // irbuilder->compunit->accept(*progbuilder);
-    // auto prog = progbuilder->prog;
+    //下面是后端的部分
+    std::shared_ptr<LoongArch::ProgramBuilder> progbuilder= std::make_shared<LoongArch::ProgramBuilder>();
+    irbuilder->compunit->accept(*progbuilder);
+    auto prog = progbuilder->prog;
 
-    // prog->get_asm(std::cout);
+    prog->get_asm(std::cout);
 }

@@ -24,6 +24,8 @@ public:
     virtual void visit(ir::binary_op_ins & node) override final;  
     virtual void visit(ir::cmp_ins& node) override final;  
     virtual void visit(ir::logic_ins & node) override final;
+    virtual void visit(ir::get_element_ptr& node) override final;
+    virtual void visit(ir::while_loop& node) override final;
     std::shared_ptr<Program> prog;
     // std::vector<std::shared_ptr<ir::ir_reg>> loaded;
 protected:

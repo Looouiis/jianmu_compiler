@@ -52,6 +52,7 @@ class cmp_ins;
 class control_ins;
 
 class get_element_ptr;
+class while_loop;
 
 class printable {
     virtual void accept(ir_visitor& visitor) = 0;
@@ -409,6 +410,7 @@ public:
     virtual void visit(cmp_ins &node) = 0;
     virtual void visit(logic_ins &node) = 0;
     virtual void visit(get_element_ptr &node) = 0;
+    virtual void visit(while_loop &node) = 0;
 };
 
 class get_element_ptr : public ir_instr {
@@ -419,6 +421,21 @@ private:
     std::vector<int> obj_offset;
 public:
     get_element_ptr(ptr<ir_memobj> base, ptr<ir_reg> dst, std::vector<int> offset) : base(base), dst(dst), obj_offset(offset) {}
+    virtual void accept(ir_visitor& visitor) override final;
+    virtual void print(std::ostream & out = std::cout) override final;
+    virtual std::vector<ptr<ir::ir_value>> use_reg() override final;
+    virtual std::vector<ptr<ir::ir_value>> def_reg() override final;
+};
+
+class while_loop : public ir_instr {
+    friend IrPrinter;
+    friend LoongArch::ColoringAllocator;
+private:
+    ptr<ir_basicblock> cond_from;
+    ptr<ir_basicblock> self;
+    ptr<ir_basicblock> out_block;
+public:
+    while_loop(ptr<ir_basicblock> cond_from, ptr<ir_basicblock> self, ptr<ir_basicblock> out_block) : cond_from(cond_from), self(self), out_block(out_block) {}
     virtual void accept(ir_visitor& visitor) override final;
     virtual void print(std::ostream & out = std::cout) override final;
     virtual std::vector<ptr<ir::ir_value>> use_reg() override final;

@@ -126,7 +126,7 @@ void ir::IrBuilder::visit(ast::binop_expr_syntax &node)
     auto exp1=pass_value;
     node.rhs->accept(*this);
     auto exp2=pass_value;
-    auto dst = cur_func->new_reg(vartype::INT);
+    auto dst = cur_func->new_reg(node.restype);
     cur_block->push_back(std::make_shared<ir::binary_op_ins>(dst,exp1,exp2,node.op));
     this->pass_value=dst;
 }
@@ -204,9 +204,9 @@ void ir::IrBuilder::visit(ast::var_def_stmt_syntax &node)       // self5
         // }
         // map[node.name] = ptr<ir::ir_value>(pass_value);
     }
-    else {
-        // map[node.name] = std::make_shared<ir::ir_constant>(0);
-    }
+    // else {
+    //     map[node.name] = std::make_shared<ir::ir_constant>(0);
+    // }
 }
 
 void ir::IrBuilder::visit(ast::assign_stmt_syntax &node)        // self6
@@ -317,11 +317,31 @@ void ir::IrBuilder::visit(ast::func_f_param_syntax &node) {
 }
 void ir::IrBuilder::visit(ast::var_dimension_syntax &node) {}
 void ir::IrBuilder::visit(ast::exp_stmt_syntax &node) {}
-void ir::IrBuilder::visit(ast::while_stmt_syntax &node) {}
+void ir::IrBuilder::visit(ast::while_stmt_syntax &node) {
+    auto while_start = this->cur_func->new_block();
+    auto while_body = this->cur_func->new_block();
+    auto out_block = this->cur_func->new_block();
+    cur_block->push_back(std::make_shared<ir::jump>(while_start));
+    cur_block = while_start;
+    node.cond->accept(*this);
+    auto judge_ret = pass_value;
+    cur_block->push_back(std::make_shared<ir::br>(judge_ret, while_body, out_block));
+    cur_block = while_body;
+    node.while_body->accept(*this);
+    cur_block->push_back(std::make_shared<ir::while_loop>(while_start, while_body, out_block));
+    cur_block = out_block;
+}
 void ir::IrBuilder::visit(ast::empty_stmt_syntax &node) {}
 void ir::IrBuilder::visit(ast::break_stmt_syntax &node) {}
 void ir::IrBuilder::visit(ast::continue_stmt_syntax &node) {}
 void ir::IrBuilder::visit(ast::init_syntax &node) {
+    if(!pass_obj->dim) {
+        node.initializer.front()->accept(*this);
+        auto ini_value = pass_value;
+        auto obj = pass_obj;
+        cur_block->push_back(std::make_shared<ir::store>(obj->get_addr(), ini_value));
+        return;
+    }
     if(node.is_array) {
         for(auto ini : node.initializer) {
             ini->accept(*this);
