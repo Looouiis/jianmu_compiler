@@ -253,23 +253,23 @@ void SynataxAnalyseVarDefGroup(ast::var_decl_stmt_syntax *&self, ast::var_def_st
 //     return new_init;
 // }
 
-ptr<ast::init_syntax> reorganize_init(ptr<ast::init_syntax> init, ptr_list<ast::expr_syntax> dim, std::vector<int> current_dim) {
+ptr<ast::init_syntax> reorganize_init(ptr<ast::init_syntax> init, ptr_list<ast::expr_syntax> dim, ptr_list<ast::expr_syntax> current_dim) {
     auto ret = std::make_shared<ast::init_syntax>();
     ret->is_array = true;
     ret->designed_size = dim.front();
     ret->transed_size = dim.front()->calc_res();
     ret->current_dim = current_dim;
 
-    auto zero = std::make_shared<ast::literal_syntax>();
-    zero->intConst = 0;
-    zero->restype = vartype::INT;
+    // auto zero = std::make_shared<ast::literal_syntax>(0);
+    // zero->intConst = 0;
+    // zero->restype = vartype::INT;
 
     int pointer = 0;
     if(dim.size() > 1) {    // 仍未到最后一个维度
         for(int i = 0; i < dim.front()->calc_res(); i++) {
             assert(init->is_array);
-            vector<int> nxt_cur_dim = current_dim;
-            nxt_cur_dim.push_back(i);
+            ptr_list<ast::expr_syntax> nxt_cur_dim = current_dim;
+            nxt_cur_dim.push_back(std::make_shared<ast::literal_syntax>(i));
             if(pointer < init->initializer.size()) {
                 auto cur = std::dynamic_pointer_cast<ast::init_syntax>(init->initializer[pointer]);
                 assert(cur);
@@ -298,7 +298,7 @@ ptr<ast::init_syntax> reorganize_init(ptr<ast::init_syntax> init, ptr_list<ast::
                         else {
                             auto zero_ini = std::make_shared<ast::init_syntax>();
                             zero_ini->is_array = false;
-                            zero_ini->initializer.push_back(zero);
+                            zero_ini->initializer.push_back(std::make_shared<ast::literal_syntax>(0));
                             nxt_ini->initializer.push_back(zero_ini);
                         }
                     }
@@ -319,7 +319,7 @@ ptr<ast::init_syntax> reorganize_init(ptr<ast::init_syntax> init, ptr_list<ast::
                 auto cur = std::dynamic_pointer_cast<ast::init_syntax>(init->initializer[pointer++]);
                 if(cur && !cur->is_array) {
                     cur->current_dim = current_dim;
-                    cur->current_dim.push_back(i);
+                    cur->current_dim.push_back(std::make_shared<ast::literal_syntax>(i));
                     ret->initializer.push_back(cur/*->initializer.front()*/);
                 }
                 else {
@@ -329,9 +329,9 @@ ptr<ast::init_syntax> reorganize_init(ptr<ast::init_syntax> init, ptr_list<ast::
             else {
                 auto exp_zero = std::make_shared<ast::init_syntax>();
                 exp_zero->is_array = false;
-                exp_zero->initializer.push_back(zero);
+                exp_zero->initializer.push_back(std::make_shared<ast::literal_syntax>(0));
                 exp_zero->current_dim = current_dim;
-                exp_zero->current_dim.push_back(i);
+                exp_zero->current_dim.push_back(std::make_shared<ast::literal_syntax>(i));
                 ret->initializer.push_back(exp_zero);
             }
         }

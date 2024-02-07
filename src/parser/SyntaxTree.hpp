@@ -207,6 +207,8 @@ struct literal_syntax : expr_syntax
     vartype restype;
     int intConst;
     float floatConst;
+    literal_syntax() {}
+    literal_syntax(int intConst) : intConst(intConst), restype(vartype::INT) {}
     virtual void accept(syntax_tree_visitor &visitor) override final;
     virtual void print() override final;
     virtual int calc_res() override final;
@@ -325,7 +327,7 @@ struct init_syntax : expr_syntax
     ptr_list<expr_syntax> initializer;
     ptr<expr_syntax> designed_size;
     int transed_size;
-    std::vector<int> current_dim;
+    ptr_list<expr_syntax> current_dim;
     // int to_bottom;
     virtual void accept(syntax_tree_visitor &visitor) override final;
     virtual void print() override final;
