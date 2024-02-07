@@ -509,3 +509,21 @@ std::vector<ptr<ir::ir_value>> ir::break_or_continue::use_reg() {
 std::vector<ptr<ir::ir_value>> ir::break_or_continue::def_reg() {
   return {};
 }
+
+void ir::func_call::accept(ir_visitor &visitor)
+{
+    visitor.visit(*this);
+}
+
+void ir::func_call::print(std::ostream &out)
+{
+}
+
+std::vector<ptr<ir::ir_value>> ir::func_call::use_reg() {
+    // return this->params;
+  return {};
+}
+
+std::vector<ptr<ir::ir_value>> ir::func_call::def_reg() {
+  return {};
+}

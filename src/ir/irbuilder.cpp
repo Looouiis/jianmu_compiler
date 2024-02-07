@@ -55,6 +55,7 @@ void ir::IrBuilder::visit(ast::func_def_syntax &node){
     for(auto a : node.params) {
         a->accept(*this);
     }
+    cur_func->rettype = rettype;
     
     /*
         deal with block
@@ -150,21 +151,59 @@ void ir::IrBuilder::visit(ast::lval_syntax &node)                   // self4----
     // auto new_reg = cur_func->new_obj(node.name)->get_addr();
     // cur_block->push_back(std::make_shared<ir::load>(value, new_reg));
     auto var = this->scope.find_var(node.name);
-    auto dst = cur_func->new_reg(node.restype);
-    if(node.dimension) {
+    if(var->dim) {
         auto element_ptr = cur_func->new_reg(vartype::INTADDR);
         ptr_list<ir::ir_value> dim;
-        for(auto dimension : node.dimension->dimensions) {
-            dimension->accept(*this);
-            dim.push_back(pass_value);
+        if(node.dimension) {
+            int var_size = var->dim->dimensions.size();
+            if(!var->dim->has_first_dim) {
+                var_size++;
+            }
+            for(auto dimension : node.dimension->dimensions) {
+                dimension->accept(*this);
+                dim.push_back(pass_value);
+            }
+            if(node.dimension->dimensions.size() < var_size) {
+                cur_block->push_back(std::make_shared<get_element_ptr>(var, element_ptr, dim));
+                pass_value = element_ptr;
+                // return;
+            }
+            else if(node.dimension->dimensions.size() == var_size) {
+                auto dst = cur_func->new_reg(node.restype);
+                cur_block->push_back(std::make_shared<get_element_ptr>(var, element_ptr, dim));
+                cur_block->push_back(std::make_shared<ir::load>(dst, element_ptr));
+                this->pass_value = dst;
+            }
+            else {
+                abort();
+            }
         }
-        cur_block->push_back(std::make_shared<get_element_ptr>(var, element_ptr, dim));
-        cur_block->push_back(std::make_shared<load>(dst, element_ptr));
+        else {
+            cur_block->push_back(std::make_shared<get_element_ptr>(var, element_ptr, dim));
+            pass_value = element_ptr;
+            // return;
+        }
+        // cur_block->push_back(std::make_shared<get_element_ptr>(var, element_ptr, dim));
+        // cur_block->push_back(std::make_shared<load>(dst, element_ptr));
     }
     else {
+        auto dst = cur_func->new_reg(node.restype);
         cur_block->push_back(std::make_shared<ir::load>(dst, var->get_addr()));
+        this->pass_value = dst;
     }
-    this->pass_value = dst;
+    // if(node.dimension) {
+    //     auto element_ptr = cur_func->new_reg(vartype::INTADDR);
+    //     ptr_list<ir::ir_value> dim;
+    //     for(auto dimension : node.dimension->dimensions) {
+    //         dimension->accept(*this);
+    //         dim.push_back(pass_value);
+    //     }
+    //     cur_block->push_back(std::make_shared<get_element_ptr>(var, element_ptr, dim));
+    //     cur_block->push_back(std::make_shared<load>(dst, element_ptr));
+    // }
+    // else {
+    //     cur_block->push_back(std::make_shared<ir::load>(dst, var->get_addr()));
+    // }
 }
 
 
@@ -429,4 +468,18 @@ void ir::IrBuilder::visit(ast::init_syntax &node) {
 //         node.initializer.front()->accept(*this);
 //     }
 // }
-void ir::IrBuilder::visit(ast::func_call_syntax &node) {}
+void ir::IrBuilder::visit(ast::func_call_syntax &node) {
+    ptr_list<ir::ir_value> params;
+    for(auto par : node.params) {
+        par->accept(*this);
+        params.push_back(pass_value);
+    }
+    auto func = this->functions.find_func(node.func_name);
+    auto call_ins =  std::make_shared<ir::func_call>(node.func_name, params, func->get_rettype());
+    if(func->get_rettype() != vartype::VOID) {
+        auto dst = cur_func->new_reg(func->get_rettype());
+        call_ins->ret_reg = dst;
+        pass_value = dst;
+    }
+    cur_block->push_back(call_ins);
+}

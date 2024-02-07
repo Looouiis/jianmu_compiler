@@ -228,7 +228,10 @@ void ir::IrPrinter::visit(get_element_ptr &node) {
     }
     // }
     out << "* ";
-    out << get_value(node.base->get_addr()) << ", i32 0";
+    out << get_value(node.base->get_addr());
+    if(node.base->dim->has_first_dim) {
+        out << ", i32 0";
+    }
     for(auto offset : node.obj_offset) {
         out << ", i32 " << get_value(offset)/* << offset*/;
     }
@@ -241,6 +244,23 @@ void ir::IrPrinter::visit(ir::while_loop &node) {
 
 void ir::IrPrinter::visit(ir::break_or_continue &node) {
     out<<"\t"<<"br "<<"label "<<"%"<<node.target->name<<std::endl;
+}
+
+void ir::IrPrinter::visit(ir::func_call &node) {
+    out << "\t";
+    if(node.ret_reg) {
+        out << "%r" << node.ret_reg->id << " = ";
+    }
+    out << "call " << mapping[node.ret_type] << " @" << node.func_name;
+    out << "(";
+    for(auto par = node.params.begin(); par != node.params.end(); par++) {
+        (*par)->accept(*this);
+        if(par != node.params.end() - 1) {
+            out << ", ";
+        }
+    }
+    out << ")";
+    out << std::endl;
 }
 
 std::string ir::IrPrinter::get_value(const ptr<ir::ir_value> &val)

@@ -56,6 +56,7 @@ public:
    virtual void visit(get_element_ptr &node) override final;
    virtual void visit(while_loop &node) override final;
    virtual void visit(break_or_continue &node) override final;
+   virtual void visit(func_call &node) override final;
    std::string get_value(const ptr<ir::ir_value> &val);
 };
 

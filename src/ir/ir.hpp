@@ -54,6 +54,7 @@ class control_ins;
 class get_element_ptr;
 class while_loop;
 class break_or_continue;
+class func_call;
 
 class printable {
     virtual void accept(ir_visitor& visitor) = 0;
@@ -170,6 +171,7 @@ protected:
 public:
     ir_func(std::string name) : name(name) {}
     bool set_retype(vartype rettype);
+    vartype get_rettype() {return rettype;}
     virtual void accept(ir_visitor& visitor) = 0;
     virtual void print(std::ostream & out = std::cout) = 0;
 };
@@ -413,6 +415,7 @@ public:
     virtual void visit(get_element_ptr &node) = 0;
     virtual void visit(while_loop &node) = 0;
     virtual void visit(break_or_continue &node) = 0;
+    virtual void visit(func_call &node) = 0;
 };
 
 class get_element_ptr : public ir_instr {
@@ -456,6 +459,23 @@ public:
     virtual std::vector<ptr<ir::ir_value>> use_reg() override final;
     virtual std::vector<ptr<ir::ir_value>> def_reg() override final;
     std::shared_ptr<ir::ir_basicblock> getTarget();
+};
+
+class func_call : public control_ins {
+    friend IrPrinter;
+    friend IrBuilder;
+    friend LoongArch::ProgramBuilder;
+    friend LoongArch::ColoringAllocator;
+    string func_name;
+    ptr_list<ir_value> params;
+    ptr<ir_reg> ret_reg;
+    vartype ret_type;
+public:
+    func_call(string func_name, ptr_list<ir_value> params, vartype ret_type) : func_name(func_name), params(params), ret_type(ret_type) {}
+    virtual void accept(ir_visitor& visitor) override final;
+    virtual void print(std::ostream & out = std::cout) override final;
+    virtual std::vector<ptr<ir::ir_value>> use_reg() override final;
+    virtual std::vector<ptr<ir::ir_value>> def_reg() override final;
 };
 
 } // namespace ir
