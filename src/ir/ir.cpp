@@ -68,6 +68,15 @@ ptr<ir::ir_userfunc> ir::ir_module::new_func(std::string name) {
   return pfunc;
 }
 
+ptr<ir::global_def> ir::ir_module::new_global(std::string name, vartype type) {
+    auto reg = std::make_shared<ir_reg>(name, type, 4);
+    auto obj = std::make_shared<ir_memobj>(name, reg, 4);
+    auto var = std::make_shared<global_def>(name, obj);
+    global_var.push_back({name, var});
+//   usrfuncs.push_back({name, pfunc});
+    return var;
+}
+
 void ir::ir_module::accept(ir_visitor &visitor)
 {
     visitor.visit(*this);
@@ -526,4 +535,25 @@ std::vector<ptr<ir::ir_value>> ir::func_call::use_reg() {
 
 std::vector<ptr<ir::ir_value>> ir::func_call::def_reg() {
   return {};
+}
+
+void ir::global_def::accept(ir_visitor &visitor)
+{
+    visitor.visit(*this);
+}
+
+void ir::global_def::print(std::ostream &out)
+{
+}
+
+std::vector<ptr<ir::ir_value>> ir::global_def::use_reg() {
+  return {init_val};
+}
+
+std::vector<ptr<ir::ir_value>> ir::global_def::def_reg() {
+  return {obj->get_addr()};
+}
+
+ptr<ir::ir_memobj> ir::global_def::get_obj() {
+    return obj;
 }

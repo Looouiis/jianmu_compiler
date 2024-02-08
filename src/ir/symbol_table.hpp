@@ -30,10 +30,11 @@ public:
     void enter();//进入一个新的作用域
     void exit();//退出当前作用域
     bool push_var(std::string name, ptr<ir::ir_memobj> var);//放入变量
+    bool push_global(std::string name, ptr<ir::global_def> var);
     ptr<ir::ir_memobj> find_var(std::string name);//查找变量
 private:
     std::vector<std::map<std::string, ptr<ir::ir_memobj>>> layers;//层  名字:变量
-
+    std::map<std::string, ptr<ir::global_def>> global;
 };
 
 }

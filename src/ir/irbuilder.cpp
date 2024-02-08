@@ -221,45 +221,76 @@ void ir::IrBuilder::visit(ast::literal_syntax &node)
     pass_value = constant;
 }
 
+void ir::IrBuilder::global_init(ptr<ir::global_def> global, ptr<ast::init_syntax> init) {
+    if(!init)
+        return;
+    if(!init->is_array) {
+        init->initializer.front()->accept(*this);
+        global->init_val.push_back(pass_value);
+        return;
+    }
+    for(auto raw : init->initializer) {
+        auto ini = std::dynamic_pointer_cast<ast::init_syntax>(raw);
+        global_init(global, ini);
+    }
+}
+
 void ir::IrBuilder::visit(ast::var_def_stmt_syntax &node)       // self5
 {
-    auto obj = cur_func->new_obj(node.name);
-    int total_cnt = 1;
-    if(node.dimension) {
-        obj->dim = node.dimension;
-        for(auto dim : node.dimension->dimensions) {
-            total_cnt *= dim->calc_res();
+    if(cur_func) {
+        auto obj = cur_func->new_obj(node.name);
+        int total_cnt = 1;
+        if(node.dimension) {
+            obj->dim = node.dimension;
+            for(auto dim : node.dimension->dimensions) {
+                total_cnt *= dim->calc_res();
+            }
         }
-    }
-    this->scope.push_var(node.name, obj);
-    cur_block->push_back(std::make_shared<ir::alloc>(obj));
-    if(node.initializer != nullptr) {
-        // pass_list.clear();
-        // node.initializer = obj
-        pass_obj = obj;
-        node.initializer->accept(*this);
-        // if(pass_list.empty()) {
-        //     auto ini_value = pass_value;
-        //     cur_block->push_back(std::make_shared<ir::store>(obj->get_addr(), ini_value));
-        // }
+        this->scope.push_var(node.name, obj);
+        cur_block->push_back(std::make_shared<ir::alloc>(obj));
+        if(node.initializer != nullptr) {
+            // pass_list.clear();
+            // node.initializer = obj
+            pass_obj = obj;
+            node.initializer->accept(*this);
+            // if(pass_list.empty()) {
+            //     auto ini_value = pass_value;
+            //     cur_block->push_back(std::make_shared<ir::store>(obj->get_addr(), ini_value));
+            // }
+            // else {
+            //     for(int i = 0; i < pass_list.size(); i++) {
+            //         auto dst = cur_func->new_reg(obj->get_addr()->type);
+            //         cur_block->push_back(std::make_shared<ir::get_element_ptr>(obj, dst, i));
+            //         cur_block->push_back(std::make_shared<ir::store>(dst, pass_list[i]));
+            //     }
+            //     auto zero = std::make_shared<ir::ir_constant>(0);
+            //     for(int i = pass_list.size(); i < total_cnt; i++) {
+            //         auto dst = cur_func->new_reg(obj->get_addr()->type);
+            //         cur_block->push_back(std::make_shared<ir::get_element_ptr>(obj, dst, i));
+            //         cur_block->push_back(std::make_shared<ir::store>(dst, zero));
+            //     }
+            // }
+            // map[node.name] = ptr<ir::ir_value>(pass_value);
+        }
         // else {
-        //     for(int i = 0; i < pass_list.size(); i++) {
-        //         auto dst = cur_func->new_reg(obj->get_addr()->type);
-        //         cur_block->push_back(std::make_shared<ir::get_element_ptr>(obj, dst, i));
-        //         cur_block->push_back(std::make_shared<ir::store>(dst, pass_list[i]));
-        //     }
-        //     auto zero = std::make_shared<ir::ir_constant>(0);
-        //     for(int i = pass_list.size(); i < total_cnt; i++) {
-        //         auto dst = cur_func->new_reg(obj->get_addr()->type);
-        //         cur_block->push_back(std::make_shared<ir::get_element_ptr>(obj, dst, i));
-        //         cur_block->push_back(std::make_shared<ir::store>(dst, zero));
-        //     }
+        //     map[node.name] = std::make_shared<ir::ir_constant>(0);
         // }
-        // map[node.name] = ptr<ir::ir_value>(pass_value);
     }
-    // else {
-    //     map[node.name] = std::make_shared<ir::ir_constant>(0);
-    // }
+    else {
+        ptr<ir::ir_value> init_val = nullptr;
+        auto def = this->compunit->new_global(node.name, vartype::INTADDR);
+        auto obj = def->get_obj();
+        if(node.dimension) {
+            obj->dim = node.dimension;
+        }
+        // if(node.initializer) {
+        //     pass_obj = obj;
+        //     node.initializer->accept(*this);
+        //     init_val = pass_value;
+        // }
+        global_init(def, node.initializer);
+        this->scope.push_global(node.name, def);
+    }
 }
 
 void ir::IrBuilder::visit(ast::assign_stmt_syntax &node)        // self6

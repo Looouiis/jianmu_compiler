@@ -1,4 +1,5 @@
 #include "ir/symbol_table.hpp"
+#include "ir/ir.hpp"
 
 bool symbol_table::FunctionTable::push_func(std::string name, ptr<ir::ir_func> ir_fun)
 {
@@ -32,6 +33,12 @@ bool symbol_table::Scope::push_var(std::string name, ptr<ir::ir_memobj> var)
     return result.second;
 }
 
+bool symbol_table::Scope::push_global(std::string name, ptr<ir::global_def> var) {
+    auto result = global.insert({name, var});
+    assert(result.second);
+    return result.second;
+}
+
 ptr<ir::ir_memobj> symbol_table::Scope::find_var(std::string name)
 {
     for(auto s=layers.rbegin();s!=layers.rend();s++)
@@ -42,7 +49,11 @@ ptr<ir::ir_memobj> symbol_table::Scope::find_var(std::string name)
             return iter->second;
         }
     }
-     assert(0);//不通过说明没有定义变量
+    auto global_it = global.find(name);
+    if(global_it != global.end()) {
+        return global_it->second->get_obj();
+    }
+    assert(0);//不通过说明没有定义变量
     return nullptr;
     // TODO: insert return statement here
 }

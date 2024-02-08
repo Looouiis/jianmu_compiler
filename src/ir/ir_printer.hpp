@@ -57,7 +57,9 @@ public:
    virtual void visit(while_loop &node) override final;
    virtual void visit(break_or_continue &node) override final;
    virtual void visit(func_call &node) override final;
+   virtual void visit(global_def &node) override final;
    std::string get_value(const ptr<ir::ir_value> &val);
+   std::string get_reg_name(ptr<ir_reg> &node);
 };
 
 } // namespace ir

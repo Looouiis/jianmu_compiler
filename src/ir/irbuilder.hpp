@@ -69,6 +69,7 @@ class IrBuilder : public ast::syntax_tree_visitor {
     virtual void visit(ast::init_syntax &node) override final;
     virtual void visit(ast::func_call_syntax &node) override final;
     ptr<ir::ir_reg> get_value(ptr<ir::ir_reg> addr);
+    void global_init(ptr<ir::global_def> global, ptr<ast::init_syntax> init);
 };
 
 }

@@ -55,6 +55,7 @@ class get_element_ptr;
 class while_loop;
 class break_or_continue;
 class func_call;
+class global_def;
 
 class printable {
     virtual void accept(ir_visitor& visitor) = 0;
@@ -77,8 +78,11 @@ private:
     int id;                                                     //virtual register id
     vartype type;                                               //int or float (extension)
     int size;                                                   //some byte
+    string global_name;
+    bool is_global;
 public:
-    ir_reg(int id,vartype type,int size) : id(id) , type(type), size(size) {}
+    ir_reg(int id,vartype type,int size) : id(id) , type(type), size(size), is_global(false) {}
+    ir_reg(string global_name, vartype type, int size) : global_name(global_name), type(type), size(size), is_global(true) {}
     bool operator==(ir_reg& rhs) {return id == rhs.id;}
     bool operator<(ir_reg& rhs) {return id < rhs.id;}
     virtual void accept(ir_visitor& visitor) override final;
@@ -184,10 +188,12 @@ protected:
 public:    
     std::list<std::pair<std::string,std::shared_ptr<ir_userfunc>>> usrfuncs;
     std::list<std::pair<std::string,std::shared_ptr<ir_libfunc>>> libfuncs;
+    std::list<std::pair<std::string,std::shared_ptr<global_def>>> global_var;
     ir_module(){
         this->scope = std::make_unique<ir_scope>();
     }
     ptr<ir_userfunc> new_func(std::string name);
+    ptr<global_def> new_global(std::string name, vartype type);
     virtual void accept(ir_visitor& visitor) override final;
     virtual void print(std::ostream & out = std::cout) override final;
     virtual void reg_allocate(int base_reg);
@@ -416,6 +422,7 @@ public:
     virtual void visit(while_loop &node) = 0;
     virtual void visit(break_or_continue &node) = 0;
     virtual void visit(func_call &node) = 0;
+    virtual void visit(global_def &node) = 0;
 };
 
 class get_element_ptr : public ir_instr {
@@ -476,6 +483,22 @@ public:
     virtual void print(std::ostream & out = std::cout) override final;
     virtual std::vector<ptr<ir::ir_value>> use_reg() override final;
     virtual std::vector<ptr<ir::ir_value>> def_reg() override final;
+};
+
+class global_def : public ir_instr {
+    friend IrPrinter;
+    friend IrBuilder;
+private:
+    string var_name;
+    ptr<ir_memobj> obj;
+    ptr_list<ir_value> init_val;
+public:
+    global_def(string name, ptr<ir_memobj> obj) : var_name(name), obj(obj) {}
+    virtual void accept(ir_visitor& visitor) override final;
+    virtual void print(std::ostream & out = std::cout) override final;
+    virtual std::vector<ptr<ir::ir_value>> use_reg() override final;
+    virtual std::vector<ptr<ir::ir_value>> def_reg() override final;
+    ptr<ir_memobj> get_obj();
 };
 
 } // namespace ir
