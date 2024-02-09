@@ -83,8 +83,8 @@ private:
     string global_name;
     bool is_global;
 public:
-    ir_reg(int id,vartype type,int size) : id(id) , type(type), size(size), is_global(false) {}
-    ir_reg(string global_name, vartype type, int size) : global_name(global_name), type(type), size(size), is_global(true) {}
+    ir_reg(int id,vartype type,int size, bool is_global) : id(id) , type(type), size(size), is_global(is_global) {}
+    // ir_reg(string global_name, vartype type, int size) : global_name(global_name), type(type), size(size), is_global(true) {}
     bool operator==(ir_reg& rhs) {return id == rhs.id;}
     bool operator<(ir_reg& rhs) {return id < rhs.id;}
     virtual void accept(ir_visitor& visitor) override final;
@@ -198,7 +198,7 @@ public:
     std::list<std::pair<std::string,std::shared_ptr<global_def>>> global_var;
     ir_module(){
         this->scope = std::make_unique<ir_scope>();
-        this->global_init_func = std::make_shared<ir_userfunc>("global_init");
+        this->global_init_func = std::make_shared<ir_userfunc>("global_init", global_var.size());
     }
     ptr<ir_userfunc> new_func(std::string name);
     ptr<global_def> new_global(std::string name, vartype type);
@@ -233,7 +233,7 @@ private:
     std::vector<ptr<ir::ir_memobj>> func_args;
     std::vector<std::shared_ptr<ir::ir_reg>> regSpill;
 public:
-    ir_userfunc(std::string name); 
+    ir_userfunc(std::string name, int reg_cnt); 
     ptr<ir_memobj> new_obj(std::string name, vartype var_type);
     ptr<ir_reg> new_reg(vartype type);//自动创建序号递增的寄存器
     ptr<ir_basicblock> new_block();//创建BB

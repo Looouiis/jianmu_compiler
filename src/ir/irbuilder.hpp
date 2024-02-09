@@ -25,7 +25,7 @@ enum class Mode {
 };
 
 class IrBuilder : public ast::syntax_tree_visitor {
-
+    bool in_func = false;
     std::string cur_func_name;//当前函数名
     ptr<ir::ir_userfunc> cur_func;//当前函数的IR对象
     ptr<ir::ir_basicblock> cur_block, return_bb;//当前BB，当前函数的return BB

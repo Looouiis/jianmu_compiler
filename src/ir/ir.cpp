@@ -74,13 +74,13 @@ void ir::ir_basicblock::for_each(std::function<void(std::shared_ptr<ir::ir_instr
 }
 
 ptr<ir::ir_userfunc> ir::ir_module::new_func(std::string name) {
-  auto pfunc = std::make_shared<ir_userfunc>(name);
+  auto pfunc = std::make_shared<ir_userfunc>(name, this->global_var.size());
   usrfuncs.push_back({name, pfunc});
   return pfunc;
 }
 
 ptr<ir::global_def> ir::ir_module::new_global(std::string name, vartype type) {
-    auto reg = std::make_shared<ir_reg>(name, type, 4);
+    auto reg = std::make_shared<ir_reg>(this->global_var.size(), type, 4, true);
     auto obj = std::make_shared<ir_memobj>(name, reg, 4);
     auto var = std::make_shared<global_def>(name, obj);
     global_var.push_back({name, var});
@@ -105,7 +105,7 @@ void ir::ir_module::reg_allocate(int base_reg) {
     }
 }
 
-ir::ir_userfunc::ir_userfunc(std::string name) : ir_func(name) {
+ir::ir_userfunc::ir_userfunc(std::string name, int reg_cnt) : ir_func(name), max_reg(reg_cnt) {
     this->scope = std::make_unique<ir::ir_scope>();
 }
 
@@ -120,7 +120,7 @@ ptr<ir::ir_memobj> ir::ir_userfunc::new_obj(std::string name, vartype var_type) 
 ptr<ir::ir_reg> ir::ir_userfunc::new_reg(vartype type)
 {
     int reg_size = 4;
-    return std::make_shared<ir_reg>(max_reg++,type,reg_size);
+    return std::make_shared<ir_reg>(max_reg++,type,reg_size, false);
 }
 
 ptr<ir::ir_basicblock> ir::ir_userfunc::new_block()

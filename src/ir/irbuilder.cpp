@@ -17,7 +17,51 @@ void ir::IrBuilder::visit(ast::compunit_syntax &node)
     /*
         register lib functions
     */
+    ptr<ir_userfunc> getint = std::make_shared<ir_userfunc>("getint", compunit->global_var.size());
+    getint->set_retype(vartype::INT);
+    this->functions.push_func("getint", getint);
 
+    ptr<ir_userfunc> getch = std::make_shared<ir_userfunc>("getch", compunit->global_var.size());
+    getch->set_retype(vartype::INT);
+    this->functions.push_func("getch", getch);
+
+    ptr<ir_userfunc> getarray = std::make_shared<ir_userfunc>("getarray", compunit->global_var.size());
+    getarray->set_retype(vartype::INT);
+    this->functions.push_func("getarray", getarray);
+
+    ptr<ir_userfunc> getfloat = std::make_shared<ir_userfunc>("getfloat", compunit->global_var.size());
+    getfloat->set_retype(vartype::FLOAT);
+    this->functions.push_func("getfloat", getfloat);
+
+    ptr<ir_userfunc> getfarray = std::make_shared<ir_userfunc>("getfarray", compunit->global_var.size());
+    getfarray->set_retype(vartype::INT);
+    this->functions.push_func("getfarray", getfarray);
+
+    ptr<ir_userfunc> putint= std::make_shared<ir_userfunc>("putint", compunit->global_var.size());
+    putint->set_retype(vartype::VOID);
+    this->functions.push_func("putint", putint);
+
+    ptr<ir_userfunc> putch = std::make_shared<ir_userfunc>("putch", compunit->global_var.size());
+    putch->set_retype(vartype::VOID);
+    this->functions.push_func("putch", putch);
+
+    ptr<ir_userfunc> putarray = std::make_shared<ir_userfunc>("putarray", compunit->global_var.size());
+    putarray->set_retype(vartype::VOID);
+    this->functions.push_func("putarray", putarray);
+
+    ptr<ir_userfunc> putfloat = std::make_shared<ir_userfunc>("putfloat", compunit->global_var.size());
+    putfloat->set_retype(vartype::VOID);
+    this->functions.push_func("putfloat", putfloat);
+
+    ptr<ir_userfunc> putfarray = std::make_shared<ir_userfunc>("putfarray", compunit->global_var.size());
+    putfarray->set_retype(vartype::VOID);
+    this->functions.push_func("putfarray", putfarray);
+
+    ptr<ir_userfunc> putf = std::make_shared<ir_userfunc>("putf", compunit->global_var.size());
+    putf->set_retype(vartype::VOID);
+    this->functions.push_func("putf", putf);
+
+    // this->functions.push_func(, );
     /*
         visit children
     */
@@ -26,6 +70,7 @@ void ir::IrBuilder::visit(ast::compunit_syntax &node)
 }
 
 void ir::IrBuilder::visit(ast::func_def_syntax &node){
+    this->in_func = true;
     auto rettype = node.rettype;
     string name = node.name;
     
@@ -111,6 +156,7 @@ void ir::IrBuilder::visit(ast::func_def_syntax &node){
         break;
     }
     this->scope.exit();
+    this->in_func = false;
 }
 
 void ir::IrBuilder::visit(ast::rel_cond_syntax &node)           // self1
@@ -169,7 +215,7 @@ void ir::IrBuilder::visit(ast::lval_syntax &node)                   // self4----
     std::unordered_map<vartype, vartype> reflect = {{vartype::FLOAT, vartype::FLOATADDR}, {vartype::INT, vartype::INTADDR}};
     std::unordered_map<vartype, vartype> reflect_back = {{vartype::FLOATADDR, vartype::FLOAT}, {vartype::INTADDR, vartype::INT}};  //处理左值的类型问题
     
-    if(cur_func) {
+    if(in_func) {
         auto var = this->scope.find_var(node.name);
         node.restype = reflect_back[var->addr->type];
         pass_type = node.restype;
@@ -278,15 +324,6 @@ void ir::IrBuilder::global_init(ptr<ir::global_def> global, ptr<ast::init_syntax
     if(!init)
         return;
     if(!init->is_array) {
-        init->initializer.front()->accept(*this);
-        if(pass_value) {
-            global->init_val.push_back(pass_value);
-        }
-        else {
-            auto zero = std::make_shared<ir::ir_constant>(global->obj->addr->type == vartype::INT ? 0 : 0.0f);
-            std::pmr::unordered_map<vartype, vartype> addr2obj = {{vartype::INTADDR, vartype::INT}, {vartype::FLOATADDR, vartype::FLOAT}};
-            zero->type = addr2obj[global->obj->addr->type];
-            global->init_val.push_back(zero);
             auto backup = this->cur_func;
             auto backup_block = this->cur_block;
             this->cur_func = compunit->global_init_func;
@@ -297,15 +334,26 @@ void ir::IrBuilder::global_init(ptr<ir::global_def> global, ptr<ast::init_syntax
             }
             auto ret = compunit->init_block->pop_back();
             this->cur_block = compunit->init_block;
+        init->initializer.front()->accept(*this);
+        if(pass_value) {
+            global->init_val.push_back(pass_value);
+        }
+        else {
+            auto zero = std::make_shared<ir::ir_constant>(global->obj->addr->type == vartype::INT ? 0 : 0.0f);
+            std::pmr::unordered_map<vartype, vartype> addr2obj = {{vartype::INTADDR, vartype::INT}, {vartype::FLOATADDR, vartype::FLOAT}};
+            zero->type = addr2obj[global->obj->addr->type];
+            global->init_val.push_back(zero);
+            this->in_func = true;
             init->initializer.front()->accept(*this);
             auto ini_val = pass_value;
             auto obj = global->obj;
             cur_block->push_back(std::make_shared<ir::store>(obj->get_addr(), ini_val));
+            this->in_func = false;
+            // compunit->global_init_func->new_reg(vartype type)
+        }
             cur_block->push_back(ret);
             this->cur_func = backup;
             this->cur_block = backup_block;
-            // compunit->global_init_func->new_reg(vartype type)
-        }
         return;
     }
     for(auto raw : init->initializer) {
@@ -316,7 +364,7 @@ void ir::IrBuilder::global_init(ptr<ir::global_def> global, ptr<ast::init_syntax
 
 void ir::IrBuilder::visit(ast::var_def_stmt_syntax &node)       // self5
 {
-    if(cur_func) {
+    if(in_func) {
         auto obj = cur_func->new_obj(node.name, node.restype);
         int total_cnt = 1;
         if(node.dimension) {

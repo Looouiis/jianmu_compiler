@@ -7,7 +7,7 @@
 std::string ir::IrPrinter::get_reg_name(ptr<ir::ir_reg> &node) {
     string ans = "";
     if(node->is_global) {
-        ans = "@" + node->global_name;
+        ans = "@g" + std::to_string(node->id);
     }
     else {
         ans = "%r" + std::to_string(node->id);
@@ -19,7 +19,7 @@ void ir::IrPrinter::visit(ir_reg &node)
 {
     out << this->mapping[node.type] << " ";
     if(node.is_global) {
-        out << "@" << node.global_name;
+        out << "@g" + std::to_string(node.id);
     }
     else {
         out << "%" << "r" <<node.id;
@@ -189,7 +189,7 @@ void ir::IrPrinter::visit(binary_op_ins &node)
         out << mapping[node.op] << " ";
         if(node.op != binop::divide){
             out<<"nsw ";
-        }
+        }                      
     }
     // if(node.op != binop::divide){
     //     out<<"nsw ";
@@ -314,7 +314,7 @@ void ir::IrPrinter::visit(ir::func_call &node) {
 }
 
 void ir::IrPrinter::visit(ir::global_def &node) {
-    out << "@" << node.var_name << " = dso_local global ";
+    out << "@g" << node.obj->addr->id << " = dso_local global ";
     string init_type = "";
     if(node.obj->dim) {
         for(auto a : node.obj->dim->dimensions) {
