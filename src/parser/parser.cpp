@@ -1557,7 +1557,7 @@ yyreduce:
   case 38: /* VarDecl: BType VarDef VarDefGroup SEMICOLON  */
 #line 239 "parser.y"
                                                {
-        SynataxAnalyseVarDecl((yyval.stmt), (yyvsp[-3].var_type), (yyvsp[-2].var_def_stmt), (yyvsp[-1].var_decl_stmt), true);
+        SynataxAnalyseVarDecl((yyval.stmt), (yyvsp[-3].var_type), (yyvsp[-2].var_def_stmt), (yyvsp[-1].var_decl_stmt), false);
     }
 #line 1563 "parser.cpp"
     break;

@@ -2,6 +2,7 @@
 #define IR_HPP
 
 #include "parser/SyntaxTree.hpp"
+#include <memory>
 #include <variant>
 #include <list>
 #include <optional>
@@ -67,6 +68,7 @@ class ir_value {
 public:
     virtual void accept(ir_visitor& visitor) = 0;
     virtual void print(std::ostream & out = std::cout) = 0;
+    virtual vartype get_type() = 0;
 };
 
 class ir_reg : public ir_value {
@@ -87,6 +89,7 @@ public:
     bool operator<(ir_reg& rhs) {return id < rhs.id;}
     virtual void accept(ir_visitor& visitor) override final;
     virtual void print(std::ostream & out = std::cout) override final;
+    virtual vartype get_type() override final;
 };
 class ir_constant : public ir_value {
     friend IrBuilder;
@@ -99,6 +102,7 @@ public:
     ir_constant(std::optional<std::variant<int,float>> init_val) : init_val(init_val) {}
     virtual void accept(ir_visitor& visitor) override final;
     virtual void print(std::ostream & out = std::cout) override final;
+    virtual vartype get_type() override final;
 };
 
 class jumpList : public ir_value {
@@ -157,6 +161,7 @@ class ir_basicblock : public printable {
 public:
     ir_basicblock(int id) : id(id) { name = "bb"+std::to_string(id); };
     void push_back(ptr<ir_instr> inst);
+    ptr<ir_instr> pop_back();
     virtual void accept(ir_visitor& visitor) override final;
     virtual void print(std::ostream & out = std::cout) override final;
     bool operator<(ir::ir_basicblock & rhs){return this->id < rhs.id;}
@@ -187,10 +192,13 @@ protected:
 
 public:    
     std::list<std::pair<std::string,std::shared_ptr<ir_userfunc>>> usrfuncs;
+    ptr<ir_userfunc> global_init_func;
+    ptr<ir_basicblock> init_block;
     std::list<std::pair<std::string,std::shared_ptr<ir_libfunc>>> libfuncs;
     std::list<std::pair<std::string,std::shared_ptr<global_def>>> global_var;
     ir_module(){
         this->scope = std::make_unique<ir_scope>();
+        this->global_init_func = std::make_shared<ir_userfunc>("global_init");
     }
     ptr<ir_userfunc> new_func(std::string name);
     ptr<global_def> new_global(std::string name, vartype type);
@@ -226,7 +234,7 @@ private:
     std::vector<std::shared_ptr<ir::ir_reg>> regSpill;
 public:
     ir_userfunc(std::string name); 
-    ptr<ir_memobj> new_obj(std::string name);
+    ptr<ir_memobj> new_obj(std::string name, vartype var_type);
     ptr<ir_reg> new_reg(vartype type);//自动创建序号递增的寄存器
     ptr<ir_basicblock> new_block();//创建BB
     virtual void accept(ir_visitor& visitor);

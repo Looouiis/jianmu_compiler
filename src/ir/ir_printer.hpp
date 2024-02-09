@@ -8,10 +8,12 @@ namespace ir {
 class IrPrinter : public ir_visitor {
 public:
    std::unordered_map<std::variant<vartype,binop,relop, unaryop>,std::string> mapping = {
-        {vartype::FLOAT, "float"},
+        // {vartype::FLOAT, "float"},
+        {vartype::FLOAT, "double"},
         {vartype::INT,  "i32"},
         {vartype::VOID , "void"},
-        {vartype::FLOATADDR, "float*"},
+        // {vartype::FLOATADDR, "float*"},
+        {vartype::FLOATADDR, "double*"},
         {vartype::INTADDR, "i32*"},
         {binop::plus, "add"},
         {binop::minus,  "sub"},
@@ -30,8 +32,27 @@ public:
         {unaryop::plus, "mul"},
         {unaryop::op_not, "xor"}
     };
+    std::unordered_map<std::variant<vartype,binop,relop, unaryop>,std::string> fmapping = {
+        {binop::plus, "fadd"},
+        {binop::minus,  "fsub"},
+        {binop::multiply , "fmul"},
+        {binop::divide, "fdiv"},
+        {binop::modulo, "fmod"},
+        {relop::greater, "ogt"},
+        {relop::less,  "olt"},
+        {relop::greater_equal , "oge"},
+        {relop::less_equal, "ole"},
+        {relop::equal, "oeq"},
+        {relop::non_equal, "one"},
+        {relop::op_and, "and"},
+        {relop::op_or, "or"},
+        {unaryop::minus, "mul"},
+        {unaryop::plus, "mul"},
+        {unaryop::op_not, "xor"}
+    };
    std::unordered_map<vartype, std::string> base_type = {
-       {vartype::FLOATADDR, "float"},
+    //    {vartype::FLOATADDR, "float"},
+       {vartype::FLOATADDR, "double"},
        {vartype::INTADDR, "i32"}
    };
    std::ostream &out;

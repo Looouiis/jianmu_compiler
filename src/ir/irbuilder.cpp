@@ -3,6 +3,9 @@
 #include "parser/SyntaxTree.hpp"
 #include <cstdlib>
 #include <memory>
+#include <unordered_map>
+
+extern ast::SyntaxTree syntax_tree;
 
 void ir::IrBuilder::visit(ast::compunit_syntax &node)
 {
@@ -47,6 +50,10 @@ void ir::IrBuilder::visit(ast::func_def_syntax &node){
     cur_block = cur_func->entry;
     if(name == "main"){
         this->found_main = true;
+        if(compunit->init_block) {
+            ptr_list<ir::ir_value> param = {};
+            cur_block->push_back(std::make_shared<ir::func_call>(compunit->global_init_func->name, param, vartype::VOID));
+        }
     }
     return_bb = cur_func->new_block();
 
@@ -76,7 +83,16 @@ void ir::IrBuilder::visit(ast::func_def_syntax &node){
         break;
     default:
         {
-            auto ret_val = std::make_shared<ir::ir_constant>(0);
+            float fz = 0.0f;
+            int z = 0;
+            ptr<ir::ir_constant> ret_val;
+            if(rettype == vartype::FLOAT) {
+                ret_val = std::make_shared<ir::ir_constant>(fz);
+            }
+            else {
+                ret_val = std::make_shared<ir::ir_constant>(z);
+            }
+            ret_val->type = rettype;
             return_value.emplace_back(ret_val,cur_block);
             cur_block->push_back(std::make_shared<ir::jump>(return_bb));
             /*
@@ -137,7 +153,7 @@ void ir::IrBuilder::visit(ast::unaryop_expr_syntax &node)           // self3
 {
     node.rhs->accept(*this);
     auto exp2 = pass_value;
-    auto dst = cur_func->new_reg(vartype::INT);
+    auto dst = cur_func->new_reg(pass_type);
     cur_block->push_back(std::make_shared<ir::unary_op_ins>(dst, exp2, node.op));
     this->pass_value = dst;
 }
@@ -150,60 +166,95 @@ void ir::IrBuilder::visit(ast::lval_syntax &node)                   // self4----
     // auto old_reg = var->get_addr();
     // auto new_reg = cur_func->new_obj(node.name)->get_addr();
     // cur_block->push_back(std::make_shared<ir::load>(value, new_reg));
-    auto var = this->scope.find_var(node.name);
-    if(var->dim) {
-        auto element_ptr = cur_func->new_reg(vartype::INTADDR);
-        ptr_list<ir::ir_value> dim;
-        if(node.dimension) {
-            int var_size = var->dim->dimensions.size();
-            if(!var->dim->has_first_dim) {
-                var_size++;
+    std::unordered_map<vartype, vartype> reflect = {{vartype::FLOAT, vartype::FLOATADDR}, {vartype::INT, vartype::INTADDR}};
+    std::unordered_map<vartype, vartype> reflect_back = {{vartype::FLOATADDR, vartype::FLOAT}, {vartype::INTADDR, vartype::INT}};  //处理左值的类型问题
+    
+    if(cur_func) {
+        auto var = this->scope.find_var(node.name);
+        node.restype = reflect_back[var->addr->type];
+        pass_type = node.restype;
+        if(var->dim) {
+            // auto element_ptr = cur_func->new_reg(vartype::INTADDR);
+            auto element_ptr = cur_func->new_reg(var->addr->type);
+            ptr_list<ir::ir_value> dim;
+            if(node.dimension) {
+                int var_size = var->dim->dimensions.size();
+                if(!var->dim->has_first_dim) {
+                    var_size++;
+                }
+                for(auto dimension : node.dimension->dimensions) {
+                    dimension->accept(*this);
+                    dim.push_back(pass_value);
+                }
+                if(node.dimension->dimensions.size() < var_size) {
+                    cur_block->push_back(std::make_shared<get_element_ptr>(var, element_ptr, dim));
+                    pass_value = element_ptr;
+                    // return;
+                }
+                else if(node.dimension->dimensions.size() == var_size) {
+                    auto dst = cur_func->new_reg(node.restype);
+                    cur_block->push_back(std::make_shared<get_element_ptr>(var, element_ptr, dim));
+                    cur_block->push_back(std::make_shared<ir::load>(dst, element_ptr));
+                    this->pass_value = dst;
+                }
+                else {
+                    abort();
+                }
             }
-            for(auto dimension : node.dimension->dimensions) {
-                dimension->accept(*this);
-                dim.push_back(pass_value);
-            }
-            if(node.dimension->dimensions.size() < var_size) {
+            else {
                 cur_block->push_back(std::make_shared<get_element_ptr>(var, element_ptr, dim));
                 pass_value = element_ptr;
                 // return;
             }
-            else if(node.dimension->dimensions.size() == var_size) {
+            // cur_block->push_back(std::make_shared<get_element_ptr>(var, element_ptr, dim));
+            // cur_block->push_back(std::make_shared<load>(dst, element_ptr));
+        }
+        else {
+            if(var->get_addr()->type == vartype::INTADDR || var->get_addr()->type == vartype::FLOATADDR) {
                 auto dst = cur_func->new_reg(node.restype);
-                cur_block->push_back(std::make_shared<get_element_ptr>(var, element_ptr, dim));
-                cur_block->push_back(std::make_shared<ir::load>(dst, element_ptr));
+                cur_block->push_back(std::make_shared<ir::load>(dst, var->get_addr()));
                 this->pass_value = dst;
             }
             else {
-                abort();
+                this->pass_value = var->get_addr();
+            }
+        }
+        // if(node.dimension) {
+        //     auto element_ptr = cur_func->new_reg(vartype::INTADDR);
+        //     ptr_list<ir::ir_value> dim;
+        //     for(auto dimension : node.dimension->dimensions) {
+        //         dimension->accept(*this);
+        //         dim.push_back(pass_value);
+        //     }
+        //     cur_block->push_back(std::make_shared<get_element_ptr>(var, element_ptr, dim));
+        //     cur_block->push_back(std::make_shared<load>(dst, element_ptr));
+        // }
+        // else {
+        //     cur_block->push_back(std::make_shared<ir::load>(dst, var->get_addr()));
+        // }
+    }
+    else {
+        auto const_ini = syntax_tree.find(node.name);
+        if(const_ini) {
+            if(node.dimension) {
+                ptr<ast::init_syntax> ini_pointer = const_ini;
+                for(auto it = node.dimension->dimensions.begin(); it != node.dimension->dimensions.end(); it++) {
+                    auto tmp = ini_pointer->initializer[(*it)->calc_res()];
+                    ini_pointer = std::dynamic_pointer_cast<ast::init_syntax>(tmp);
+                    if(!ini_pointer) {
+                        abort();
+                    }
+                }
+                ini_pointer->initializer.front()->accept(*this);
+            }
+            else {
+                const_ini->initializer.front()->accept(*this);
             }
         }
         else {
-            cur_block->push_back(std::make_shared<get_element_ptr>(var, element_ptr, dim));
-            pass_value = element_ptr;
-            // return;
+            pass_value = nullptr;
         }
-        // cur_block->push_back(std::make_shared<get_element_ptr>(var, element_ptr, dim));
-        // cur_block->push_back(std::make_shared<load>(dst, element_ptr));
     }
-    else {
-        auto dst = cur_func->new_reg(node.restype);
-        cur_block->push_back(std::make_shared<ir::load>(dst, var->get_addr()));
-        this->pass_value = dst;
-    }
-    // if(node.dimension) {
-    //     auto element_ptr = cur_func->new_reg(vartype::INTADDR);
-    //     ptr_list<ir::ir_value> dim;
-    //     for(auto dimension : node.dimension->dimensions) {
-    //         dimension->accept(*this);
-    //         dim.push_back(pass_value);
-    //     }
-    //     cur_block->push_back(std::make_shared<get_element_ptr>(var, element_ptr, dim));
-    //     cur_block->push_back(std::make_shared<load>(dst, element_ptr));
-    // }
-    // else {
-    //     cur_block->push_back(std::make_shared<ir::load>(dst, var->get_addr()));
-    // }
 }
 
 
@@ -212,9 +263,11 @@ void ir::IrBuilder::visit(ast::literal_syntax &node)
 {
     ptr<ir::ir_constant> constant;
     if(node.restype == vartype::INT) {
+        pass_type = vartype::INT;
         constant = std::make_shared<ir::ir_constant>(node.intConst);
     }
     else {
+        pass_type = vartype::FLOAT;
         constant = std::make_shared<ir::ir_constant>(node.floatConst);
     }
     constant->type = node.restype;
@@ -226,7 +279,33 @@ void ir::IrBuilder::global_init(ptr<ir::global_def> global, ptr<ast::init_syntax
         return;
     if(!init->is_array) {
         init->initializer.front()->accept(*this);
-        global->init_val.push_back(pass_value);
+        if(pass_value) {
+            global->init_val.push_back(pass_value);
+        }
+        else {
+            auto zero = std::make_shared<ir::ir_constant>(global->obj->addr->type == vartype::INT ? 0 : 0.0f);
+            std::pmr::unordered_map<vartype, vartype> addr2obj = {{vartype::INTADDR, vartype::INT}, {vartype::FLOATADDR, vartype::FLOAT}};
+            zero->type = addr2obj[global->obj->addr->type];
+            global->init_val.push_back(zero);
+            auto backup = this->cur_func;
+            auto backup_block = this->cur_block;
+            this->cur_func = compunit->global_init_func;
+            if(!compunit->init_block) {
+                compunit->init_block = compunit->global_init_func->new_block();
+                compunit->global_init_func->set_retype(vartype::VOID);
+                compunit->init_block->push_back(std::make_shared<ir::ret>(nullptr, false));
+            }
+            auto ret = compunit->init_block->pop_back();
+            this->cur_block = compunit->init_block;
+            init->initializer.front()->accept(*this);
+            auto ini_val = pass_value;
+            auto obj = global->obj;
+            cur_block->push_back(std::make_shared<ir::store>(obj->get_addr(), ini_val));
+            cur_block->push_back(ret);
+            this->cur_func = backup;
+            this->cur_block = backup_block;
+            // compunit->global_init_func->new_reg(vartype type)
+        }
         return;
     }
     for(auto raw : init->initializer) {
@@ -238,7 +317,7 @@ void ir::IrBuilder::global_init(ptr<ir::global_def> global, ptr<ast::init_syntax
 void ir::IrBuilder::visit(ast::var_def_stmt_syntax &node)       // self5
 {
     if(cur_func) {
-        auto obj = cur_func->new_obj(node.name);
+        auto obj = cur_func->new_obj(node.name, node.restype);
         int total_cnt = 1;
         if(node.dimension) {
             obj->dim = node.dimension;
@@ -278,7 +357,8 @@ void ir::IrBuilder::visit(ast::var_def_stmt_syntax &node)       // self5
     }
     else {
         ptr<ir::ir_value> init_val = nullptr;
-        auto def = this->compunit->new_global(node.name, vartype::INTADDR);
+        std::unordered_map<vartype, vartype> reflect = {{vartype::FLOAT, vartype::FLOATADDR}, {vartype::INT, vartype::INTADDR}};
+        auto def = this->compunit->new_global(node.name, reflect[node.restype]);
         auto obj = def->get_obj();
         if(node.dimension) {
             obj->dim = node.dimension;
@@ -298,8 +378,11 @@ void ir::IrBuilder::visit(ast::assign_stmt_syntax &node)        // self6
     node.value->accept(*this);
     auto value = pass_value;
     auto obj = this->scope.find_var(node.target->name);
-    cur_block->push_back(std::make_shared<ir::store>(obj->get_addr(),value));
-    // map[node.target->name] = ptr<ir::ir_value>(pass_value);
+    if(!obj->addr->is_global) {
+        cur_block->push_back(std::make_shared<ir::store>(obj->get_addr(),value));
+        // map[node.target->name] = ptr<ir::ir_value>(pass_value);
+    }
+    // abort();     // 根据cpp中的处理方式，不是abort而是忽略二次赋值
 }
 
 void ir::IrBuilder::visit(ast::block_syntax &node)
@@ -391,10 +474,13 @@ void ir::IrBuilder::visit(ast::func_f_param_syntax &node) {
     //     mem = std::make_shared<ir_memobj>(node.name, reg, i32_size);
     // }
     // else {
-        mem = this->cur_func->new_obj(node.name);
+        mem = this->cur_func->new_obj(node.name, node.accept_type);
     // }
     if(node.dimension) {
         mem->dim = node.dimension;
+    }
+    else {
+        mem->addr->type = node.accept_type;
     }
     this->scope.push_var(node.name, mem);
     this->cur_func->func_args.push_back(mem);

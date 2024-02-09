@@ -48,6 +48,9 @@ void ir::IrPrinter::visit(ir_module& node){
     for(auto & [name, var] : node.global_var) {
         var->accept(*this);
     }
+    if(node.init_block) {
+        node.global_init_func->accept(*this);
+    }
     for(auto & [name,func] : node.usrfuncs){
         func->accept(*this);
     }
@@ -179,10 +182,18 @@ void ir::IrPrinter::visit(binary_op_ins &node)
     out<<"\t";
     auto dst_r = std::dynamic_pointer_cast<ir::ir_reg>(node.dst);
     out<<get_reg_name(dst_r)<<" = ";
-    out<<mapping[node.op] << " ";
-    if(node.op != binop::divide){
-        out<<"nsw ";
+    if(node.src1->get_type() == vartype::FLOAT || node.src2->get_type() == vartype::FLOAT) {
+        out<< fmapping[node.op] << " ";
     }
+    else {
+        out << mapping[node.op] << " ";
+        if(node.op != binop::divide){
+            out<<"nsw ";
+        }
+    }
+    // if(node.op != binop::divide){
+    //     out<<"nsw ";
+    // }
     node.src1->accept(*this);
     out<<", ";
     out << this->get_value(node.src2);
@@ -191,9 +202,21 @@ void ir::IrPrinter::visit(binary_op_ins &node)
 
 void ir::IrPrinter::visit(cmp_ins &node)
 {
-    out << "\t" << get_reg_name(node.dst) << " = icmp "<< mapping[node.op] << " ";
+    out << "\t" << get_reg_name(node.dst);
     auto src1_r = std::dynamic_pointer_cast<ir::ir_constant>(node.src1);
+    if(node.src1->get_type() == vartype::FLOAT || node.src2->get_type() == vartype::FLOAT) {
+        out << " = fcmp "<< fmapping[node.op] << " ";
+    }
+    else {
+        out << " = icmp "<< mapping[node.op] << " ";
+    }
     if(src1_r){
+        // if(src1_r->type == vartype::INT) {
+        //     out << " = icmp "<< mapping[node.op] << " ";
+        // }
+        // else {
+        //     out << " = fcmp "<< fmapping[node.op] << " ";
+        // }
         out << mapping[src1_r->type] << " ";
         auto value = src1_r->init_val.value();
         if(std::holds_alternative<int>(value)){
@@ -203,6 +226,12 @@ void ir::IrPrinter::visit(cmp_ins &node)
         }
     }else{
         auto aa = std::dynamic_pointer_cast<ir::ir_reg>(node.src1);
+        // if(aa->type == vartype::INT) {
+        //     out << " = icmp "<< mapping[node.op] << " ";
+        // }
+        // else {
+        //     out << " = fcmp "<< fmapping[node.op] << " ";
+        // }
         out << mapping[aa->type] << " "<< get_reg_name(aa);
     }
     out << ",";

@@ -237,7 +237,7 @@
     }
 
     VarDecl: BType VarDef VarDefGroup SEMICOLON{
-        SynataxAnalyseVarDecl($$, $1, $2, $3, true);
+        SynataxAnalyseVarDecl($$, $1, $2, $3, false);
     }
 
     VarDefGroup:  COMMA VarDef VarDefGroup{

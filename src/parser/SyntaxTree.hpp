@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <string>
+#include <unordered_map>
 #include <vector>
 #include <memory>
  
@@ -114,6 +115,40 @@ class SyntaxTree {
     void accept(syntax_tree_visitor &visitor){
         this->root->accept(visitor);
     };
+    bool insert(std::pair<string, ptr<ast::init_syntax>> pair) {
+        auto res = const_val_map.insert(pair);
+        return res.second;
+    };
+    ptr<ast::init_syntax> find(string name) {
+        auto res = const_val_map.find(name);
+        if(res != const_val_map.end()) {
+            return res->second;
+        }
+        else {
+            return nullptr;
+        }
+    };
+    // ptr<expr_syntax> get_const_val(string name, ptr_list<expr_syntax> dimension) {
+    //     auto const_ini = this->find(name);
+    //     if(const_ini) {
+    //         if(!dimension.empty()) {
+    //             ptr<ast::init_syntax> ini_pointer = const_ini;
+    //             for(auto it = dimension.begin(); it != dimension.end(); it++) {
+    //                 auto tmp = ini_pointer->initializer[(*it)->calc_res()];
+    //                 ini_pointer = std::dynamic_pointer_cast<init_syntax>(tmp);
+    //                 if(!ini_pointer) {
+    //                     abort();
+    //                 }
+    //             }
+    //             return ini_pointer->initializer.front()->calc_res();
+    //         }
+    //         else {
+    //             return const_ini->initializer.front()->calc_res();
+    //         }
+    //     }
+    // };
+private:
+    std::unordered_map<string, ptr<ast::init_syntax>> const_val_map;
 };
 
 //编译单位，就是一个文件

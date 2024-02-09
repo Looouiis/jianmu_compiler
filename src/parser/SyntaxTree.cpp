@@ -10,6 +10,8 @@
 
 using namespace ast;
 
+extern SyntaxTree syntax_tree;
+
 SyntaxTreePrinter ast_printer;
 
 void ast::parse_file(string input_file_path) {
@@ -507,6 +509,23 @@ int ast::unaryop_expr_syntax::calc_res() {
 
 int ast::lval_syntax::calc_res() {
     // calc_res只是用来计算常量表达式
+    auto const_ini = syntax_tree.find(this->name);
+    if(const_ini) {
+        if(this->dimension) {
+            ptr<ast::init_syntax> ini_pointer = const_ini;
+            for(auto it = this->dimension->dimensions.begin(); it != this->dimension->dimensions.end(); it++) {
+                auto tmp = ini_pointer->initializer[(*it)->calc_res()];
+                ini_pointer = std::dynamic_pointer_cast<init_syntax>(tmp);
+                if(!ini_pointer) {
+                    abort();
+                }
+            }
+            return ini_pointer->initializer.front()->calc_res();
+        }
+        else {
+            return const_ini->initializer.front()->calc_res();
+        }
+    }
     std::abort();
     return -1;
 }

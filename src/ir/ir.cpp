@@ -4,6 +4,7 @@
 #include <set>
 #include "ir.hpp"
 #include "loongarch/register_allocator.hpp"
+#include "parser/SyntaxTree.hpp"
 #include <functional>
 void ir::ir_reg::accept(ir_visitor &visitor)
 {
@@ -12,6 +13,11 @@ void ir::ir_reg::accept(ir_visitor &visitor)
 void ir::ir_reg::print(std::ostream & out ) { 
     out << "%r" << this->id << '\t';
 }
+
+vartype ir::ir_reg::get_type() {
+    return this->type;
+}
+
 void ir::ir_memobj::accept(ir_visitor &visitor) {
 
 }
@@ -28,6 +34,11 @@ void ir::ir_scope::print(std::ostream & out )
 void ir::ir_basicblock::push_back(ptr<ir_instr> inst)
 {
     this->instructions.push_back(inst);
+}
+ptr<ir::ir_instr> ir::ir_basicblock::pop_back() {
+    auto back = this->instructions.back();
+    this->instructions.pop_back();
+    return back;
 }
 
 void ir::ir_basicblock::accept(ir_visitor &visitor)
@@ -98,8 +109,9 @@ ir::ir_userfunc::ir_userfunc(std::string name) : ir_func(name) {
     this->scope = std::make_unique<ir::ir_scope>();
 }
 
-ptr<ir::ir_memobj> ir::ir_userfunc::new_obj(std::string name) {
-  auto addr = this->new_reg(vartype::INTADDR);
+ptr<ir::ir_memobj> ir::ir_userfunc::new_obj(std::string name, vartype var_type) {
+    std::unordered_map<vartype, vartype> var_reg_trans = {{vartype::INT, vartype::INTADDR}, {vartype::FLOAT, vartype::FLOATADDR}};
+  auto addr = this->new_reg(var_reg_trans[var_type]);
   auto obj = std::make_shared<ir_memobj>(name, addr, i32_size);
   this->scope->ir_objs.push_back(obj);
   return obj;
@@ -408,6 +420,10 @@ void ir::ir_constant::accept(ir_visitor &visitor) {
 
 void ir::ir_constant::print(std::ostream &out)
 {
+}
+
+vartype ir::ir_constant::get_type() {
+    return this->type;
 }
 
 void ir::jumpList::accept(ir_visitor &visitor)

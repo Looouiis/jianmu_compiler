@@ -144,6 +144,14 @@ void SynataxAnalyseVarDecl(ast::stmt_syntax *&self,vartype var_type, ast::var_de
     for(auto a : syntax->var_def_list) {
         a->restype = var_type;
         a->is_const = is_const;
+        if(is_const) {
+            if(a->initializer) {
+                syntax_tree.insert({a->name, a->initializer});
+            }
+            else {
+                abort();
+            }
+        }
     }
     self = static_cast<ast::stmt_syntax*>(syntax);
 }
@@ -279,7 +287,7 @@ ptr<ast::init_syntax> reorganize_init(ptr<ast::init_syntax> init, ptr_list<ast::
                     ret->initializer.push_back(reorganize_init(cur, nxt_dim, nxt_cur_dim));
                 }
                 else {
-                    int nxt_cnt = 1;
+                    int nxt_cnt = 1, bak = dim.back()->calc_res();
                     auto nxt_ini = std::make_shared<ast::init_syntax>();
                     nxt_ini->is_array = true;
                     for(auto it = dim.begin() + 1; it != dim.end(); it++) {
@@ -288,11 +296,19 @@ ptr<ast::init_syntax> reorganize_init(ptr<ast::init_syntax> init, ptr_list<ast::
                     for(int j = 0; j < nxt_cnt; j++) {
                         if(pointer < init->initializer.size()) {
                             auto check = std::dynamic_pointer_cast<ast::init_syntax>(init->initializer[pointer]);
-                            if(!check || check->is_array) {
-                                abort();
-                            }
+                            // if(!check || check->is_array) {
+                            //     abort();
+                            // }
                             assert(check);
-                            assert(!check->is_array);
+                            // assert(!check->is_array);
+                            if(check->is_array) {
+                                if(j % bak == 0) {
+                                    j += (bak - 1);
+                                }
+                                else {
+                                    abort();
+                                }
+                            }
                             nxt_ini->initializer.push_back(init->initializer[pointer++]);
                         }
                         else {
@@ -345,7 +361,7 @@ void SynataxAnalyseVarDef(ast::var_def_stmt_syntax *&self, char *ident, ast::var
     if(init) {
         if(current_dim) {
             auto res = reorganize_init(std::shared_ptr<ast::init_syntax>(init), current_dim->dimensions, {});
-            res->print();
+            // res->print();
             syntax->initializer = res;
         }
         else {
