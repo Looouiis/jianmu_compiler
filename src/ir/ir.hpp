@@ -57,6 +57,7 @@ class while_loop;
 class break_or_continue;
 class func_call;
 class global_def;
+class trans;
 
 class printable {
     virtual void accept(ir_visitor& visitor) = 0;
@@ -431,6 +432,7 @@ public:
     virtual void visit(break_or_continue &node) = 0;
     virtual void visit(func_call &node) = 0;
     virtual void visit(global_def &node) = 0;
+    virtual void visit(trans &node) = 0;
 };
 
 class get_element_ptr : public ir_instr {
@@ -507,6 +509,21 @@ public:
     virtual std::vector<ptr<ir::ir_value>> use_reg() override final;
     virtual std::vector<ptr<ir::ir_value>> def_reg() override final;
     ptr<ir_memobj> get_obj();
+};
+
+class trans : public ir_instr {
+    friend IrPrinter;
+    friend IrBuilder;
+private:
+    vartype target;
+    ptr<ir_reg> dst;
+    ptr<ir_value> src;
+public:
+    trans(vartype target, ptr<ir_reg> dst, ptr<ir_value> src) : target(target), dst(dst), src(src) {}
+    virtual void accept(ir_visitor& visitor) override final;
+    virtual void print(std::ostream & out = std::cout) override final;
+    virtual std::vector<ptr<ir::ir_value>> use_reg() override final;
+    virtual std::vector<ptr<ir::ir_value>> def_reg() override final;
 };
 
 } // namespace ir

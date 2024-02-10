@@ -46,8 +46,8 @@ public:
         {relop::non_equal, "one"},
         {relop::op_and, "and"},
         {relop::op_or, "or"},
-        {unaryop::minus, "mul"},
-        {unaryop::plus, "mul"},
+        {unaryop::minus, "fmul"},
+        {unaryop::plus, "fmul"},
         {unaryop::op_not, "xor"}
     };
    std::unordered_map<vartype, std::string> base_type = {
@@ -79,8 +79,10 @@ public:
    virtual void visit(break_or_continue &node) override final;
    virtual void visit(func_call &node) override final;
    virtual void visit(global_def &node) override final;
+   virtual void visit(trans &node) override final;
    std::string get_value(const ptr<ir::ir_value> &val);
    std::string get_reg_name(ptr<ir_reg> &node);
+   void llvm(ptr<int> pointer, ptr_list<ir::ir_value> init_val, ptr_list<ast::expr_syntax> dimensions, string init_type, vartype type);
 };
 
 } // namespace ir

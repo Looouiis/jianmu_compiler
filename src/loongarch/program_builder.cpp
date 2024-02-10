@@ -481,3 +481,5 @@ void LoongArch::ProgramBuilder::visit(ir::break_or_continue& node) {}
 void LoongArch::ProgramBuilder::visit(ir::func_call& node) {}
 
 void LoongArch::ProgramBuilder::visit(ir::global_def& node) {}
+
+void LoongArch::ProgramBuilder::visit(ir::trans& node) {}

@@ -163,8 +163,26 @@ void ir::IrBuilder::visit(ast::rel_cond_syntax &node)           // self1
 {
     node.lhs->accept(*this);
     auto exp1 = pass_value;
+    if(!pass_value) {
+        return;
+    }
     node.rhs->accept(*this);
     auto exp2 = pass_value;
+    if(!pass_value) {
+        return;
+    }
+    if(exp1->get_type() == vartype::FLOAT || exp2->get_type() == vartype::FLOAT) {
+        if(exp1->get_type() != vartype::FLOAT) {
+            auto transed = cur_func->new_reg(exp1->get_type() == vartype::INT ? vartype::FLOAT : vartype::FLOATADDR);
+            cur_block->push_back(std::make_shared<ir::trans>(vartype::FLOAT, transed, exp1));
+            exp1 = transed;
+        }
+        if(exp2->get_type() != vartype::FLOAT) {
+            auto transed = cur_func->new_reg(exp2->get_type() == vartype::INT ? vartype::FLOAT : vartype::FLOATADDR);
+            cur_block->push_back(std::make_shared<ir::trans>(vartype::FLOAT, transed, exp2));
+            exp2 = transed;
+        }
+    }
     auto dst = cur_func->new_reg(vartype::INT);
     cur_block->push_back(std::make_shared<ir::cmp_ins>(dst, exp1, exp2, node.op));
     this->pass_value = dst;
@@ -174,8 +192,26 @@ void ir::IrBuilder::visit(ast::logic_cond_syntax &node)         // self2
 {
     node.lhs->accept(*this);
     auto exp1 = pass_value;
+    if(!pass_value) {
+        return;
+    }
     node.rhs->accept(*this);
     auto exp2 = pass_value;
+    if(!pass_value) {
+        return;
+    }
+    if(exp1->get_type() == vartype::FLOAT || exp2->get_type() == vartype::FLOAT) {
+        if(exp1->get_type() != vartype::FLOAT) {
+            auto transed = cur_func->new_reg(exp1->get_type() == vartype::INT ? vartype::FLOAT : vartype::FLOATADDR);
+            cur_block->push_back(std::make_shared<ir::trans>(vartype::FLOAT, transed, exp1));
+            exp1 = transed;
+        }
+        if(exp2->get_type() != vartype::FLOAT) {
+            auto transed = cur_func->new_reg(exp2->get_type() == vartype::INT ? vartype::FLOAT : vartype::FLOATADDR);
+            cur_block->push_back(std::make_shared<ir::trans>(vartype::FLOAT, transed, exp2));
+            exp2 = transed;
+        }
+    }
     auto dst = cur_func->new_reg(vartype::INT);
     cur_block->push_back(std::make_shared<ir::logic_ins>(dst, exp1, exp2, node.op));
     this->pass_value = dst;
@@ -190,7 +226,23 @@ void ir::IrBuilder::visit(ast::binop_expr_syntax &node)
     auto exp1=pass_value;
     node.rhs->accept(*this);
     auto exp2=pass_value;
-    auto dst = cur_func->new_reg(node.restype);
+    ptr<ir_reg> dst = cur_func->new_reg(node.restype);
+    if(exp1->get_type() == vartype::FLOAT || exp2->get_type() == vartype::FLOAT) {
+        if(exp1->get_type() != vartype::FLOAT) {
+            auto transed = cur_func->new_reg(exp1->get_type() == vartype::INT ? vartype::FLOAT : vartype::FLOATADDR);
+            cur_block->push_back(std::make_shared<ir::trans>(vartype::FLOAT, transed, exp1));
+            exp1 = transed;
+        }
+        if(exp2->get_type() != vartype::FLOAT) {
+            auto transed = cur_func->new_reg(exp2->get_type() == vartype::INT ? vartype::FLOAT : vartype::FLOATADDR);
+            cur_block->push_back(std::make_shared<ir::trans>(vartype::FLOAT, transed, exp2));
+            exp2 = transed;
+        }
+        dst = cur_func->new_reg(node.restype == vartype::INT ? vartype::FLOAT : (node.restype == vartype::INTADDR ? vartype::FLOATADDR : node.restype));
+    }
+    else {
+        dst = cur_func->new_reg(node.restype);
+    }
     cur_block->push_back(std::make_shared<ir::binary_op_ins>(dst,exp1,exp2,node.op));
     this->pass_value=dst;
 }
@@ -199,6 +251,9 @@ void ir::IrBuilder::visit(ast::unaryop_expr_syntax &node)           // self3
 {
     node.rhs->accept(*this);
     auto exp2 = pass_value;
+    if(!pass_value) {
+        return;
+    }
     auto dst = cur_func->new_reg(pass_type);
     cur_block->push_back(std::make_shared<ir::unary_op_ins>(dst, exp2, node.op));
     this->pass_value = dst;
@@ -215,7 +270,26 @@ void ir::IrBuilder::visit(ast::lval_syntax &node)                   // self4----
     std::unordered_map<vartype, vartype> reflect = {{vartype::FLOAT, vartype::FLOATADDR}, {vartype::INT, vartype::INTADDR}};
     std::unordered_map<vartype, vartype> reflect_back = {{vartype::FLOATADDR, vartype::FLOAT}, {vartype::INTADDR, vartype::INT}};  //处理左值的类型问题
     
-    if(in_func) {
+    if(!in_func) {
+        auto const_ini = syntax_tree.find(node.name);
+        if(const_ini) {
+            if(node.dimension) {
+                ptr<ast::init_syntax> ini_pointer = const_ini;
+                for(auto it = node.dimension->dimensions.begin(); it != node.dimension->dimensions.end(); it++) {
+                    auto tmp = ini_pointer->initializer[(*it)->calc_res()];
+                    ini_pointer = std::dynamic_pointer_cast<ast::init_syntax>(tmp);
+                    if(!ini_pointer) {
+                        abort();
+                    }
+                }
+                ini_pointer->initializer.front()->accept(*this);
+            }
+            else {
+                const_ini->initializer.front()->accept(*this);
+            }
+            return;
+        }
+    }
         auto var = this->scope.find_var(node.name);
         node.restype = reflect_back[var->addr->type];
         pass_type = node.restype;
@@ -278,29 +352,8 @@ void ir::IrBuilder::visit(ast::lval_syntax &node)                   // self4----
         // else {
         //     cur_block->push_back(std::make_shared<ir::load>(dst, var->get_addr()));
         // }
-    }
-    else {
-        auto const_ini = syntax_tree.find(node.name);
-        if(const_ini) {
-            if(node.dimension) {
-                ptr<ast::init_syntax> ini_pointer = const_ini;
-                for(auto it = node.dimension->dimensions.begin(); it != node.dimension->dimensions.end(); it++) {
-                    auto tmp = ini_pointer->initializer[(*it)->calc_res()];
-                    ini_pointer = std::dynamic_pointer_cast<ast::init_syntax>(tmp);
-                    if(!ini_pointer) {
-                        abort();
-                    }
-                }
-                ini_pointer->initializer.front()->accept(*this);
-            }
-            else {
-                const_ini->initializer.front()->accept(*this);
-            }
-        }
-        else {
-            pass_value = nullptr;
-        }
-    }
+
+
 }
 
 
@@ -335,12 +388,13 @@ void ir::IrBuilder::global_init(ptr<ir::global_def> global, ptr<ast::init_syntax
             auto ret = compunit->init_block->pop_back();
             this->cur_block = compunit->init_block;
         init->initializer.front()->accept(*this);
-        if(pass_value) {
+        auto is_const = std::dynamic_pointer_cast<ir_constant>(pass_value);
+        if(is_const) {
             global->init_val.push_back(pass_value);
         }
         else {
             auto zero = std::make_shared<ir::ir_constant>(global->obj->addr->type == vartype::INT ? 0 : 0.0f);
-            std::pmr::unordered_map<vartype, vartype> addr2obj = {{vartype::INTADDR, vartype::INT}, {vartype::FLOATADDR, vartype::FLOAT}};
+            std::unordered_map<vartype, vartype> addr2obj = {{vartype::INTADDR, vartype::INT}, {vartype::FLOATADDR, vartype::FLOAT}};
             zero->type = addr2obj[global->obj->addr->type];
             global->init_val.push_back(zero);
             this->in_func = true;
@@ -403,7 +457,7 @@ void ir::IrBuilder::visit(ast::var_def_stmt_syntax &node)       // self5
         //     map[node.name] = std::make_shared<ir::ir_constant>(0);
         // }
     }
-    else {
+    else { 
         ptr<ir::ir_value> init_val = nullptr;
         std::unordered_map<vartype, vartype> reflect = {{vartype::FLOAT, vartype::FLOATADDR}, {vartype::INT, vartype::INTADDR}};
         auto def = this->compunit->new_global(node.name, reflect[node.restype]);

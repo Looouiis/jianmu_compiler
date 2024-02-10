@@ -573,3 +573,20 @@ std::vector<ptr<ir::ir_value>> ir::global_def::def_reg() {
 ptr<ir::ir_memobj> ir::global_def::get_obj() {
     return obj;
 }
+
+void ir::trans::accept(ir_visitor &visitor)
+{
+    visitor.visit(*this);
+}
+
+void ir::trans::print(std::ostream &out)
+{
+}
+
+std::vector<ptr<ir::ir_value>> ir::trans::use_reg() {
+  return {src};
+}
+
+std::vector<ptr<ir::ir_value>> ir::trans::def_reg() {
+  return {dst};
+}

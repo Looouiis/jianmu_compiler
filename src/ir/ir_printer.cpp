@@ -1,6 +1,8 @@
 #include "ir_printer.hpp"
 #include "ir/ir.hpp"
 #include "parser/SyntaxTree.hpp"
+#include <iomanip>
+#include <ios>
 #include <memory>
 #include <string>
 
@@ -33,7 +35,7 @@ void ir::IrPrinter::visit(ir_constant &node)
     if(std::holds_alternative<int>(value)){
         out << std::get<int>(value);
     }else{
-        out << std::get<float>(value);
+        out << std::fixed << std::setprecision(1) << std::get<float>(value);
     }
 }
 
@@ -162,14 +164,29 @@ void ir::IrPrinter::visit(unary_op_ins &node)
     out << "\t";
     auto dst_r = std::dynamic_pointer_cast<ir::ir_reg>(node.dst);
     out << get_reg_name(dst_r) << " = ";
-    out << mapping[node.op] << " ";
+    if(node.src->get_type() == vartype::FLOAT) {
+        out << fmapping[node.op] << " ";
+    }
+    else {
+        out << mapping[node.op] << " ";
+    }
     node.src->accept(*this);
     out << ", ";
     if(node.op == unaryop::minus) {
-        out << "-1";
+        if(node.src->get_type() == vartype::FLOAT) {
+            out << "-1.0";
+        }
+        else {
+            out << "-1";
+        }
     }
     else if(node.op == unaryop::plus) {
-        out << "1";
+        if(node.src->get_type() == vartype::FLOAT) {
+            out << "1.0";
+        }
+        else {
+            out << "1";
+        }
     }
     else if(node.op == unaryop::op_not) {
         out << "true";
@@ -222,7 +239,7 @@ void ir::IrPrinter::visit(cmp_ins &node)
         if(std::holds_alternative<int>(value)){
             out << std::get<int>(value);
         }else{
-            out << std::get<float>(value);
+            out << std::fixed << std::setprecision(1) << std::get<float>(value);
         }
     }else{
         auto aa = std::dynamic_pointer_cast<ir::ir_reg>(node.src1);
@@ -313,60 +330,127 @@ void ir::IrPrinter::visit(ir::func_call &node) {
     out << std::endl;
 }
 
+void ir::IrPrinter::llvm(ptr<int> pointer, ptr_list<ir::ir_value> init_val, ptr_list<ast::expr_syntax> dimensions, string init_type, vartype type) {
+    for(auto a : dimensions) {
+        // if(dimensions.size() > 1)
+            out << "[" << a->calc_res() << " x ";
+        if(a == dimensions.back()) {
+            // if(dimensions.size() == 1)
+                out<<base_type[type];
+            init_type = "[" + std::to_string(a->calc_res()) + " x " + base_type[type] + "]";
+        }
+        // out << "]";
+    }
+    for(auto a : dimensions) {
+        // if(dimensions.size() > 1)
+            out << "]";
+    }
+    out << " [";
+    for(int i = 0; i < dimensions.front()->calc_res(); i++) {
+        if(dimensions.size() > 1) {
+            ptr_list<ast::expr_syntax> nxt_dim(dimensions.begin() + 1, dimensions.end());
+            llvm(pointer, init_val, nxt_dim, init_type, type);
+            if(i != dimensions.front()->calc_res() - 1) {
+                out << ", ";
+            }
+        }
+        else {
+            init_val[*pointer]->accept(*this);
+            (*pointer)++;
+            if(i != dimensions.front()->calc_res() - 1) {
+                out << ", ";
+            }
+        }
+    }
+    out << "]";
+}
+
 void ir::IrPrinter::visit(ir::global_def &node) {
     out << "@g" << node.obj->addr->id << " = dso_local global ";
     string init_type = "";
     if(node.obj->dim) {
         for(auto a : node.obj->dim->dimensions) {
-            out << "[" << a->calc_res() << " x ";
+            // if(node.obj->dim->dimensions.size() > 1)
+                // out << "[" << a->calc_res() << " x ";
             if(a == node.obj->dim->dimensions.back()) {
-                out<<base_type[node.obj->addr->type];
+                // if(node.obj->dim->dimensions.size() > 1)
+                    // out<<base_type[node.obj->addr->type];
                 init_type = "[" + std::to_string(a->calc_res()) + " x " + base_type[node.obj->addr->type] + "]";
             }
             // out << "]";
         }
         for(auto a : node.obj->dim->dimensions) {
-            out << "]";
+            // if(node.obj->dim->dimensions.size() > 1)
+                // out << "]";
         }
-        out << " ";
+        // out << " ";
     }
     else {
-        // out << mapping[node.obj->addr->type];
-        init_type = mapping[node.obj->addr->type];
+        // if(node.init_val.empty())
+        //     out << base_type[node.obj->addr->type] << " ";
+        init_type = base_type[node.obj->addr->type];
     }
     if(!node.init_val.empty()) {
         if(node.obj->dim) {
-            out << "[";
-            // for(auto a : node.init_val) {
-            //     out << init_type << " ";
-            //     a->accept(*this);
+            // if(node.obj->dim->dimensions.size() > 1)
+            //     out << "[";
+            // // for(auto a : node.init_val) {
+            // //     out << init_type << " ";
+            // //     a->accept(*this);
+            // // }
+            // int back = node.obj->dim->dimensions.back()->calc_res();
+            
+            // for(int i = 0; i < node.init_val.size();) {
+            //     if(i % back == 0) {
+            //         out << init_type << " [";
+            //     }
+            //     node.init_val[i++]->accept(*this);
+            //     if(i % back == 0) {
+            //         out << "]";
+            //         if(i / back != node.init_val.size() / back) {
+            //             out << ", ";
+            //         }
+            //     }
+            //     else {
+            //         out << ", ";
+            //     }
             // }
-            int back = node.obj->dim->dimensions.back()->calc_res();
-            for(int i = 0; i < node.init_val.size();) {
-                if(i % back == 0) {
-                    out << init_type << " [";
-                }
-                node.init_val[i++]->accept(*this);
-                if(i % back == 0) {
-                    out << "]";
-                    if(i / back != node.init_val.size() / back) {
-                        out << ", ";
-                    }
-                }
-                else {
-                    out << ", ";
-                }
-            }
-            out << "]";
+            // if(node.obj->dim->dimensions.size() > 1)
+            //     out << "]";
+            llvm(std::make_shared<int>(0), node.init_val, node.obj->dim->dimensions, init_type, node.obj->addr->type);
         }
         else {
             node.init_val.front()->accept(*this);
         }
     }
     else {
+        // if(node.obj->dim->dimensions.size() == 1) {
+            out << init_type << " ";
+        // }
         out << "zeroinitializer";
     }
     out << ", align " << node.obj->addr->size;
+    out << std::endl;
+}
+
+void ir::IrPrinter::visit(ir::trans &node) {
+    out << "\t";
+    out << get_reg_name(node.dst) << " = ";
+    if(node.target == vartype::FLOAT) {
+        out << "sitofp i32";
+    }
+    else {
+        out << "fptosi double";
+    }
+    out << " ";
+    out << get_value(node.src);
+    out << " ";
+    if(node.target == vartype::FLOAT) {
+        out << "to double";
+    }
+    else {
+        out << "to i32";
+    }
     out << std::endl;
 }
 
@@ -384,7 +468,7 @@ std::string ir::IrPrinter::get_value(const ptr<ir::ir_value> &val)
     }else{
         auto aa = std::dynamic_pointer_cast<ir::ir_reg>(val);
         if(aa->is_global) {
-            ans += ("@" + aa->global_name);
+            ans += ("@g" + std::to_string(aa->id));
         }
         else {
             ans += ("%r" + std::to_string(aa->id));
