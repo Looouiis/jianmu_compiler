@@ -1,10 +1,12 @@
 #include "ir_printer.hpp"
 #include "ir/ir.hpp"
 #include "parser/SyntaxTree.hpp"
+#include <bitset>
 #include <iomanip>
 #include <ios>
 #include <memory>
 #include <string>
+#include <variant>
 
 std::string ir::IrPrinter::get_reg_name(ptr<ir::ir_reg> &node) {
     string ans = "";
@@ -28,6 +30,18 @@ void ir::IrPrinter::visit(ir_reg &node)
     }
 }
 
+std::string float_to_hex_string(float num) {
+    double double_num = static_cast<double>(num);
+    std::bitset<64> bits(*reinterpret_cast<unsigned long long*>(&double_num));
+    std::stringstream ss;
+    ss << std::hex << std::setw(16) << std::setfill('0') << bits.to_ullong();
+    return "0x" + ss.str();
+    // std::ostringstream oss;
+    // oss << std::hex << std::showbase << std::setw(16) << std::setfill('0') << *(reinterpret_cast<unsigned int*>(&num));
+    // return oss.str();
+}
+
+
 void ir::IrPrinter::visit(ir_constant &node)
 {
     out << mapping[node.type] << " ";
@@ -35,7 +49,8 @@ void ir::IrPrinter::visit(ir_constant &node)
     if(std::holds_alternative<int>(value)){
         out << std::get<int>(value);
     }else{
-        out << std::fixed << std::setprecision(1) << std::get<float>(value);
+        // out << std::fixed << std::setprecision(1) << std::hexfloat << std::get<float>(value);
+        out << float_to_hex_string(std::get<float>(value));
     }
 }
 
@@ -47,6 +62,9 @@ void ir::IrPrinter::visit(ir_basicblock &node)
         inst->accept(*this);
 }
 void ir::IrPrinter::visit(ir_module& node){
+    for(auto & [name, fun] : node.libfuncs) {
+        fun->accept(*this);
+    }
     for(auto & [name, var] : node.global_var) {
         var->accept(*this);
     }
@@ -72,6 +90,20 @@ void ir::IrPrinter::visit(ir_userfunc &node)
     for(auto & bb : node.bbs)
         bb->accept(*this);
     out << "}" << std::endl;
+}
+
+void ir::IrPrinter::visit(ir_libfunc &node)
+{    
+    out << "declare" << " " << mapping[node.rettype]
+    <<  " " << "@" << node.name <<"(";
+    out << "...";
+    // for(auto a : node.func_args) {
+    //     if(a != node.func_args.front()) {
+    //         out << ", ";
+    //     }
+    //     out << mapping[a->addr->type] << " " << get_reg_name(a->addr);
+    // }
+    out << ")" << std::endl;
 }
 
 void ir::IrPrinter::visit(store &node)
@@ -174,7 +206,8 @@ void ir::IrPrinter::visit(unary_op_ins &node)
     out << ", ";
     if(node.op == unaryop::minus) {
         if(node.src->get_type() == vartype::FLOAT) {
-            out << "-1.0";
+            // out << "-1.0";
+            out << float_to_hex_string(-1.0);
         }
         else {
             out << "-1";
@@ -182,7 +215,8 @@ void ir::IrPrinter::visit(unary_op_ins &node)
     }
     else if(node.op == unaryop::plus) {
         if(node.src->get_type() == vartype::FLOAT) {
-            out << "1.0";
+            // out << "1.0";
+            out << float_to_hex_string(1.0);
         }
         else {
             out << "1";
@@ -280,6 +314,9 @@ void ir::IrPrinter::visit(get_element_ptr &node) {
     for(auto a : node.base->dim->dimensions) {
         out << "]";
     }
+    if(node.base->dim->dimensions.empty()) {
+        out << base_type[node.base->addr->type];
+    }
     // }
     out << ", ";
     // for(auto a : node.base->dim->dimensions) {
@@ -292,9 +329,14 @@ void ir::IrPrinter::visit(get_element_ptr &node) {
     }
     for(auto a : node.base->dim->dimensions) {
         out << "]";
+        out << "*";
+    }
+    if(node.base->dim->dimensions.empty()) {
+        out << "ptr";
     }
     // }
-    out << "* ";
+    // out << "* ";
+    out << " ";
     out << get_value(node.base->get_addr());
     if(node.base->dim->has_first_dim) {
         out << ", i32 0";
@@ -440,13 +482,13 @@ void ir::IrPrinter::visit(ir::trans &node) {
         out << "sitofp i32";
     }
     else {
-        out << "fptosi double";
+        out << "fptosi float";
     }
     out << " ";
     out << get_value(node.src);
     out << " ";
     if(node.target == vartype::FLOAT) {
-        out << "to double";
+        out << "to float";
     }
     else {
         out << "to i32";
@@ -463,7 +505,7 @@ std::string ir::IrPrinter::get_value(const ptr<ir::ir_value> &val)
         if(std::holds_alternative<int>(value)){   
            ans += std::to_string(std::get<int>(value));
         }else{
-            ans += std::to_string(std::get<float>(value));
+            ans += float_to_hex_string(std::get<float>(value));
         }
     }else{
         auto aa = std::dynamic_pointer_cast<ir::ir_reg>(val);

@@ -83,6 +83,7 @@ private:
     int size;                                                   //some byte
     string global_name;
     bool is_global;
+    bool is_const;
 public:
     ir_reg(int id,vartype type,int size, bool is_global) : id(id) , type(type), size(size), is_global(is_global) {}
     // ir_reg(string global_name, vartype type, int size) : global_name(global_name), type(type), size(size), is_global(true) {}
@@ -202,6 +203,7 @@ public:
         this->global_init_func = std::make_shared<ir_userfunc>("global_init", global_var.size());
     }
     ptr<ir_userfunc> new_func(std::string name);
+    void add_lib_func(std::string name, ptr<ir_libfunc> fun);
     ptr<global_def> new_global(std::string name, vartype type);
     virtual void accept(ir_visitor& visitor) override final;
     virtual void print(std::ostream & out = std::cout) override final;
@@ -210,10 +212,17 @@ public:
 
 //below is func
 class ir_libfunc : public ir_func {
-
 public:
-    virtual void accept(ir_visitor& visitor) = 0;
-    virtual void print(std::ostream & out = std::cout) = 0;
+    friend IrPrinter;
+    friend IrBuilder;
+    friend LoongArch::ProgramBuilder;
+    friend LoongArch::ColoringAllocator;
+private:
+    std::vector<ptr<ir::ir_memobj>> func_args;
+public:
+    ir_libfunc(std::string name, int reg_cnt) : ir_func(name) {} 
+    virtual void accept(ir_visitor& visitor) override final;
+    virtual void print(std::ostream & out = std::cout) override final;
 };
 
 class ir_userfunc : public ir_func , public std::enable_shared_from_this<ir_userfunc> {
@@ -416,6 +425,7 @@ public:
     virtual void visit(ir_basicblock &node) = 0;
     virtual void visit(ir_module &node) = 0;
     virtual void visit(ir_userfunc &node) = 0;
+    virtual void visit(ir_libfunc &node) = 0;
     virtual void visit(store &node) = 0;
     virtual void visit(jump &node) = 0;
     virtual void visit(br &node) = 0;
@@ -487,6 +497,7 @@ class func_call : public control_ins {
     ptr_list<ir_value> params;
     ptr<ir_reg> ret_reg;
     vartype ret_type;
+    bool is_lib = false;
 public:
     func_call(string func_name, ptr_list<ir_value> params, vartype ret_type) : func_name(func_name), params(params), ret_type(ret_type) {}
     virtual void accept(ir_visitor& visitor) override final;

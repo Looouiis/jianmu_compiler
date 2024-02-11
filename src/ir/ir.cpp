@@ -79,6 +79,11 @@ ptr<ir::ir_userfunc> ir::ir_module::new_func(std::string name) {
   return pfunc;
 }
 
+void ir::ir_module::add_lib_func(std::string name, ptr<ir_libfunc> fun) {
+  libfuncs.push_back({name, fun});
+  return;
+}
+
 ptr<ir::global_def> ir::ir_module::new_global(std::string name, vartype type) {
     auto reg = std::make_shared<ir_reg>(this->global_var.size(), type, 4, true);
     auto obj = std::make_shared<ir_memobj>(name, reg, 4);
@@ -136,6 +141,15 @@ void ir::ir_userfunc::accept(ir_visitor &visitor)
 }
 
 void ir::ir_userfunc::print(std::ostream & out)
+{
+}
+
+void ir::ir_libfunc::accept(ir_visitor &visitor)
+{
+    visitor.visit(*this);
+}
+
+void ir::ir_libfunc::print(std::ostream & out)
 {
 }
 

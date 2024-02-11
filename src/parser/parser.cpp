@@ -1342,7 +1342,7 @@ yyreduce:
   case 10: /* FuncFParam: BType Ident  */
 #line 128 "parser.y"
                             {
-        SyntaxAnalyseFuncFDef((yyval.func_f_param), (yyvsp[-1].var_type), (yyvsp[0].current_symbol), nullptr);
+        SyntaxAnalyseFuncFDef((yyval.func_f_param), (yyvsp[-1].var_type), (yyvsp[0].current_symbol), nullptr, false);
     }
 #line 1348 "parser.cpp"
     break;
@@ -1350,7 +1350,7 @@ yyreduce:
   case 11: /* FuncFParam: BType Ident LBRACKET RBRACKET ExpGroup  */
 #line 131 "parser.y"
                                              {
-        SyntaxAnalyseFuncFDef((yyval.func_f_param), (yyvsp[-4].var_type), (yyvsp[-3].current_symbol), (yyvsp[0].var_dimension));
+        SyntaxAnalyseFuncFDef((yyval.func_f_param), (yyvsp[-4].var_type), (yyvsp[-3].current_symbol), (yyvsp[0].var_dimension), true);
     }
 #line 1356 "parser.cpp"
     break;

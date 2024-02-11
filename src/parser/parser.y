@@ -126,10 +126,10 @@
     }
 
     FuncFParam: BType Ident {
-        SyntaxAnalyseFuncFDef($$, $1, $2, nullptr);
+        SyntaxAnalyseFuncFDef($$, $1, $2, nullptr, false);
     }
     | BType Ident LBRACKET RBRACKET ExpGroup {
-        SyntaxAnalyseFuncFDef($$, $1, $2, $5);
+        SyntaxAnalyseFuncFDef($$, $1, $2, $5, true);
     }             // !!! Sysy上写明数组形参的第一维长度省去，即第一个[]应省略
 
     ExpGroup: LBRACKET Exp RBRACKET ExpGroup {

@@ -9,11 +9,11 @@ class IrPrinter : public ir_visitor {
 public:
    std::unordered_map<std::variant<vartype,binop,relop, unaryop>,std::string> mapping = {
         // {vartype::FLOAT, "float"},
-        {vartype::FLOAT, "double"},
+        {vartype::FLOAT, "float"},
         {vartype::INT,  "i32"},
         {vartype::VOID , "void"},
         // {vartype::FLOATADDR, "float*"},
-        {vartype::FLOATADDR, "double*"},
+        {vartype::FLOATADDR, "float*"},
         {vartype::INTADDR, "i32*"},
         {binop::plus, "add"},
         {binop::minus,  "sub"},
@@ -52,7 +52,7 @@ public:
     };
    std::unordered_map<vartype, std::string> base_type = {
     //    {vartype::FLOATADDR, "float"},
-       {vartype::FLOATADDR, "double"},
+       {vartype::FLOATADDR, "float"},
        {vartype::INTADDR, "i32"}
    };
    std::ostream &out;
@@ -63,6 +63,7 @@ public:
    virtual void visit(ir_basicblock &node) override final;
    virtual void visit(ir_module &node) override;
    virtual void visit(ir_userfunc &node) override final;
+   virtual void visit(ir_libfunc &node) override final;
    virtual void visit(store &node) override final;
    virtual void visit(jump &node) override final;
    virtual void visit(br &node) override final;

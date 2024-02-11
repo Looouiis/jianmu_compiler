@@ -33,12 +33,15 @@ void SyntaxAnalyseFuncDef(ast::func_def_syntax * &self, vartype var_type, char *
     self->body = ptr<ast::block_syntax>(block);
 }
 
-void SyntaxAnalyseFuncFDef(ast::func_f_param_syntax *&self, vartype var_type, char* ident, ast::var_dimension_syntax* dimension) {
+void SyntaxAnalyseFuncFDef(ast::func_f_param_syntax *&self, vartype var_type, char* ident, ast::var_dimension_syntax* dimension, bool has_dim) {
     auto syntax = new ast::func_f_param_syntax;
     syntax->accept_type = var_type;
     syntax->name = ident;
-    if(dimension) {
-        syntax->dimension = ptr<ast::var_dimension_syntax>(dimension);
+    if(has_dim) {
+        if(dimension)
+            syntax->dimension = ptr<ast::var_dimension_syntax>(dimension);
+        else
+            syntax->dimension = std::make_shared<ast::var_dimension_syntax>();
         syntax->dimension->has_first_dim = false;
     }
     self = syntax;

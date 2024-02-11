@@ -17,49 +17,60 @@ void ir::IrBuilder::visit(ast::compunit_syntax &node)
     /*
         register lib functions
     */
-    ptr<ir_userfunc> getint = std::make_shared<ir_userfunc>("getint", compunit->global_var.size());
+    ptr<ir_libfunc> getint = std::make_shared<ir_libfunc>("getint", compunit->global_var.size());
     getint->set_retype(vartype::INT);
     this->functions.push_func("getint", getint);
+    this->compunit->add_lib_func("getint", getint);
 
-    ptr<ir_userfunc> getch = std::make_shared<ir_userfunc>("getch", compunit->global_var.size());
+    ptr<ir_libfunc> getch = std::make_shared<ir_libfunc>("getch", compunit->global_var.size());
     getch->set_retype(vartype::INT);
     this->functions.push_func("getch", getch);
+    this->compunit->add_lib_func("getch", getch);
 
-    ptr<ir_userfunc> getarray = std::make_shared<ir_userfunc>("getarray", compunit->global_var.size());
+    ptr<ir_libfunc> getarray = std::make_shared<ir_libfunc>("getarray", compunit->global_var.size());
     getarray->set_retype(vartype::INT);
     this->functions.push_func("getarray", getarray);
+    this->compunit->add_lib_func("getarray", getarray);
 
-    ptr<ir_userfunc> getfloat = std::make_shared<ir_userfunc>("getfloat", compunit->global_var.size());
+    ptr<ir_libfunc> getfloat = std::make_shared<ir_libfunc>("getfloat", compunit->global_var.size());
     getfloat->set_retype(vartype::FLOAT);
     this->functions.push_func("getfloat", getfloat);
+    this->compunit->add_lib_func("getfloat", getfloat);
 
-    ptr<ir_userfunc> getfarray = std::make_shared<ir_userfunc>("getfarray", compunit->global_var.size());
+    ptr<ir_libfunc> getfarray = std::make_shared<ir_libfunc>("getfarray", compunit->global_var.size());
     getfarray->set_retype(vartype::INT);
     this->functions.push_func("getfarray", getfarray);
+    this->compunit->add_lib_func("getfarray", getfarray);
 
-    ptr<ir_userfunc> putint= std::make_shared<ir_userfunc>("putint", compunit->global_var.size());
+    ptr<ir_libfunc> putint= std::make_shared<ir_libfunc>("putint", compunit->global_var.size());
     putint->set_retype(vartype::VOID);
     this->functions.push_func("putint", putint);
+    this->compunit->add_lib_func("putint", putint);
 
-    ptr<ir_userfunc> putch = std::make_shared<ir_userfunc>("putch", compunit->global_var.size());
+    ptr<ir_libfunc> putch = std::make_shared<ir_libfunc>("putch", compunit->global_var.size());
     putch->set_retype(vartype::VOID);
     this->functions.push_func("putch", putch);
+    this->compunit->add_lib_func("putch", putch);
 
-    ptr<ir_userfunc> putarray = std::make_shared<ir_userfunc>("putarray", compunit->global_var.size());
+    ptr<ir_libfunc> putarray = std::make_shared<ir_libfunc>("putarray", compunit->global_var.size());
     putarray->set_retype(vartype::VOID);
     this->functions.push_func("putarray", putarray);
+    this->compunit->add_lib_func("putarray", putarray);
 
-    ptr<ir_userfunc> putfloat = std::make_shared<ir_userfunc>("putfloat", compunit->global_var.size());
+    ptr<ir_libfunc> putfloat = std::make_shared<ir_libfunc>("putfloat", compunit->global_var.size());
     putfloat->set_retype(vartype::VOID);
     this->functions.push_func("putfloat", putfloat);
+    this->compunit->add_lib_func("putfloat", putfloat);
 
-    ptr<ir_userfunc> putfarray = std::make_shared<ir_userfunc>("putfarray", compunit->global_var.size());
+    ptr<ir_libfunc> putfarray = std::make_shared<ir_libfunc>("putfarray", compunit->global_var.size());
     putfarray->set_retype(vartype::VOID);
     this->functions.push_func("putfarray", putfarray);
+    this->compunit->add_lib_func("putfarray", putfarray);
 
-    ptr<ir_userfunc> putf = std::make_shared<ir_userfunc>("putf", compunit->global_var.size());
+    ptr<ir_libfunc> putf = std::make_shared<ir_libfunc>("putf", compunit->global_var.size());
     putf->set_retype(vartype::VOID);
     this->functions.push_func("putf", putf);
+    this->compunit->add_lib_func("putf", putf);
 
     // this->functions.push_func(, );
     /*
@@ -427,6 +438,7 @@ void ir::IrBuilder::visit(ast::var_def_stmt_syntax &node)       // self5
                 total_cnt *= dim->calc_res();
             }
         }
+        obj->addr->is_const = node.is_const;
         this->scope.push_var(node.name, obj);
         cur_block->push_back(std::make_shared<ir::alloc>(obj));
         if(node.initializer != nullptr) {
@@ -480,9 +492,27 @@ void ir::IrBuilder::visit(ast::assign_stmt_syntax &node)        // self6
     node.value->accept(*this);
     auto value = pass_value;
     auto obj = this->scope.find_var(node.target->name);
-    if(!obj->addr->is_global) {
-        cur_block->push_back(std::make_shared<ir::store>(obj->get_addr(),value));
-        // map[node.target->name] = ptr<ir::ir_value>(pass_value);
+    std::unordered_map<vartype, vartype> trans = {{vartype::INTADDR, vartype::INT}, {vartype::INT, vartype::INT}, {vartype::FLOATADDR, vartype::FLOAT}, {vartype::FLOAT, vartype::FLOAT}};
+    if(value->get_type() != trans[obj->addr->type]) {
+        auto transed = cur_func->new_reg(trans[obj->addr->type]);
+        cur_block->push_back(std::make_shared<ir::trans>(obj->addr->get_type(), transed, value));
+        value = transed;
+    }
+    if(!obj->addr->is_const) {
+        if(node.target->dimension) {
+            auto element_ptr = cur_func->new_reg(obj->get_addr()->type);
+            ptr_list<ir::ir_value> dim;
+            for(auto a : node.target->dimension->dimensions) {
+                a->accept(*this);
+                dim.push_back(pass_value);
+            }
+            cur_block->push_back(std::make_shared<ir::get_element_ptr>(obj, element_ptr, dim));
+            cur_block->push_back(std::make_shared<ir::store>(element_ptr, value));
+        }
+        else {
+            cur_block->push_back(std::make_shared<ir::store>(obj->get_addr(), value));
+            // map[node.target->name] = ptr<ir::ir_value>(pass_value);
+        }
     }
     // abort();     // 根据cpp中的处理方式，不是abort而是忽略二次赋值
 }
@@ -580,11 +610,17 @@ void ir::IrBuilder::visit(ast::func_f_param_syntax &node) {
     // }
     if(node.dimension) {
         mem->dim = node.dimension;
+        this->scope.push_var(node.name, mem);
     }
     else {
         mem->addr->type = node.accept_type;
+        // changeable->dim = node.dimension;
+        auto changeable = this->cur_func->new_obj(node.name, node.accept_type);
+        cur_block->push_back(std::make_shared<ir::alloc>(changeable));
+        cur_block->push_back(std::make_shared<ir::store>(changeable->get_addr(), mem->get_addr()));
+        this->scope.push_var(node.name, changeable);
     }
-    this->scope.push_var(node.name, mem);
+    // this->scope.push_var(node.name, mem);
     this->cur_func->func_args.push_back(mem);
 }
 void ir::IrBuilder::visit(ast::var_dimension_syntax &node) {}
@@ -623,10 +659,16 @@ void ir::IrBuilder::visit(ast::continue_stmt_syntax &node) {
     cur_block->push_back(std::make_shared<ir::break_or_continue>(continue_list.back()));
 }
 void ir::IrBuilder::visit(ast::init_syntax &node) {
+    std::unordered_map<vartype, vartype> trans = {{vartype::INTADDR, vartype::INT}, {vartype::INT, vartype::INT}, {vartype::FLOATADDR, vartype::FLOAT}, {vartype::FLOAT, vartype::FLOAT}};
     if(!pass_obj->dim) {
         node.initializer.front()->accept(*this);
         auto ini_value = pass_value;
         auto obj = pass_obj;
+        if(ini_value->get_type() != trans[obj->addr->type]) {
+            auto transed = cur_func->new_reg(trans[obj->addr->type]);
+            cur_block->push_back(std::make_shared<ir::trans>(obj->addr->get_type(), transed, ini_value));
+            ini_value = transed;
+        }
         cur_block->push_back(std::make_shared<ir::store>(obj->get_addr(), ini_value));
         return;
     }
@@ -639,6 +681,11 @@ void ir::IrBuilder::visit(ast::init_syntax &node) {
         node.initializer.front()->accept(*this);
         auto val = pass_value;
         auto obj = pass_obj;
+        if(val->get_type() != trans[obj->addr->type]) {
+            auto transed = cur_func->new_reg(trans[obj->addr->type]);
+            cur_block->push_back(std::make_shared<ir::trans>(obj->addr->get_type(), transed, val));
+            val = transed;
+        }
         auto dst = cur_func->new_reg(obj->get_addr()->type);
         ptr_list<ir::ir_value> dim;
         for(auto dimension : node.current_dim) {

@@ -4,7 +4,7 @@
 //a--难度
 void SyntaxAnalyseCompUnit(ast::compunit_syntax* &self, ast::compunit_syntax* compunit, ast::syntax_tree_node* func_def);
 void SyntaxAnalyseFuncDef(ast::func_def_syntax* &self, vartype var_type, char* Ident,ast::block_syntax * block);
-void SyntaxAnalyseFuncFDef(ast::func_f_param_syntax *&self, vartype var_type, char* ident, ast::var_dimension_syntax* dimension);
+void SyntaxAnalyseFuncFDef(ast::func_f_param_syntax *&self, vartype var_type, char* ident, ast::var_dimension_syntax* dimension, bool has_dim);
 void SyntaxAnalyseFuncFDecl(ast::func_def_syntax* &self, ast::func_f_param_syntax *var_def, ast::func_def_syntax *var_def_group);
 void SyntaxAnalyseFuncFDeclGroup(ast::func_def_syntax* &self, ast::func_f_param_syntax *var_def, ast::func_def_syntax *var_def_group);
 void SynataxAnalyseFuncType(vartype &self, char* type);
