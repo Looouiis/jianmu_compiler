@@ -50,7 +50,8 @@ enum class vartype
   VOID,
   FLOAT,
   FLOATADDR,
-  INTADDR
+  INTADDR,
+  PTR
 };
 
 //ast结点

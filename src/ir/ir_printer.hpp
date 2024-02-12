@@ -2,6 +2,7 @@
 #define IR_PRINTER_HPP
 
 #include "ir/ir.hpp"
+#include "parser/SyntaxTree.hpp"
 
 namespace ir {
 
@@ -12,6 +13,7 @@ public:
         {vartype::FLOAT, "float"},
         {vartype::INT,  "i32"},
         {vartype::VOID , "void"},
+        {vartype::PTR, "ptr"},
         // {vartype::FLOATADDR, "float*"},
         {vartype::FLOATADDR, "float*"},
         {vartype::INTADDR, "i32*"},
@@ -53,7 +55,8 @@ public:
    std::unordered_map<vartype, std::string> base_type = {
     //    {vartype::FLOATADDR, "float"},
        {vartype::FLOATADDR, "float"},
-       {vartype::INTADDR, "i32"}
+       {vartype::INTADDR, "i32"},
+       {vartype::PTR, "ptr"}
    };
    std::ostream &out;
 

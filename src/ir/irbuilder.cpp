@@ -610,6 +610,11 @@ void ir::IrBuilder::visit(ast::func_f_param_syntax &node) {
     // }
     if(node.dimension) {
         mem->dim = node.dimension;
+        auto changeable = this->cur_func->new_obj(node.name, vartype::PTR);
+        mem->base_type = mem->addr->type;
+        mem->addr->type = vartype::PTR;
+        cur_block->push_back(std::make_shared<ir::alloc>(changeable));
+        cur_block->push_back(std::make_shared<ir::store>(changeable->get_addr(), mem->get_addr()));
         this->scope.push_var(node.name, mem);
     }
     else {
