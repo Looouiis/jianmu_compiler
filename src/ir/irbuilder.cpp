@@ -194,7 +194,7 @@ void ir::IrBuilder::visit(ast::rel_cond_syntax &node)           // self1
             exp2 = transed;
         }
     }
-    auto dst = cur_func->new_reg(vartype::INT);
+    auto dst = cur_func->new_reg(vartype::BOOL);
     cur_block->push_back(std::make_shared<ir::cmp_ins>(dst, exp1, exp2, node.op));
     this->pass_value = dst;
 }
@@ -223,7 +223,7 @@ void ir::IrBuilder::visit(ast::logic_cond_syntax &node)         // self2
             exp2 = transed;
         }
     }
-    auto dst = cur_func->new_reg(vartype::INT);
+    auto dst = cur_func->new_reg(vartype::BOOL);
     cur_block->push_back(std::make_shared<ir::logic_ins>(dst, exp1, exp2, node.op));
     this->pass_value = dst;
 }
@@ -266,6 +266,23 @@ void ir::IrBuilder::visit(ast::unaryop_expr_syntax &node)           // self3
         return;
     }
     auto dst = cur_func->new_reg(pass_type);
+    if(node.op == unaryop::op_not) {
+        if(exp2->get_type() != vartype::BOOL) {
+            ptr<ir_constant> zero;
+            if(exp2->get_type() == vartype::FLOAT) {
+                zero = std::make_shared<ir_constant>(0.0f);
+                zero->type = vartype::FLOAT;
+            }
+            else {
+                zero = std::make_shared<ir_constant>(0);
+                zero->type = vartype::INT;
+            }
+            auto transed = cur_func->new_reg(vartype::BOOL);
+            cur_block->push_back(std::make_shared<cmp_ins>(transed, exp2, zero, relop::non_equal));
+            exp2 = transed;
+        }
+        dst->type = vartype::BOOL;
+    }
     cur_block->push_back(std::make_shared<ir::unary_op_ins>(dst, exp2, node.op));
     this->pass_value = dst;
 }
@@ -532,6 +549,20 @@ void ir::IrBuilder::visit(ast::if_stmt_syntax &node)
 {
     node.pred->accept(*this);
     auto judge_ret = pass_value;
+    if(judge_ret->get_type() != vartype::BOOL) {
+        ptr<ir_constant> zero;
+        if(judge_ret->get_type() == vartype::FLOAT) {
+            zero = std::make_shared<ir_constant>(0.0f);
+            zero->type = vartype::FLOAT;
+        }
+        else {
+            zero = std::make_shared<ir_constant>(0);
+            zero->type = vartype::INT;
+        }
+        auto transed = cur_func->new_reg(vartype::BOOL);
+        cur_block->push_back(std::make_shared<cmp_ins>(transed, judge_ret, zero, relop::non_equal));
+        judge_ret = transed;
+    }
     auto bb_bak = cur_block;
     auto bb_nxt = cur_func->new_block();
     auto then_bb = cur_func->new_block();
@@ -642,6 +673,20 @@ void ir::IrBuilder::visit(ast::while_stmt_syntax &node) {
     cur_block = while_start;
     node.cond->accept(*this);
     auto judge_ret = pass_value;
+    if(judge_ret->get_type() != vartype::BOOL) {
+        ptr<ir_constant> zero;
+        if(judge_ret->get_type() == vartype::FLOAT) {
+            zero = std::make_shared<ir_constant>(0.0f);
+            zero->type = vartype::FLOAT;
+        }
+        else {
+            zero = std::make_shared<ir_constant>(0);
+            zero->type = vartype::INT;
+        }
+        auto transed = cur_func->new_reg(vartype::BOOL);
+        cur_block->push_back(std::make_shared<cmp_ins>(transed, judge_ret, zero, relop::non_equal));
+        judge_ret = transed;
+    }
     cur_block->push_back(std::make_shared<ir::br>(judge_ret, while_body, out_block));
     cur_block = while_body;
     node.while_body->accept(*this);

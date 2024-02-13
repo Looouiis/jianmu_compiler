@@ -238,7 +238,7 @@ void ir::IrPrinter::visit(binary_op_ins &node)
     }
     else {
         out << mapping[node.op] << " ";
-        if(node.op != binop::divide){
+        if(node.op != binop::divide && node.op != binop::modulo){
             out<<"nsw ";
         }                      
     }

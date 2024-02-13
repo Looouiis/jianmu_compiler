@@ -433,6 +433,9 @@ void SynataxAnalyseMulExp(ast::expr_syntax *&self, ast::expr_syntax *exp1, char 
     else if(*op == '/') {
         syntax->op = binop::divide;
     }
+    else if(*op == '%') {
+        syntax->op = binop::modulo;
+    }
     syntax->lhs = ptr<ast::expr_syntax>(exp1);
     syntax->rhs = ptr<ast::expr_syntax>(exp2);
     syntax->restype = vartype::INT;
