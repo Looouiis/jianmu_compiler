@@ -201,6 +201,75 @@ void ir::IrBuilder::visit(ast::rel_cond_syntax &node)           // self1
 
 void ir::IrBuilder::visit(ast::logic_cond_syntax &node)         // self2
 {
+    if(node.op == relop::op_and || node.op == relop::op_or) {
+        auto lhs_block = cur_func->new_block();
+        auto rhs_block = cur_func->new_block();
+        auto true_block = cur_func->new_block();
+        auto false_block = cur_func->new_block();
+        auto nxt_block = cur_func->new_block();
+        auto ret_obj = cur_func->new_obj("tmp_bool", vartype::BOOL);
+        cur_block->push_back(std::make_shared<alloc>(ret_obj));
+        cur_block->push_back(std::make_shared<jump>(lhs_block));
+        cur_block = lhs_block;
+        node.lhs->accept((*this));
+        auto exp1 = pass_value;
+        if(exp1->get_type() != vartype::BOOL) {
+            ptr<ir_constant> zero;
+            if(exp1->get_type() == vartype::FLOAT) {
+                zero = std::make_shared<ir_constant>(0.0f);
+                zero->type = vartype::FLOAT;
+            }
+            else {
+                zero = std::make_shared<ir_constant>(0);
+                zero->type = vartype::INT;
+            }
+            auto transed = cur_func->new_reg(vartype::BOOL);
+            cur_block->push_back(std::make_shared<cmp_ins>(transed, exp1, zero, relop::non_equal));
+            exp1 = transed;
+        }
+        ptr<ir::ir_basicblock> target_true;
+        ptr<ir::ir_basicblock> target_false;
+        if(node.op == relop::op_and) {
+            target_true = rhs_block;
+            target_false = false_block;
+        }
+        else {
+            target_true = true_block;
+            target_false = rhs_block;
+        }
+        cur_block->push_back(std::make_shared<ir::br>(exp1, target_true, target_false));
+        cur_block = rhs_block;
+        node.rhs->accept(*this);
+        auto exp2 = pass_value;
+        if(exp2->get_type() != vartype::BOOL) {
+            ptr<ir_constant> zero;
+            if(exp2->get_type() == vartype::FLOAT) {
+                zero = std::make_shared<ir_constant>(0.0f);
+                zero->type = vartype::FLOAT;
+            }
+            else {
+                zero = std::make_shared<ir_constant>(0);
+                zero->type = vartype::INT;
+            }
+            auto transed = cur_func->new_reg(vartype::BOOL);
+            cur_block->push_back(std::make_shared<cmp_ins>(transed, exp2, zero, relop::non_equal));
+            exp2 = transed;
+        }
+        cur_block->push_back(std::make_shared<ir::br>(exp2, true_block, false_block));
+        auto true_ret = std::make_shared<ir::ir_constant>(1);
+        true_ret->type = vartype::BOOL;
+        auto false_ret = std::make_shared<ir::ir_constant>(0);
+        false_ret->type = vartype::BOOL;
+        true_block->push_back(std::make_shared<store>(ret_obj->addr, true_ret));
+        true_block->push_back(std::make_shared<jump>(nxt_block));
+        false_block->push_back(std::make_shared<store>(ret_obj->addr, false_ret));
+        false_block->push_back(std::make_shared<jump>(nxt_block));
+        cur_block = nxt_block;
+        auto ret = cur_func->new_reg(vartype::BOOL);
+        cur_block->push_back(std::make_shared<load>(ret, ret_obj->addr));
+        pass_value = ret;
+        return;
+    }
     node.lhs->accept(*this);
     auto exp1 = pass_value;
     if(!pass_value) {
@@ -223,6 +292,39 @@ void ir::IrBuilder::visit(ast::logic_cond_syntax &node)         // self2
             exp2 = transed;
         }
     }
+    // if(node.op == relop::op_and || node.op == relop::op_or) {
+    //     auto lhs_block = cur_func->new_block();
+    //     auto rhs_block = cur_func->new_block();
+    //     auto bak = cur_block;
+    //     if(exp1->get_type() != vartype::BOOL) {
+    //         ptr<ir_constant> zero;
+    //         if(exp1->get_type() == vartype::FLOAT) {
+    //             zero = std::make_shared<ir_constant>(0.0f);
+    //             zero->type = vartype::FLOAT;
+    //         }
+    //         else {
+    //             zero = std::make_shared<ir_constant>(0);
+    //             zero->type = vartype::INT;
+    //         }
+    //         auto transed = cur_func->new_reg(vartype::BOOL);
+    //         cur_block->push_back(std::make_shared<cmp_ins>(transed, exp1, zero, relop::non_equal));
+    //         exp1 = transed;
+    //     }
+    //     if(exp2->get_type() != vartype::BOOL) {
+    //         ptr<ir_constant> zero;
+    //         if(exp2->get_type() == vartype::FLOAT) {
+    //             zero = std::make_shared<ir_constant>(0.0f);
+    //             zero->type = vartype::FLOAT;
+    //         }
+    //         else {
+    //             zero = std::make_shared<ir_constant>(0);
+    //             zero->type = vartype::INT;
+    //         }
+    //         auto transed = cur_func->new_reg(vartype::BOOL);
+    //         cur_block->push_back(std::make_shared<cmp_ins>(transed, exp2, zero, relop::non_equal));
+    //         exp2 = transed;
+    //     }
+    // }
     auto dst = cur_func->new_reg(vartype::BOOL);
     cur_block->push_back(std::make_shared<ir::logic_ins>(dst, exp1, exp2, node.op));
     this->pass_value = dst;
@@ -421,7 +523,16 @@ void ir::IrBuilder::global_init(ptr<ir::global_def> global, ptr<ast::init_syntax
             global->init_val.push_back(pass_value);
         }
         else {
-            auto zero = std::make_shared<ir::ir_constant>(global->obj->addr->type == vartype::INT ? 0 : 0.0f);
+            ptr<ir::ir_constant> zero;
+            if(global->obj->addr->type == vartype::INT || global->obj->addr->type == vartype::INTADDR) {
+                int z = 0;
+                zero = std::make_shared<ir::ir_constant>(z);
+            }
+            else {
+                float z = 0.0f;
+                zero = std::make_shared<ir::ir_constant>(z);
+            }
+            // auto zero = std::make_shared<ir::ir_constant>((global->obj->addr->type == vartype::INT || global->obj->addr->type == vartype::INTADDR) ? 0 : 0.0f);
             std::unordered_map<vartype, vartype> addr2obj = {{vartype::INTADDR, vartype::INT}, {vartype::FLOATADDR, vartype::FLOAT}};
             zero->type = addr2obj[global->obj->addr->type];
             global->init_val.push_back(zero);

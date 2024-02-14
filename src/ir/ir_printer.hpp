@@ -15,6 +15,7 @@ public:
         {vartype::VOID , "void"},
         {vartype::PTR, "ptr"},
         {vartype::BOOL, "i1"},
+        {vartype::BOOLADDR, "i1*"},
         // {vartype::FLOATADDR, "float*"},
         {vartype::FLOATADDR, "float*"},
         {vartype::INTADDR, "i32*"},
@@ -57,7 +58,8 @@ public:
     //    {vartype::FLOATADDR, "float"},
        {vartype::FLOATADDR, "float"},
        {vartype::INTADDR, "i32"},
-       {vartype::PTR, "ptr"}
+       {vartype::PTR, "ptr"},
+       {vartype::BOOLADDR, "i1"}
    };
    std::ostream &out;
 

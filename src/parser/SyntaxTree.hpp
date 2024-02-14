@@ -52,7 +52,8 @@ enum class vartype
   FLOATADDR,
   INTADDR,
   PTR,
-  BOOL
+  BOOL,
+  BOOLADDR
 };
 
 //ast结点
