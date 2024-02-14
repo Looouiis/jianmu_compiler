@@ -315,8 +315,7 @@ void ir::IrPrinter::visit(get_element_ptr &node) {
         out << "]";
     }
     if(node.base->dim->dimensions.empty()) {
-        // out << base_type[node.base->addr->type];
-        out << base_type[node.base->base_type];
+        out << base_type[node.base->addr->type];
     }
     // }
     out << ", ";

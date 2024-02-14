@@ -2,7 +2,6 @@
 #define IR_PRINTER_HPP
 
 #include "ir/ir.hpp"
-#include "parser/SyntaxTree.hpp"
 
 namespace ir {
 
@@ -13,7 +12,6 @@ public:
         {vartype::FLOAT, "float"},
         {vartype::INT,  "i32"},
         {vartype::VOID , "void"},
-        {vartype::PTR, "ptr"},
         {vartype::BOOL, "i1"},
         {vartype::BOOLADDR, "i1*"},
         // {vartype::FLOATADDR, "float*"},
@@ -58,7 +56,6 @@ public:
     //    {vartype::FLOATADDR, "float"},
        {vartype::FLOATADDR, "float"},
        {vartype::INTADDR, "i32"},
-       {vartype::PTR, "ptr"},
        {vartype::BOOLADDR, "i1"}
    };
    std::ostream &out;

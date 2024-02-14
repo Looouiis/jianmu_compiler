@@ -124,7 +124,6 @@ protected:
     int size;
     std::shared_ptr<ir_reg> addr;
     ptr<ast::var_dimension_syntax> dim;
-    vartype base_type;
 public:
     ptr<ir_reg> get_addr() { return this->addr;};
     int get_size() {return this->size;}
@@ -448,12 +447,10 @@ public:
 
 class get_element_ptr : public ir_instr {
     friend IrPrinter;
-    friend IrBuilder;
 private:
     ptr<ir_memobj> base;
     ptr<ir_reg> dst;
     ptr_list<ir_value> obj_offset;
-    vartype origin;
 public:
     get_element_ptr(ptr<ir_memobj> base, ptr<ir_reg> dst, ptr_list<ir_value> offset) : base(base), dst(dst), obj_offset(offset) {}
     virtual void accept(ir_visitor& visitor) override final;

@@ -115,7 +115,7 @@ ir::ir_userfunc::ir_userfunc(std::string name, int reg_cnt) : ir_func(name), max
 }
 
 ptr<ir::ir_memobj> ir::ir_userfunc::new_obj(std::string name, vartype var_type) {
-    std::unordered_map<vartype, vartype> var_reg_trans = {{vartype::INT, vartype::INTADDR}, {vartype::FLOAT, vartype::FLOATADDR}, {vartype::PTR, vartype::PTR}, {vartype::BOOL, vartype::BOOLADDR}};
+    std::unordered_map<vartype, vartype> var_reg_trans = {{vartype::INT, vartype::INTADDR}, {vartype::FLOAT, vartype::FLOATADDR}, {vartype::BOOL, vartype::BOOLADDR}};
   auto addr = this->new_reg(var_reg_trans[var_type]);
   auto obj = std::make_shared<ir_memobj>(name, addr, i32_size);
   this->scope->ir_objs.push_back(obj);
