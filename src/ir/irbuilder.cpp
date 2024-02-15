@@ -897,7 +897,7 @@ void ir::IrBuilder::visit(ast::func_call_syntax &node) {
         params.push_back(pass_value);
     }
     auto func = this->functions.find_func(node.func_name);
-    auto call_ins =  std::make_shared<ir::func_call>(node.func_name, params, func->get_rettype());
+    auto call_ins = std::make_shared<ir::func_call>(node.func_name, params, func->get_rettype());
     if(func->get_rettype() != vartype::VOID) {
         auto dst = cur_func->new_reg(func->get_rettype());
         call_ins->ret_reg = dst;

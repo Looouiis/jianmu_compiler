@@ -85,7 +85,8 @@ protected:
     //上面的逆映射
     std::unordered_map<std::shared_ptr<ir::ir_memobj>,std::shared_ptr<ir::ir_reg>> revAddMemObj;
 
-    std::vector<std::shared_ptr<ir::ir_reg>> spill_vec;
+    // std::vector<std::shared_ptr<ir::ir_reg>> spill_vec;
+    std::vector<int> spill_vec;
     std::unordered_map<int, LoongArch::Reg> spill_mapping;
 public:
     //申请一个被预留的寄存器

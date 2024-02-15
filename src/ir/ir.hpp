@@ -119,6 +119,7 @@ public:
 class ir_memobj : public printable {
     friend IrBuilder;
     friend IrPrinter;
+    friend LoongArch::ProgramBuilder;
 protected:
     std::string name;
     int size;
@@ -447,6 +448,7 @@ public:
 
 class get_element_ptr : public ir_instr {
     friend IrPrinter;
+    friend LoongArch::ProgramBuilder;
 private:
     ptr<ir_memobj> base;
     ptr<ir_reg> dst;
@@ -461,6 +463,7 @@ public:
 
 class while_loop : public ir_instr {
     friend IrPrinter;
+    friend LoongArch::ProgramBuilder;
     friend LoongArch::ColoringAllocator;
 private:
     ptr<ir_basicblock> cond_from;

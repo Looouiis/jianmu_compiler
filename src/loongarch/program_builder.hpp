@@ -30,7 +30,9 @@ public:
     virtual void visit(ir::func_call& node) override final;
     virtual void visit(ir::global_def& node) override final;
     virtual void visit(ir::trans& node) override final;
+    virtual void visit(ir::ir_libfunc& node) override final;
     std::shared_ptr<Program> prog;
+    void check_write_back(LoongArch::Reg tar);
     // std::vector<std::shared_ptr<ir::ir_reg>> loaded;
 protected:
     std::shared_ptr<Function> cur_func;
@@ -53,6 +55,10 @@ protected:
     Reg using_reg = const_reg_l;
     Reg pass_reg;
     int spill_base = 17;
+    Reg spill_dst = Reg{spill_base};
+    Reg spill_use_1 = Reg{spill_base + 1};
+    Reg spill_use_2 = Reg{spill_base + 2};
+    bool is_dst = false;
 };
 } // namespace archLA
 
