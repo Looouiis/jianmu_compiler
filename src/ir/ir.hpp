@@ -84,6 +84,7 @@ private:
     string global_name;
     bool is_global;
     bool is_const;
+    bool is_arr = false;
 public:
     ir_reg(int id,vartype type,int size, bool is_global) : id(id) , type(type), size(size), is_global(is_global) {}
     // ir_reg(string global_name, vartype type, int size) : global_name(global_name), type(type), size(size), is_global(true) {}
@@ -120,6 +121,7 @@ class ir_memobj : public printable {
     friend IrBuilder;
     friend IrPrinter;
     friend LoongArch::ProgramBuilder;
+    friend LoongArch::ColoringAllocator;
 protected:
     std::string name;
     int size;
@@ -243,6 +245,7 @@ private:
 
     std::vector<ptr<ir::ir_memobj>> func_args;
     std::vector<std::shared_ptr<ir::ir_reg>> regSpill;
+    ptr_list<ir::ir_memobj> arrobj;
 public:
     ir_userfunc(std::string name, int reg_cnt); 
     ptr<ir_memobj> new_obj(std::string name, vartype var_type);
@@ -252,7 +255,7 @@ public:
     virtual void print(std::ostream & out = std::cout) override;
     std::unordered_map<ptr<ir::ir_value>,Pass::LiveInterval> GetLiveInterval();
     std::vector<std::shared_ptr<ir_basicblock>> GetLinerSequence();
-    virtual void reg_allocate(std::unordered_map<std::shared_ptr<ir::ir_reg>,int> map, std::vector<std::shared_ptr<ir::ir_reg>> spill);
+    virtual void reg_allocate(std::unordered_map<std::shared_ptr<ir::ir_reg>,int> map, std::vector<std::shared_ptr<ir::ir_reg>> spill, std::vector<std::shared_ptr<ir::ir_memobj>> arrobj);
 };
 
 //below is instruction
@@ -274,10 +277,10 @@ class control_ins : public ir_instr {
 class store : public ir_instr {
     friend IrPrinter;
     friend LoongArch::ProgramBuilder;
-    ptr<ir_value> addr;
+    ptr<ir_reg> addr;
     ptr<ir_value> value;
 public:
-    store(ptr<ir_value> addr,ptr<ir_value> value):addr(addr),value(value){}
+    store(ptr<ir_reg> addr,ptr<ir_value> value):addr(addr),value(value){}
     virtual void accept(ir_visitor& visitor) override final;
     virtual void print(std::ostream & out = std::cout) override final;
     virtual std::vector<ptr<ir::ir_value>> use_reg() override final;
@@ -332,9 +335,9 @@ class load : public reg_write_ins {
     friend IrPrinter;
     friend LoongArch::ProgramBuilder;
     ptr<ir_reg> dst;
-    ptr<ir_value>  addr;
+    ptr<ir_reg>  addr;
 public:
-    load(ptr<ir_reg> dst,ptr<ir_value> addr): dst(dst),addr(addr){}
+    load(ptr<ir_reg> dst,ptr<ir_reg> addr): dst(dst),addr(addr){}
     virtual void accept(ir_visitor& visitor) override final;
     virtual void print(std::ostream & out = std::cout) override final;
     virtual std::vector<ptr<ir::ir_value>> use_reg() override final;
@@ -343,6 +346,8 @@ public:
 
 class alloc : public reg_write_ins {
     friend IrPrinter;
+    friend LoongArch::ProgramBuilder;
+    friend LoongArch::ColoringAllocator;
     ptr<ir_memobj> var;
 public:
     alloc(ptr<ir_memobj>  var):var(var){}

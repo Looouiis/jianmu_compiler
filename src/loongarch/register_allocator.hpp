@@ -12,6 +12,7 @@ namespace LoongArch {
 
 struct Reg;
 struct Function;
+struct alloc_res;
 
 // no coalescing
 class ColoringAllocator {
@@ -30,6 +31,7 @@ class ColoringAllocator {
   std::unordered_map<std::shared_ptr<ir::ir_basicblock>, int> block_line_end;
   std::vector<std::shared_ptr<ir::ir_reg>> s;
   std::vector<std::shared_ptr<ir::ir_reg>> allregs;
+  std::vector<std::shared_ptr<ir::ir_memobj>> arrobj;
   std::vector<std::shared_ptr<ir::ir_reg>> non_conf_regs;
   std::vector<std::shared_ptr<ir::ir_reg>> mappingToSpill;
   int color_count = 3;
@@ -39,10 +41,21 @@ class ColoringAllocator {
   void SimplifyGraph();
   void Spill(std::unordered_map<std::shared_ptr<ir::ir_reg> ,std::vector<std::shared_ptr<ir::ir_reg>>> &conf_graph);
   void BuildConflictGraph();
-  std::pair<std::unordered_map<std::shared_ptr<ir::ir_reg>,int>, std::vector<std::shared_ptr<ir::ir_reg>>> getAllocate();
+  // std::pair<std::unordered_map<std::shared_ptr<ir::ir_reg>,int>, std::vector<std::shared_ptr<ir::ir_reg>>> getAllocate();
+  alloc_res getAllocate();
  public:
   ColoringAllocator(std::shared_ptr<ir::ir_userfunc> _func, int base_reg);
-  std::pair<std::unordered_map<std::shared_ptr<ir::ir_reg>,int>, std::vector<std::shared_ptr<ir::ir_reg>>> run();
+  // std::pair<std::unordered_map<std::shared_ptr<ir::ir_reg>,int>, std::vector<std::shared_ptr<ir::ir_reg>>> run();
+  alloc_res run();
+};
+
+struct alloc_res {
+  std::unordered_map<std::shared_ptr<ir::ir_reg>,int> mapping_to_reg;
+  std::vector<std::shared_ptr<ir::ir_reg>> mapping_to_spill;
+  std::vector<std::shared_ptr<ir::ir_memobj>> arrobj;
+public:
+  alloc_res(std::unordered_map<std::shared_ptr<ir::ir_reg>,int> mapping_to_reg, std::vector<std::shared_ptr<ir::ir_reg>> mapping_to_spill, std::vector<std::shared_ptr<ir::ir_memobj>> arrobj) :
+  mapping_to_reg(mapping_to_reg), mapping_to_spill(mapping_to_spill), arrobj(arrobj) {}
 };
 
 }  // namespace Archriscv

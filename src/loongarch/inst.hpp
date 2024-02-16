@@ -64,7 +64,7 @@ struct RegRegInst : Inst {      //R-Type Instruction like add r1, r2 ——> r3
   enum Type {
     add_w,add_d,
     sub_w,sub_d,
-    mul_w,
+    mul_w, mul_d,
     div_w,
 
     andw,orw,
@@ -84,8 +84,8 @@ struct RegRegInst : Inst {      //R-Type Instruction like add r1, r2 ——> r3
     static const std::map<Type, std::string> asm_name
     {
         //Integer
-        {add_w, "add.w"}, {sub_w, "sub.w"}, {mul_w, "mul.w"},  {div_w, "div.w"}, {andw, "and"}, {orw, "or"},
-        {slt, "slt"}
+        {add_w, "add.w"}, {add_d, "add.d"}, {sub_w, "sub.w"}, {mul_w, "mul.w"},  {div_w, "div.w"}, {andw, "and"}, {orw, "or"},
+        {slt, "slt"}, {mul_d, "mul.d"}
         ,{mod_w, "mod.w"}   // 我加一个：取余
     };
     out << asm_name.find(op)->second << ' ' << dst << ", " << lhs << ", " << rhs<< '\n';
@@ -94,7 +94,7 @@ struct RegRegInst : Inst {      //R-Type Instruction like add r1, r2 ——> r3
 
 struct RegImmInst : Inst {
   enum Type { 
-    addi_d , addi_w , slli, srli, srai, andi, ori, slti
+    addi_d , addi_w , slli_w, slli_d, srli, srai, andi, ori, slti
     , xori
     , sltui
   } op;
@@ -111,7 +111,7 @@ struct RegImmInst : Inst {
     static const std::map<Type, std::string> asm_name 
     {
         {addi_d, "addi.d"},{addi_w, "addi.w"}, {andi, "andi"}, {ori, "ori"},
-        {slti, "slti"}
+        {slti, "slti"}, {slli_w, "slli.w"}, {slli_d, "slli.d"}
         , {xori, "xori"}, {sltui, "sltui"}
     };
       out << asm_name.find(op)->second << ' ' << dst << ", " << lhs << ", " << rhs<< '\n';
@@ -221,6 +221,29 @@ struct ld : Inst {
   virtual void gen_asm(std::ostream &out) override {
     static const std::map<Type, std::string> asm_name {
         {ld_d, "ld.d"}, {ld_w, "ld.w"}
+    };
+      out << asm_name.find(op)->second << ' ' << src << ", "  << base << "," << this->offset << "\n";
+  }
+};
+
+struct ldptr : Inst {
+  enum Type {
+    ld_d,
+    ld_w,
+  } op;
+  Reg src, base;
+  int32_t offset;
+  ldptr(Reg _src, Reg _base, int32_t _offset, Type _op = ld_d)
+      : op(_op), src(_src), base(_base), offset(_offset) {
+    // assert(is_imm12(offset));
+  }
+
+  virtual std::vector<Reg> use_reg() override { return {src, base}; }
+  virtual std::vector<Reg *> regs() override { return {&src, &base}; }
+  virtual bool side_effect() override { return true; }
+  virtual void gen_asm(std::ostream &out) override {
+    static const std::map<Type, std::string> asm_name {
+        {ld_d, "ldptr.d"}, {ld_w, "ldptr.w"}
     };
       out << asm_name.find(op)->second << ' ' << src << ", "  << base << "," << this->offset << "\n";
   }

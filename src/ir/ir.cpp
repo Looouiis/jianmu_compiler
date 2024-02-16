@@ -106,7 +106,7 @@ void ir::ir_module::reg_allocate(int base_reg) {
     for(auto & [name, func] : this->usrfuncs){
         LoongArch::ColoringAllocator allocator(func, base_reg);     // 我修改了allocator的构造函数
         auto ret = allocator.run();                                 // 我也修改了run方法的返回值
-        func->reg_allocate(ret.first, ret.second);
+        func->reg_allocate(ret.mapping_to_reg, ret.mapping_to_spill, ret.arrobj);
     }
 }
 
@@ -163,9 +163,10 @@ std::vector<ptr<ir::ir_basicblock>> ir::ir_userfunc::GetLinerSequence()
    
 }
 
-void ir::ir_userfunc::reg_allocate(std::unordered_map<std::shared_ptr<ir::ir_reg>,int> map, std::vector<std::shared_ptr<ir::ir_reg>> spill) {
+void ir::ir_userfunc::reg_allocate(std::unordered_map<std::shared_ptr<ir::ir_reg>,int> map, std::vector<std::shared_ptr<ir::ir_reg>> spill, std::vector<std::shared_ptr<ir::ir_memobj>> arrobj) {
     regAllocateOut = map;       // 成功分配的寄存器映射
     regSpill = spill;           // 无法分配，被流放到内存中的寄存器
+    this->arrobj = arrobj;
 }
 
 bool ir::ir_func::set_retype(vartype rettype)

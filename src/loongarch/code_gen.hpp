@@ -3,6 +3,7 @@
 #include <functional>
 #include <map>
 #include <sstream>
+#include <unordered_map>
 #include <vector>
 #include <memory>
 #include <set>
@@ -11,6 +12,7 @@
 #include "ir/ir.hpp"
 #include "loongarch/arch.hpp"
 #include "loongarch/register_allocator.hpp"
+#include "parser/SyntaxTree.hpp"
 
 namespace LoongArch {
 
@@ -88,6 +90,9 @@ protected:
     // std::vector<std::shared_ptr<ir::ir_reg>> spill_vec;
     std::vector<int> spill_vec;
     std::unordered_map<int, LoongArch::Reg> spill_mapping;
+    // ptr_list<ir::ir_memobj> mem_var;
+    std::unordered_map<int, int> mem_var;
+    int used_mem = 0;
 public:
     //申请一个被预留的寄存器
     Reg new_reg();

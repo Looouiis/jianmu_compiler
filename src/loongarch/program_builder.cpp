@@ -159,10 +159,23 @@ void LoongArch::ProgramBuilder::visit(ir::ir_userfunc &node) {
 
     for(auto reg : node.regSpill) {
         this->cur_mapping->spill_vec.push_back(reg->id);
+        this->cur_mapping->used_mem += reg->size;
+    }
+    
+    for(auto obj : node.arrobj) {
+        this->cur_mapping->mem_var.insert({obj->addr->id, this->cur_mapping->used_mem});
+        int total_cnt = obj->addr->size;
+        if(obj->dim) {
+            for(auto a : obj->dim->dimensions) {
+                total_cnt *= a->calc_res();
+            }
+        }
+        this->cur_mapping->used_mem += total_cnt; 
     }
 
-    int spill_cnt = node.regSpill.size();
-    cur_func->stack_size += spill_cnt * 4;
+    // int spill_cnt = node.regSpill.size();
+    // cur_func->stack_size += spill_cnt * 4;
+    cur_func->stack_size += this->cur_mapping->used_mem;
     
     //处理内存变量
 
@@ -407,14 +420,24 @@ void LoongArch::ProgramBuilder::visit(ir::ir_userfunc &node) {
 }
 
 void LoongArch::ProgramBuilder::visit(ir::store &node) {
-    is_dst = true;
-    node.addr->accept(*this);
-    Reg reg = pass_reg;
+    // is_dst = true;
+    // node.addr->accept(*this);
+    // Reg reg = pass_reg;
     using_reg = const_reg_l;
     node.value->accept(*this);
     Reg dst = pass_reg;
-    cur_block->instructions.push_back(std::make_shared<LoongArch::RegRegInst>(RegRegInst::add_w, reg, Reg{0}, dst));
-    check_write_back(reg);
+    // cur_block->instructions.push_back(std::make_shared<LoongArch::RegRegInst>(RegRegInst::add_w, reg, Reg{0}, dst));
+    if(node.addr->is_arr) {
+        node.addr->accept(*this);
+        Reg reg = pass_reg;
+        cur_block->instructions.push_back(std::make_shared<st>(dst, reg, 0, st::st_w));
+    }
+    else {
+        int offset = cur_mapping->mem_var.find(node.addr->id)->second;
+        offset = cur_func->stack_size - offset;
+        cur_block->instructions.push_back(std::make_shared<st>(dst, Reg{fp}, -offset, st::st_w));
+    }
+    // check_write_back(reg);
     // // auto reg_id = std::dynamic_pointer_cast<ir::ir_reg>(node.addr)->id;
     // auto ir_r = std::dynamic_pointer_cast<ir::ir_reg>(node.addr);
     // // auto reg = this->cur_mapping->reg_mapping[reg_id];
@@ -480,11 +503,28 @@ void LoongArch::ProgramBuilder::visit(ir::load &node) {
     is_dst = true;
     node.dst->accept(*this);
     Reg dst = pass_reg;
-    cur_block->instructions.push_back(std::make_shared<LoongArch::RegImmInst>(RegImmInst::addi_w, dst, src, 0));
+    // cur_block->instructions.push_back(std::make_shared<LoongArch::RegImmInst>(RegImmInst::addi_w, dst, src, 0));
+    if(node.addr->is_arr) {
+        node.addr->accept(*this);
+        Reg reg = pass_reg;
+        cur_block->instructions.push_back(std::make_shared<ld>(dst, reg, 0, ld::ld_w));
+    }
+    else {
+        int offset = cur_mapping->mem_var.find(node.addr->id)->second;
+        offset = cur_func->stack_size - offset;
+        cur_block->instructions.push_back(std::make_shared<ld>(dst, Reg{fp}, -offset, ld::ld_w));
+    }
     check_write_back(dst);
 }
 
 void LoongArch::ProgramBuilder::visit(ir::alloc &node) {
+    // is_dst = true;
+    // node.var->addr->accept(*this);
+    // auto dst = pass_reg;
+    // int offset = cur_mapping->mem_var.find(node.var->addr->id)->second;
+    // cur_block->instructions.push_back(std::make_shared<RegImmInst>(RegImmInst::addi_w, dst, Reg{0}, offset));
+    // check_write_back(dst);
+    
 // auto regs = node.def_reg();
 // for(auto reg : regs) {
         // auto id = std::dynamic_pointer_cast<ir::ir_reg>(reg)->id;
@@ -608,9 +648,11 @@ void LoongArch::ProgramBuilder::visit(ir::logic_ins &node) {
 
 void LoongArch::ProgramBuilder::visit(ir::get_element_ptr& node) {
     auto dimensions = node.obj_offset;
+    is_dst = true;
     node.dst->accept(*this);
     auto dst = pass_reg;
-    cur_block->instructions.push_back(std::make_shared<RegRegInst>(RegRegInst::add_w, dst, Reg{0}, Reg{0}));
+    int offset = cur_mapping->mem_var.find(node.base->addr->id)->second - cur_func->stack_size;
+    cur_block->instructions.push_back(std::make_shared<RegImmInst>(RegImmInst::addi_d, dst, Reg{fp}, offset));
     for(int i = 0; i < dimensions.size() - 1; i++) {
         using_reg = const_reg_l;
         // auto ini_r = std::make_shared<ir::ir_constant>(1);
@@ -625,9 +667,17 @@ void LoongArch::ProgramBuilder::visit(ir::get_element_ptr& node) {
         using_reg = const_reg_r;
         load_cnt->accept(*this);
         Reg cnt = pass_reg;
-        cur_block->instructions.push_back(std::make_shared<LoongArch::RegRegInst>(RegRegInst::mul_w, ini, ini, cnt));
-        cur_block->instructions.push_back(std::make_shared<RegRegInst>(RegRegInst::add_w, dst, dst, ini));
+        cur_block->instructions.push_back(std::make_shared<LoongArch::RegRegInst>(RegRegInst::mul_d, ini, ini, cnt));
+        cur_block->instructions.push_back(std::make_shared<LoongArch::RegImmInst>(RegImmInst::slli_d, ini, ini, 2));
+        cur_block->instructions.push_back(std::make_shared<RegRegInst>(RegRegInst::add_d, dst, dst, ini));
     }
+    dimensions.back()->accept(*this);
+    auto ini = pass_reg;
+    cur_block->instructions.push_back(std::make_shared<LoongArch::RegImmInst>(RegImmInst::slli_d, ini, ini, 2));
+    cur_block->instructions.push_back(std::make_shared<RegRegInst>(RegRegInst::add_d, dst, dst, ini));
+    check_write_back(dst);
+    node.dst->is_arr = true;
+    // pass_reg = dst;
 }
 
 void LoongArch::ProgramBuilder::visit(ir::while_loop& node) {

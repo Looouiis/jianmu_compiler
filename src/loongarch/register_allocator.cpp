@@ -65,6 +65,14 @@ void LoongArch::ColoringAllocator::Spill(std::unordered_map<std::shared_ptr<ir::
 void LoongArch::ColoringAllocator::BuildConflictGraph() {
   for(auto block : func->bbs) {
     for(auto ins : block->instructions) {
+      auto is_alloc = std::dynamic_pointer_cast<ir::alloc>(ins);
+      if(is_alloc) {
+        // if(is_alloc->var->dim) {
+          arrobj.push_back(is_alloc->var);
+          // continue;
+        // }
+      }
+
       for(auto raw_reg : ins->def_reg()) {
         auto reg = std::dynamic_pointer_cast<ir::ir_reg>(raw_reg);
         if(reg != nullptr) {
@@ -103,7 +111,7 @@ bool LoongArch::ColoringAllocator::conflict(std::shared_ptr<ir::ir_reg> r1, std:
     return true;
 }
 
-std::pair<std::unordered_map<std::shared_ptr<ir::ir_reg>,int>, std::vector<std::shared_ptr<ir::ir_reg>>> LoongArch::ColoringAllocator::getAllocate() {
+LoongArch::alloc_res LoongArch::ColoringAllocator::getAllocate() {
   SimplifyGraph();
   auto stk = s;
   std::vector<std::shared_ptr<ir::ir_reg>> colored;
@@ -126,7 +134,7 @@ std::pair<std::unordered_map<std::shared_ptr<ir::ir_reg>,int>, std::vector<std::
     }
   }
 
-  return {this->mappingToReg, this->mappingToSpill};
+  return alloc_res(this->mappingToReg, this->mappingToSpill, this->arrobj);
 }
 
 
@@ -291,6 +299,7 @@ LoongArch::ColoringAllocator::ColoringAllocator(std::shared_ptr<ir::ir_userfunc>
       auto instruction = *ins_it;
       auto x = instruction->def_reg();
       auto phi = std::dynamic_pointer_cast<ir::phi>(instruction);
+      auto get = std::dynamic_pointer_cast<ir::get_element_ptr>(instruction);
       if(phi != nullptr) {
         for(auto r : x) {
           auto reg = std::dynamic_pointer_cast<ir::ir_reg>(r);
@@ -301,8 +310,14 @@ LoongArch::ColoringAllocator::ColoringAllocator(std::shared_ptr<ir::ir_userfunc>
       else {
         for(auto r : x) {
           auto reg = std::dynamic_pointer_cast<ir::ir_reg>(r);
-          if(reg != nullptr)
-            mappingToInterval[reg].l = cur_line + 1;
+          if(reg != nullptr) {
+            if(get) {
+              mappingToInterval[reg].l = cur_line;
+            }
+            else {
+              mappingToInterval[reg].l = cur_line + 1;
+            }
+          }
         }
       }
       auto y = instruction->use_reg();
@@ -328,6 +343,6 @@ LoongArch::ColoringAllocator::ColoringAllocator(std::shared_ptr<ir::ir_userfunc>
   this->BuildConflictGraph();
 }
 
-std::pair<std::unordered_map<std::shared_ptr<ir::ir_reg>,int>, std::vector<std::shared_ptr<ir::ir_reg>>> LoongArch::ColoringAllocator::run() {
+LoongArch::alloc_res LoongArch::ColoringAllocator::run() {
   return this->getAllocate();
 }
