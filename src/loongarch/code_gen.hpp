@@ -25,6 +25,7 @@ class IrMapping;
 struct Inst;
 struct Jump;
 struct Br;
+struct Bl;
 struct RegImmInst;
 
 
@@ -41,6 +42,7 @@ public:
 
 class Function : public std::enable_shared_from_this<Function> {
     friend LoongArch::ProgramBuilder;
+    friend LoongArch::Bl;
 protected:
     int regn; 
     std::string name;

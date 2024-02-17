@@ -1,6 +1,7 @@
 #include "program_builder.hpp"
 #include "ir/ir.hpp"
 #include "loongarch/arch.hpp"
+#include "loongarch/code_gen.hpp"
 #include "loongarch/inst.hpp"
 #include "parser/SyntaxTree.hpp"
 #include <algorithm>
@@ -187,7 +188,16 @@ void LoongArch::ProgramBuilder::visit(ir::ir_userfunc &node) {
     //构造函数的进入部分
     this->cur_func->entry->instructions.push_back(std::make_shared<LoongArch::RegImmInst>(RegImmInst::addi_d,Reg{sp},Reg{sp},-cur_func->stack_size));  //sp:栈顶指针
     this->cur_func->entry->instructions.push_back(std::make_shared<LoongArch::st>(Reg{ra},Reg{sp},cur_func->stack_size-8,st::st_d));//保存ra//返回地址
+    this->cur_func->entry->instructions.push_back(std::make_shared<LoongArch::st>(Reg{fp},Reg{sp},cur_func->stack_size - 16,st::st_d));//保存ra//返回地址
     this->cur_func->entry->instructions.push_back(std::make_shared<LoongArch::RegImmInst>(RegImmInst::addi_d,Reg{fp},Reg{sp},cur_func->stack_size)); //确定
+    int pointer = 4 + node.func_args.size();
+    for(auto arg : node.func_args) {
+        is_dst = true;
+        arg->addr->accept(*this);
+        auto reg = pass_reg;
+        cur_func->entry->instructions.push_back(std::make_shared<LoongArch::RegRegInst>(RegRegInst::add_d, reg, Reg{--pointer}, Reg{0}));
+        check_write_back(reg);
+    }
 
     
     for(auto & block : node.bbs){
@@ -489,8 +499,9 @@ void LoongArch::ProgramBuilder::visit(ir::ret &node) {
         std::make_shared<LoongArch::RegRegInst>(RegRegInst::orw,Reg{4},backend_reg,Reg{0})
     );
     cur_block->instructions.push_back(
-        std::make_shared<LoongArch::ld>(Reg{22},Reg{3},this->cur_func->stack_size - 8,ld::ld_d)
+        std::make_shared<LoongArch::ld>(Reg{22},Reg{3},this->cur_func->stack_size - 16,ld::ld_d)
     );
+    cur_block->instructions.push_back(std::make_shared<LoongArch::ld>(Reg{ra}, Reg{sp}, cur_func->stack_size - 8, ld::ld_d));
     cur_block->instructions.push_back(
         std::make_shared<LoongArch::RegImmInst>(RegImmInst::addi_d,Reg{sp},Reg{sp},cur_func->stack_size)
     );
@@ -651,9 +662,16 @@ void LoongArch::ProgramBuilder::visit(ir::get_element_ptr& node) {
     is_dst = true;
     node.dst->accept(*this);
     auto dst = pass_reg;
-    int offset = cur_mapping->mem_var.find(node.base->addr->id)->second - cur_func->stack_size;
-    cur_block->instructions.push_back(std::make_shared<RegImmInst>(RegImmInst::addi_d, dst, Reg{fp}, offset));
-    for(int i = 0; i < dimensions.size() - 1; i++) {
+    if(node.base->dim->has_first_dim) {
+        int offset = cur_mapping->mem_var.find(node.base->addr->id)->second - cur_func->stack_size;
+        cur_block->instructions.push_back(std::make_shared<RegImmInst>(RegImmInst::addi_d, dst, Reg{fp}, offset));
+    }
+    else {
+        node.base->addr->accept(*this);
+        auto base_add = pass_reg;
+        cur_block->instructions.push_back(std::make_shared<RegRegInst>(RegRegInst::add_d, dst, base_add, Reg{0}));
+    }
+    for(int i = 0; (i < dimensions.size() - 1) && !dimensions.empty(); i++) {
         using_reg = const_reg_l;
         // auto ini_r = std::make_shared<ir::ir_constant>(1);
         // ini_r->accept(*this);
@@ -671,10 +689,12 @@ void LoongArch::ProgramBuilder::visit(ir::get_element_ptr& node) {
         cur_block->instructions.push_back(std::make_shared<LoongArch::RegImmInst>(RegImmInst::slli_d, ini, ini, 2));
         cur_block->instructions.push_back(std::make_shared<RegRegInst>(RegRegInst::add_d, dst, dst, ini));
     }
-    dimensions.back()->accept(*this);
-    auto ini = pass_reg;
-    cur_block->instructions.push_back(std::make_shared<LoongArch::RegImmInst>(RegImmInst::slli_d, ini, ini, 2));
-    cur_block->instructions.push_back(std::make_shared<RegRegInst>(RegRegInst::add_d, dst, dst, ini));
+    if(!dimensions.empty()) {
+        dimensions.back()->accept(*this);
+        auto ini = pass_reg;
+        cur_block->instructions.push_back(std::make_shared<LoongArch::RegImmInst>(RegImmInst::slli_d, ini, ini, 2));
+        cur_block->instructions.push_back(std::make_shared<RegRegInst>(RegRegInst::add_d, dst, dst, ini));
+    }
     check_write_back(dst);
     node.dst->is_arr = true;
     // pass_reg = dst;
@@ -692,7 +712,21 @@ void LoongArch::ProgramBuilder::visit(ir::break_or_continue& node) {
     cur_block->instructions.push_back(std::make_shared<LoongArch::Jump>(target.get()));
 }
 
-void LoongArch::ProgramBuilder::visit(ir::func_call& node) {}
+void LoongArch::ProgramBuilder::visit(ir::func_call& node) {
+    int pointer = 4 + node.params.size();
+    for(auto par : node.params) {
+        par->accept(*this);
+        auto reg = pass_reg;
+        cur_block->instructions.push_back(std::make_shared<RegRegInst>(RegRegInst::add_d, Reg{--pointer}, reg, Reg{0}));
+    }
+    cur_block->instructions.push_back(std::make_shared<LoongArch::Bl>(node.func_name));
+    if(node.ret_reg) {
+        is_dst = true;
+        node.ret_reg->accept(*this);
+        auto dst = pass_reg;
+        cur_block->instructions.push_back(std::make_shared<RegRegInst>(RegRegInst::add_d, dst, Reg{4}, Reg{0}));
+    }
+}
 
 void LoongArch::ProgramBuilder::visit(ir::global_def& node) {}
 

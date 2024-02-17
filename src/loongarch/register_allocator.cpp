@@ -63,6 +63,9 @@ void LoongArch::ColoringAllocator::Spill(std::unordered_map<std::shared_ptr<ir::
 }
 
 void LoongArch::ColoringAllocator::BuildConflictGraph() {
+  for(auto funcf : func->func_args) {
+    allregs.push_back(funcf->addr);
+  }
   for(auto block : func->bbs) {
     for(auto ins : block->instructions) {
       auto is_alloc = std::dynamic_pointer_cast<ir::alloc>(ins);

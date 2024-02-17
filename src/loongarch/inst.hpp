@@ -161,6 +161,16 @@ struct Br : Inst {
   }
 };
 
+struct Bl : Inst {
+  string name;
+  Bl(string name) : name(name) {}
+
+  virtual bool side_effect() override { return true; }
+  virtual void gen_asm(std::ostream &out) override {
+    out << "bl " << name << '\n';
+  }
+};
+
 struct jr : Inst { //用于生成函数返回指令的汇编代码。
   bool has_return_value;
   jr(bool _has_return_value) : has_return_value(_has_return_value) {}

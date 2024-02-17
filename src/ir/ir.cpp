@@ -560,12 +560,12 @@ void ir::func_call::print(std::ostream &out)
 }
 
 std::vector<ptr<ir::ir_value>> ir::func_call::use_reg() {
-    // return this->params;
-  return {};
+    return this->params;
+//   return {};
 }
 
 std::vector<ptr<ir::ir_value>> ir::func_call::def_reg() {
-  return {};
+  return {this->ret_reg};
 }
 
 void ir::global_def::accept(ir_visitor &visitor)
