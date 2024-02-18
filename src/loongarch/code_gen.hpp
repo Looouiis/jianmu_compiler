@@ -34,10 +34,13 @@ class Program {
 protected:
     std::stringstream asm_code;
     std::vector<std::shared_ptr<Function>> functions;
+    std::vector<std::shared_ptr<Function>> lib_funcs;
+    ptr_list<ir::global_def> global_var;
     int block_n;
 public:
     Program();
     void get_asm(std::ostream &out);
+    void global_ini(ptr<int> pointer, ptr_list<ir::ir_value> init_val, ptr_list<ast::expr_syntax> dimensions, std::ostream& out);
 };
 
 class Function : public std::enable_shared_from_this<Function> {
@@ -55,6 +58,7 @@ protected:
 public:
     Function(std::string name);
     void get_asm(std::ostream& out);
+    string get_name();
 };
 
 class Block {

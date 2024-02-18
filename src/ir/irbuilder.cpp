@@ -512,8 +512,9 @@ void ir::IrBuilder::global_init(ptr<ir::global_def> global, ptr<ast::init_syntax
             this->cur_func = compunit->global_init_func;
             if(!compunit->init_block) {
                 compunit->init_block = compunit->global_init_func->new_block();
+                compunit->global_init_func->max_reg = compunit->global_var.size();
                 compunit->global_init_func->set_retype(vartype::VOID);
-                compunit->init_block->push_back(std::make_shared<ir::ret>(nullptr, false));
+                compunit->init_block->push_back(std::make_shared<ir::ret>(std::make_shared<ir::ir_constant>(0), false));
             }
             auto ret = compunit->init_block->pop_back();
             this->cur_block = compunit->init_block;

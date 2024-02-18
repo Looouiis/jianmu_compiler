@@ -6,6 +6,7 @@
 #include <utility>
 #include <vector>
 #include "ir/ir.hpp"
+#include "parser/SyntaxTree.hpp"
 
 
 namespace LoongArch {
@@ -34,6 +35,7 @@ class ColoringAllocator {
   std::vector<std::shared_ptr<ir::ir_memobj>> arrobj;
   std::vector<std::shared_ptr<ir::ir_reg>> non_conf_regs;
   std::vector<std::shared_ptr<ir::ir_reg>> mappingToSpill;
+  ptr_list<ir::global_def> global_var;
   int color_count = 3;
   int base_reg;
   bool conflict(std::shared_ptr<ir::ir_reg> r1, std::shared_ptr<ir::ir_reg> r2);
@@ -44,7 +46,7 @@ class ColoringAllocator {
   // std::pair<std::unordered_map<std::shared_ptr<ir::ir_reg>,int>, std::vector<std::shared_ptr<ir::ir_reg>>> getAllocate();
   alloc_res getAllocate();
  public:
-  ColoringAllocator(std::shared_ptr<ir::ir_userfunc> _func, int base_reg);
+  ColoringAllocator(std::shared_ptr<ir::ir_userfunc> _func, int base_reg, ptr_list<ir::global_def> global_var);
   // std::pair<std::unordered_map<std::shared_ptr<ir::ir_reg>,int>, std::vector<std::shared_ptr<ir::ir_reg>>> run();
   alloc_res run();
 };

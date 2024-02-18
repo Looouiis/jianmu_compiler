@@ -1,5 +1,6 @@
 #include "register_allocator.hpp"
 #include "ir/ir.hpp"
+#include "parser/SyntaxTree.hpp"
 #include <algorithm>
 #include <iterator>
 #include <memory>
@@ -63,6 +64,9 @@ void LoongArch::ColoringAllocator::Spill(std::unordered_map<std::shared_ptr<ir::
 }
 
 void LoongArch::ColoringAllocator::BuildConflictGraph() {
+  for(auto global : global_var) {
+    allregs.push_back(global->obj->addr);
+  }
   for(auto funcf : func->func_args) {
     allregs.push_back(funcf->addr);
   }
@@ -141,7 +145,7 @@ LoongArch::alloc_res LoongArch::ColoringAllocator::getAllocate() {
 }
 
 
-LoongArch::ColoringAllocator::ColoringAllocator(std::shared_ptr<ir::ir_userfunc> _func, int _base) : func(_func), base_reg(_base)
+LoongArch::ColoringAllocator::ColoringAllocator(std::shared_ptr<ir::ir_userfunc> _func, int _base, ptr_list<ir::global_def> global_var) : func(_func), base_reg(_base), global_var(global_var)
 {
   auto blocks = func->bbs;
   // for(auto block : blocks) {

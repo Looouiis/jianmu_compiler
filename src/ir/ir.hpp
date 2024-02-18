@@ -17,6 +17,7 @@ namespace LoongArch{
     class ProgramBuilder;
     class IrMapping;
     class ColoringAllocator;
+    class Program;
     // class what;
 }
 namespace Pass {
@@ -70,6 +71,7 @@ public:
     virtual void accept(ir_visitor& visitor) = 0;
     virtual void print(std::ostream & out = std::cout) = 0;
     virtual vartype get_type() = 0;
+    virtual string get_val() = 0;
 };
 
 class ir_reg : public ir_value {
@@ -93,6 +95,8 @@ public:
     virtual void accept(ir_visitor& visitor) override final;
     virtual void print(std::ostream & out = std::cout) override final;
     virtual vartype get_type() override final;
+    virtual string get_val() override final;
+    string get_name();
 };
 class ir_constant : public ir_value {
     friend IrBuilder;
@@ -106,6 +110,7 @@ public:
     virtual void accept(ir_visitor& visitor) override final;
     virtual void print(std::ostream & out = std::cout) override final;
     virtual vartype get_type() override final;
+    virtual string get_val() override final;
 };
 
 class jumpList : public ir_value {
@@ -115,6 +120,7 @@ class jumpList : public ir_value {
 public:
     virtual void accept(ir_visitor& visitor);
     virtual void print(std::ostream & out = std::cout);
+    virtual string get_val() override final;
 };
 
 class ir_memobj : public printable {
@@ -130,6 +136,7 @@ protected:
 public:
     ptr<ir_reg> get_addr() { return this->addr;};
     int get_size() {return this->size;}
+    ptr<ast::var_dimension_syntax> get_dim() {return this->dim;};
     ir_memobj(std::string name , ptr<ir_reg> addr, int size) : name(name) , addr(addr) , size(size) {}
     virtual void accept(ir_visitor& visitor) override final;
     virtual void print(std::ostream & out = std::cout) override final;
@@ -210,7 +217,7 @@ public:
     ptr<global_def> new_global(std::string name, vartype type);
     virtual void accept(ir_visitor& visitor) override final;
     virtual void print(std::ostream & out = std::cout) override final;
-    virtual void reg_allocate(int base_reg);
+    virtual void reg_allocate(int base_reg, ptr_list<global_def> global_var);
 };
 
 //below is func
@@ -322,7 +329,7 @@ class ret : public control_ins {
     friend IrPrinter;
     friend LoongArch::ProgramBuilder;
     ptr<ir_value> value;
-    bool has_return_value;
+    bool has_return_value = false;
 public:
     ret(ptr<ir_value>  value,bool has_return_value):value(value),has_return_value(has_return_value){}
     virtual void accept(ir_visitor& visitor) override final;
@@ -517,6 +524,8 @@ public:
 class global_def : public ir_instr {
     friend IrPrinter;
     friend IrBuilder;
+    friend LoongArch::ColoringAllocator;
+    friend LoongArch::Program;
 private:
     string var_name;
     ptr<ir_memobj> obj;

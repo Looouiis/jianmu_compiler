@@ -259,5 +259,46 @@ struct ldptr : Inst {
   }
 };
 
+struct stptr : Inst {
+  enum Type {
+    st_d,
+    st_w,
+  } op;
+  Reg src, base;
+  int32_t offset;
+  stptr(Reg _src, Reg _base, int32_t _offset, Type _op = st_d)
+      : op(_op), src(_src), base(_base), offset(_offset) {
+    // assert(is_imm12(offset));
+  }
+
+  virtual std::vector<Reg> use_reg() override { return {src, base}; }
+  virtual std::vector<Reg *> regs() override { return {&src, &base}; }
+  virtual bool side_effect() override { return true; }
+  virtual void gen_asm(std::ostream &out) override {
+    static const std::map<Type, std::string> asm_name {
+        {st_d, "stptr.d"}, {st_w, "stptr.w"}
+    };
+      out << asm_name.find(op)->second << ' ' << src << ", "  << base << "," << this->offset << "\n";
+  }
+};
+
+struct la : Inst {
+  enum Type {
+    local,
+  } op;
+  Reg dst;
+  ptr<ir::ir_reg> src;
+  la(ptr<ir::ir_reg> src, Reg dst, Type op = local) : src(src), dst(dst), op(op) {}
+  virtual std::vector<Reg> use_reg() override { return {dst}; }
+  virtual std::vector<Reg *> regs() override { return {&dst}; }
+  virtual bool side_effect() override { return true; }
+  virtual void gen_asm(std::ostream &out) override {
+    static const std::map<Type, std::string> asm_name {
+        {local, "la.local"},
+    };
+      out << asm_name.find(op)->second << ' ' << dst << ", "  << src->get_name() << "\n";
+  }
+};
+
 
 }  // namespace Archriscv

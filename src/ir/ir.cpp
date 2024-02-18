@@ -1,5 +1,9 @@
 #include "ir/ir.hpp"
+#include <bitset>
+#include <cstdlib>
+#include <iomanip>
 #include <memory>
+#include <string>
 #include <unordered_map>
 #include <set>
 #include "ir.hpp"
@@ -16,6 +20,15 @@ void ir::ir_reg::print(std::ostream & out ) {
 
 vartype ir::ir_reg::get_type() {
     return this->type;
+}
+
+string ir::ir_reg::get_val() {
+    abort();
+    return "";
+}
+
+string ir::ir_reg::get_name() {
+    return "g" + std::to_string(this->id);
 }
 
 void ir::ir_memobj::accept(ir_visitor &visitor) {
@@ -102,9 +115,14 @@ void ir::ir_module::print(std::ostream & out)
 {
 }
 
-void ir::ir_module::reg_allocate(int base_reg) {
+void ir::ir_module::reg_allocate(int base_reg, ptr_list<global_def> global_var) {
+    if(this->init_block) {
+        LoongArch::ColoringAllocator allocator(this->global_init_func, base_reg, global_var);
+        auto ret = allocator.run();
+        this->global_init_func->reg_allocate(ret.mapping_to_reg, ret.mapping_to_spill, ret.arrobj);
+    }
     for(auto & [name, func] : this->usrfuncs){
-        LoongArch::ColoringAllocator allocator(func, base_reg);     // 我修改了allocator的构造函数
+        LoongArch::ColoringAllocator allocator(func, base_reg, global_var);     // 我修改了allocator的构造函数
         auto ret = allocator.run();                                 // 我也修改了run方法的返回值
         func->reg_allocate(ret.mapping_to_reg, ret.mapping_to_spill, ret.arrobj);
     }
@@ -441,12 +459,31 @@ vartype ir::ir_constant::get_type() {
     return this->type;
 }
 
+string ir::ir_constant::get_val() {
+    auto value = this->init_val.value();
+    if(std::holds_alternative<int>(value)){
+        return std::to_string(std::get<int>(value));
+    }else{
+        float num = std::get<float>(value);
+        double double_num = static_cast<double>(num);
+        std::bitset<64> bits(*reinterpret_cast<unsigned long long*>(&double_num));
+        std::stringstream ss;
+        ss << std::hex << std::setw(16) << std::setfill('0') << bits.to_ullong();
+        return "0x" + ss.str();
+    }
+}
+
 void ir::jumpList::accept(ir_visitor &visitor)
 {
 }
 
 void ir::jumpList::print(std::ostream &out)
 {
+}
+
+string ir::jumpList::get_val() {
+    abort();
+    return "";
 }
 
 void ir::cmp_ins::accept(ir_visitor &visitor)

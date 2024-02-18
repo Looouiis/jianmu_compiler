@@ -136,8 +136,22 @@ void LoongArch::ProgramBuilder::visit(ir::ir_module &node) {
     this->prog = std::make_shared<LoongArch::Program>();
     this->cur_mapping = std::make_shared<IrMapping>();
 
+    for(auto & [name, global] : node.global_var) {
+        prog->global_var.push_back(global);
+    }
+
     //可以调用寄存器分配函数进行寄存器分配
-    node.reg_allocate(cur_mapping->regn);       // 新增了传入分配起始地址的信息，方便分配
+    node.reg_allocate(cur_mapping->regn, prog->global_var);       // 新增了传入分配起始地址的信息，方便分配
+
+    for(auto & [name, func] : node.libfuncs) {
+        prog->lib_funcs.push_back(std::make_shared<LoongArch::Function>(name));
+    }
+
+    if(node.init_block) {
+        this->func_name = node.global_init_func->name;
+        prog->functions.emplace_back(std::make_shared<LoongArch::Function>(node.global_init_func->name));
+        node.global_init_func->accept(*this);
+    }
 
     for(auto & [name,func] : node.usrfuncs){
         this->func_name = name;
@@ -442,6 +456,12 @@ void LoongArch::ProgramBuilder::visit(ir::store &node) {
         Reg reg = pass_reg;
         cur_block->instructions.push_back(std::make_shared<st>(dst, reg, 0, st::st_w));
     }
+    else if(node.addr->is_global) {
+        node.addr->accept(*this);
+        Reg reg = pass_reg;
+        cur_block->instructions.push_back(std::make_shared<la>(node.addr, reg));
+        cur_block->instructions.push_back(std::make_shared<stptr>(dst, reg, 0, stptr::st_w));
+    }
     else {
         int offset = cur_mapping->mem_var.find(node.addr->id)->second;
         offset = cur_func->stack_size - offset;
@@ -519,6 +539,12 @@ void LoongArch::ProgramBuilder::visit(ir::load &node) {
         node.addr->accept(*this);
         Reg reg = pass_reg;
         cur_block->instructions.push_back(std::make_shared<ld>(dst, reg, 0, ld::ld_w));
+    }
+    else if(node.addr->is_global) {
+        node.addr->accept(*this);
+        Reg reg = pass_reg;
+        cur_block->instructions.push_back(std::make_shared<la>(node.addr, reg));
+        cur_block->instructions.push_back(std::make_shared<ldptr>(dst, reg, 0, ldptr::ld_w));
     }
     else {
         int offset = cur_mapping->mem_var.find(node.addr->id)->second;
@@ -662,7 +688,10 @@ void LoongArch::ProgramBuilder::visit(ir::get_element_ptr& node) {
     is_dst = true;
     node.dst->accept(*this);
     auto dst = pass_reg;
-    if(node.base->dim->has_first_dim) {
+    if(node.base->addr->is_global) {
+        cur_block->instructions.push_back(std::make_shared<la>(node.base->addr, dst, la::local));
+    }
+    else if(node.base->dim->has_first_dim) {
         int offset = cur_mapping->mem_var.find(node.base->addr->id)->second - cur_func->stack_size;
         cur_block->instructions.push_back(std::make_shared<RegImmInst>(RegImmInst::addi_d, dst, Reg{fp}, offset));
     }
@@ -728,7 +757,9 @@ void LoongArch::ProgramBuilder::visit(ir::func_call& node) {
     }
 }
 
-void LoongArch::ProgramBuilder::visit(ir::global_def& node) {}
+void LoongArch::ProgramBuilder::visit(ir::global_def& node) {
+
+}
 
 void LoongArch::ProgramBuilder::visit(ir::trans& node) {}
 
