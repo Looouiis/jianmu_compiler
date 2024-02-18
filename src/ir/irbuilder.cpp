@@ -182,6 +182,7 @@ void ir::IrBuilder::visit(ast::rel_cond_syntax &node)           // self1
     if(!pass_value) {
         return;
     }
+    ptr<ir_reg> dst;
     if(exp1->get_type() == vartype::FLOAT || exp2->get_type() == vartype::FLOAT) {
         if(exp1->get_type() != vartype::FLOAT) {
             auto transed = cur_func->new_reg(exp1->get_type() == vartype::INT ? vartype::FLOAT : vartype::FLOATADDR);
@@ -193,8 +194,12 @@ void ir::IrBuilder::visit(ast::rel_cond_syntax &node)           // self1
             cur_block->push_back(std::make_shared<ir::trans>(vartype::FLOAT, transed, exp2));
             exp2 = transed;
         }
+        dst = cur_func->new_reg(vartype::FBOOL);
     }
-    auto dst = cur_func->new_reg(vartype::BOOL);
+    else {
+        dst = cur_func->new_reg(vartype::BOOL);
+    }
+    // auto dst = cur_func->new_reg(vartype::BOOL);
     cur_block->push_back(std::make_shared<ir::cmp_ins>(dst, exp1, exp2, node.op));
     this->pass_value = dst;
 }
@@ -213,17 +218,18 @@ void ir::IrBuilder::visit(ast::logic_cond_syntax &node)         // self2
         cur_block = lhs_block;
         node.lhs->accept((*this));
         auto exp1 = pass_value;
-        if(exp1->get_type() != vartype::BOOL) {
+        if(exp1->get_type() != vartype::BOOL && exp1->get_type() != vartype::FBOOL) {
             ptr<ir_constant> zero;
+            auto transed = cur_func->new_reg(vartype::BOOL);
             if(exp1->get_type() == vartype::FLOAT) {
                 zero = std::make_shared<ir_constant>(0.0f);
                 zero->type = vartype::FLOAT;
+                transed->type = vartype::FBOOL;
             }
             else {
                 zero = std::make_shared<ir_constant>(0);
                 zero->type = vartype::INT;
             }
-            auto transed = cur_func->new_reg(vartype::BOOL);
             cur_block->push_back(std::make_shared<cmp_ins>(transed, exp1, zero, relop::non_equal));
             exp1 = transed;
         }
@@ -241,17 +247,18 @@ void ir::IrBuilder::visit(ast::logic_cond_syntax &node)         // self2
         cur_block = rhs_block;
         node.rhs->accept(*this);
         auto exp2 = pass_value;
-        if(exp2->get_type() != vartype::BOOL) {
+        if(exp2->get_type() != vartype::BOOL && exp2->get_type() != vartype::FBOOL) {
             ptr<ir_constant> zero;
+            auto transed = cur_func->new_reg(vartype::BOOL);
             if(exp2->get_type() == vartype::FLOAT) {
                 zero = std::make_shared<ir_constant>(0.0f);
                 zero->type = vartype::FLOAT;
+                transed->type = vartype::FBOOL;
             }
             else {
                 zero = std::make_shared<ir_constant>(0);
                 zero->type = vartype::INT;
             }
-            auto transed = cur_func->new_reg(vartype::BOOL);
             cur_block->push_back(std::make_shared<cmp_ins>(transed, exp2, zero, relop::non_equal));
             exp2 = transed;
         }
@@ -280,6 +287,7 @@ void ir::IrBuilder::visit(ast::logic_cond_syntax &node)         // self2
     if(!pass_value) {
         return;
     }
+    auto dst = cur_func->new_reg(vartype::BOOL);
     if(exp1->get_type() == vartype::FLOAT || exp2->get_type() == vartype::FLOAT) {
         if(exp1->get_type() != vartype::FLOAT) {
             auto transed = cur_func->new_reg(exp1->get_type() == vartype::INT ? vartype::FLOAT : vartype::FLOATADDR);
@@ -291,6 +299,7 @@ void ir::IrBuilder::visit(ast::logic_cond_syntax &node)         // self2
             cur_block->push_back(std::make_shared<ir::trans>(vartype::FLOAT, transed, exp2));
             exp2 = transed;
         }
+        dst->type = vartype::FBOOL;
     }
     // if(node.op == relop::op_and || node.op == relop::op_or) {
     //     auto lhs_block = cur_func->new_block();
@@ -325,7 +334,6 @@ void ir::IrBuilder::visit(ast::logic_cond_syntax &node)         // self2
     //         exp2 = transed;
     //     }
     // }
-    auto dst = cur_func->new_reg(vartype::BOOL);
     cur_block->push_back(std::make_shared<ir::logic_ins>(dst, exp1, exp2, node.op));
     this->pass_value = dst;
 }
@@ -369,17 +377,18 @@ void ir::IrBuilder::visit(ast::unaryop_expr_syntax &node)           // self3
     }
     auto dst = cur_func->new_reg(pass_type);
     if(node.op == unaryop::op_not) {
-        if(exp2->get_type() != vartype::BOOL) {
+        if(exp2->get_type() != vartype::BOOL && exp2->get_type() != vartype::FBOOL) {
             ptr<ir_constant> zero;
+            auto transed = cur_func->new_reg(vartype::BOOL);
             if(exp2->get_type() == vartype::FLOAT) {
                 zero = std::make_shared<ir_constant>(0.0f);
                 zero->type = vartype::FLOAT;
+                transed->type = vartype::FBOOL;
             }
             else {
                 zero = std::make_shared<ir_constant>(0);
                 zero->type = vartype::INT;
             }
-            auto transed = cur_func->new_reg(vartype::BOOL);
             cur_block->push_back(std::make_shared<cmp_ins>(transed, exp2, zero, relop::non_equal));
             exp2 = transed;
         }
@@ -661,17 +670,20 @@ void ir::IrBuilder::visit(ast::if_stmt_syntax &node)
 {
     node.pred->accept(*this);
     auto judge_ret = pass_value;
-    if(judge_ret->get_type() != vartype::BOOL) {
+    if(judge_ret->get_type() != vartype::BOOL && judge_ret->get_type() != vartype::FBOOL) {
         ptr<ir_constant> zero;
+        ptr<ir_reg> transed;
         if(judge_ret->get_type() == vartype::FLOAT) {
             zero = std::make_shared<ir_constant>(0.0f);
             zero->type = vartype::FLOAT;
+            transed = cur_func->new_reg(vartype::FBOOL);
         }
         else {
             zero = std::make_shared<ir_constant>(0);
             zero->type = vartype::INT;
+            transed = cur_func->new_reg(vartype::BOOL);
         }
-        auto transed = cur_func->new_reg(vartype::BOOL);
+        // auto transed = cur_func->new_reg(vartype::BOOL);
         cur_block->push_back(std::make_shared<cmp_ins>(transed, judge_ret, zero, relop::non_equal));
         judge_ret = transed;
     }
@@ -780,17 +792,20 @@ void ir::IrBuilder::visit(ast::while_stmt_syntax &node) {
     cur_block = while_start;
     node.cond->accept(*this);
     auto judge_ret = pass_value;
-    if(judge_ret->get_type() != vartype::BOOL) {
+    if(judge_ret->get_type() != vartype::BOOL && judge_ret->get_type() != vartype::FBOOL) {
         ptr<ir_constant> zero;
+        ptr<ir_reg> transed;
         if(judge_ret->get_type() == vartype::FLOAT) {
             zero = std::make_shared<ir_constant>(0.0f);
             zero->type = vartype::FLOAT;
+            transed = cur_func->new_reg(vartype::FBOOL);
         }
         else {
             zero = std::make_shared<ir_constant>(0);
             zero->type = vartype::INT;
+            transed = cur_func->new_reg(vartype::BOOL);
         }
-        auto transed = cur_func->new_reg(vartype::BOOL);
+        // auto transed = cur_func->new_reg(vartype::BOOL);
         cur_block->push_back(std::make_shared<cmp_ins>(transed, judge_ret, zero, relop::non_equal));
         judge_ret = transed;
     }

@@ -5,8 +5,10 @@
 #include "loongarch/inst.hpp"
 #include "parser/SyntaxTree.hpp"
 #include <algorithm>
+#include <bitset>
 #include <cassert>
 #include <cstddef>
+#include <iomanip>
 #include <iterator>
 #include <memory>
 #include <unordered_map>
@@ -27,6 +29,12 @@ void LoongArch::ProgramBuilder::visit(ir::ir_reg &node) {
     auto it = std::find(cur_mapping->spill_vec.begin(), cur_mapping->spill_vec.end(), node.id);
     if(it != cur_mapping->spill_vec.end()) {
         Reg tar;
+        if(node.get_type() == vartype::FLOAT || node.get_type() == vartype::FLOATADDR) {
+            tar.type = FLOAT;
+        }
+        else {
+            tar.type = INT;
+        }
         tar.ir_id = node.id;
         if(is_dst) {
             is_dst = false;
@@ -55,6 +63,12 @@ void LoongArch::ProgramBuilder::visit(ir::ir_reg &node) {
 
 void LoongArch::ProgramBuilder::visit(ir::ir_constant &node) {
     auto optional_val = node.init_val;
+    if(node.get_type() == vartype::FLOAT || node.get_type() == vartype::FLOATADDR) {
+        using_reg.type = FLOAT;
+    }
+    else {
+        using_reg.type = INT;
+    }
     if(optional_val.has_value()) {
         auto variant_val = optional_val.value();
         if(std::holds_alternative<int>(variant_val)) {
@@ -62,7 +76,14 @@ void LoongArch::ProgramBuilder::visit(ir::ir_constant &node) {
             cur_block->instructions.push_back(std::make_shared<LoongArch::LoadImm>(using_reg, val));
         } else if(std::holds_alternative<float>(variant_val)) {
             float val = std::get<float>(variant_val);
-            cur_block->instructions.push_back(std::make_shared<LoongArch::LoadImm>(using_reg, val));
+            Reg middle_reg{using_reg.id};
+            cur_block->instructions.push_back(std::make_shared<LoongArch::LoadFloat>(middle_reg, prog->float_nums.size()));
+            cur_block->instructions.push_back(std::make_shared<LoongArch::ld>(using_reg, middle_reg, 0, ld::fld_f));
+            // double double_num = static_cast<double>(val);
+            std::bitset<32> bits(*reinterpret_cast<unsigned int*>(&val));
+            std::stringstream ss;
+            ss << std::hex << std::setw(8) << std::setfill('0') << bits.to_ulong();
+            prog->float_nums.push_back("0x" + ss.str());
         }
     }
     pass_reg = using_reg;
@@ -169,7 +190,7 @@ void LoongArch::ProgramBuilder::visit(ir::ir_userfunc &node) {
 
     for(auto [ir_reg,backend_reg] : node.regAllocateOut)
     {
-        this->cur_mapping->reg_mapping[ir_reg->id] = Reg{backend_reg};
+        this->cur_mapping->reg_mapping[ir_reg->id] = backend_reg;
     }
 
     for(auto reg : node.regSpill) {
@@ -450,22 +471,28 @@ void LoongArch::ProgramBuilder::visit(ir::store &node) {
     using_reg = const_reg_l;
     node.value->accept(*this);
     Reg dst = pass_reg;
+    st::Type type = st::st_w;
+    stptr::Type sttype = stptr::st_w;
+    if(dst.is_float()) {
+        type = st::fst_f;
+        sttype = stptr::fst_f;
+    }
     // cur_block->instructions.push_back(std::make_shared<LoongArch::RegRegInst>(RegRegInst::add_w, reg, Reg{0}, dst));
     if(node.addr->is_arr) {
         node.addr->accept(*this);
         Reg reg = pass_reg;
-        cur_block->instructions.push_back(std::make_shared<st>(dst, reg, 0, st::st_w));
+        cur_block->instructions.push_back(std::make_shared<st>(dst, reg, 0, type));
     }
     else if(node.addr->is_global) {
         node.addr->accept(*this);
         Reg reg = pass_reg;
         cur_block->instructions.push_back(std::make_shared<la>(node.addr, reg));
-        cur_block->instructions.push_back(std::make_shared<stptr>(dst, reg, 0, stptr::st_w));
+        cur_block->instructions.push_back(std::make_shared<stptr>(dst, reg, 0, sttype));
     }
     else {
         int offset = cur_mapping->mem_var.find(node.addr->id)->second;
         offset = cur_func->stack_size - offset;
-        cur_block->instructions.push_back(std::make_shared<st>(dst, Reg{fp}, -offset, st::st_w));
+        cur_block->instructions.push_back(std::make_shared<st>(dst, Reg{fp}, -offset, type));
     }
     // check_write_back(reg);
     // // auto reg_id = std::dynamic_pointer_cast<ir::ir_reg>(node.addr)->id;
@@ -506,10 +533,18 @@ void LoongArch::ProgramBuilder::visit(ir::jump &node) {
 void LoongArch::ProgramBuilder::visit(ir::br &node) {
     node.use_reg()[0]->accept(*this);
     Reg cond = pass_reg;
-    auto target_true = cur_mapping->blockmapping[node.get_target_true()];
-    auto target_false = cur_mapping->blockmapping[node.get_target_false()];
-    cur_block->instructions.push_back(std::make_shared<LoongArch::Br>(Br::bnez, cond, target_true.get()));
-    cur_block->instructions.push_back(std::make_shared<LoongArch::Jump>(target_false.get()));
+    if(cond.type == FBOOL) {
+        auto target_true = cur_mapping->blockmapping[node.get_target_true()];
+        auto target_false = cur_mapping->blockmapping[node.get_target_false()];
+        cur_block->instructions.push_back(std::make_shared<LoongArch::Br>(Br::bcnez, cond, target_true.get()));
+        cur_block->instructions.push_back(std::make_shared<LoongArch::Jump>(target_false.get()));
+    }
+    else {
+        auto target_true = cur_mapping->blockmapping[node.get_target_true()];
+        auto target_false = cur_mapping->blockmapping[node.get_target_false()];
+        cur_block->instructions.push_back(std::make_shared<LoongArch::Br>(Br::bnez, cond, target_true.get()));
+        cur_block->instructions.push_back(std::make_shared<LoongArch::Jump>(target_false.get()));
+    }
 }
 
 void LoongArch::ProgramBuilder::visit(ir::ret &node) {
@@ -534,22 +569,28 @@ void LoongArch::ProgramBuilder::visit(ir::load &node) {
     is_dst = true;
     node.dst->accept(*this);
     Reg dst = pass_reg;
+    ld::Type type = ld::ld_w;
+    ldptr::Type ldtype = ldptr::ld_w;
+    if(dst.is_float()) {
+        type = ld::fld_f;
+        ldtype = ldptr::fld_f;
+    }
     // cur_block->instructions.push_back(std::make_shared<LoongArch::RegImmInst>(RegImmInst::addi_w, dst, src, 0));
     if(node.addr->is_arr) {
         node.addr->accept(*this);
         Reg reg = pass_reg;
-        cur_block->instructions.push_back(std::make_shared<ld>(dst, reg, 0, ld::ld_w));
+        cur_block->instructions.push_back(std::make_shared<ld>(dst, reg, 0, type));
     }
     else if(node.addr->is_global) {
         node.addr->accept(*this);
         Reg reg = pass_reg;
         cur_block->instructions.push_back(std::make_shared<la>(node.addr, reg));
-        cur_block->instructions.push_back(std::make_shared<ldptr>(dst, reg, 0, ldptr::ld_w));
+        cur_block->instructions.push_back(std::make_shared<ldptr>(dst, reg, 0, ldtype));
     }
     else {
         int offset = cur_mapping->mem_var.find(node.addr->id)->second;
         offset = cur_func->stack_size - offset;
-        cur_block->instructions.push_back(std::make_shared<ld>(dst, Reg{fp}, -offset, ld::ld_w));
+        cur_block->instructions.push_back(std::make_shared<ld>(dst, Reg{fp}, -offset, type));
     }
     check_write_back(dst);
 }
@@ -639,26 +680,40 @@ void LoongArch::ProgramBuilder::visit(ir::cmp_ins &node) {
     using_reg = const_reg_r;
     exps[1]->accept(*this);
     Reg exp2 = pass_reg;
-    if(node.op == relop::equal || node.op == relop::non_equal) {
-        cur_block->instructions.push_back(std::make_shared<LoongArch::RegRegInst>(RegRegInst::sub_w, dst, exp1, exp2));
-        cur_block->instructions.push_back(std::make_shared<LoongArch::RegImmInst>(RegImmInst::sltui, dst, dst, 1));
-        if(node.op == relop::non_equal) {
+    if(node.dst->get_type() == vartype::FBOOL) {
+        // if(node.op == relop::equal || node.op == relop::non_equal)
+        std::unordered_map<relop, FCMP::Type> map_to_f = {
+            {relop::equal, FCMP::eq},
+            {relop::non_equal, FCMP::ne},
+            {relop::greater, FCMP::gt},
+            {relop::greater_equal, FCMP::ge},
+            {relop::less, FCMP::lt},
+            {relop::less_equal, FCMP::le},
+        };
+        cur_block->instructions.push_back(std::make_shared<LoongArch::FCMP>(dst, exp1, exp2, map_to_f[node.op]));
+    }
+    else {
+        if(node.op == relop::equal || node.op == relop::non_equal) {
+            cur_block->instructions.push_back(std::make_shared<LoongArch::RegRegInst>(RegRegInst::sub_w, dst, exp1, exp2));
+            cur_block->instructions.push_back(std::make_shared<LoongArch::RegImmInst>(RegImmInst::sltui, dst, dst, 1));
+            if(node.op == relop::non_equal) {
+                cur_block->instructions.push_back(std::make_shared<LoongArch::RegImmInst>(RegImmInst::xori, dst, dst, 1));
+            }
+        }
+        else if (node.op == relop::greater) {
+            cur_block->instructions.push_back(std::make_shared<LoongArch::RegRegInst>(RegRegInst::slt, dst, exp2, exp1));
+        }
+        else if (node.op == relop::greater_equal) {
+            cur_block->instructions.push_back(std::make_shared<LoongArch::RegRegInst>(RegRegInst::slt, dst, exp1, exp2));
             cur_block->instructions.push_back(std::make_shared<LoongArch::RegImmInst>(RegImmInst::xori, dst, dst, 1));
         }
-    }
-    else if (node.op == relop::greater) {
-        cur_block->instructions.push_back(std::make_shared<LoongArch::RegRegInst>(RegRegInst::slt, dst, exp2, exp1));
-    }
-    else if (node.op == relop::greater_equal) {
-        cur_block->instructions.push_back(std::make_shared<LoongArch::RegRegInst>(RegRegInst::slt, dst, exp1, exp2));
-        cur_block->instructions.push_back(std::make_shared<LoongArch::RegImmInst>(RegImmInst::xori, dst, dst, 1));
-    }
-    else if (node.op == relop::less) {
-        cur_block->instructions.push_back(std::make_shared<LoongArch::RegRegInst>(RegRegInst::slt, dst, exp1, exp2));
-    }
-    else if (node.op == relop::less_equal) {
-        cur_block->instructions.push_back(std::make_shared<LoongArch::RegRegInst>(RegRegInst::slt, dst, exp2, exp1));
-        cur_block->instructions.push_back(std::make_shared<LoongArch::RegImmInst>(RegImmInst::xori, dst, exp1, 1));
+        else if (node.op == relop::less) {
+            cur_block->instructions.push_back(std::make_shared<LoongArch::RegRegInst>(RegRegInst::slt, dst, exp1, exp2));
+        }
+        else if (node.op == relop::less_equal) {
+            cur_block->instructions.push_back(std::make_shared<LoongArch::RegRegInst>(RegRegInst::slt, dst, exp2, exp1));
+            cur_block->instructions.push_back(std::make_shared<LoongArch::RegImmInst>(RegImmInst::xori, dst, exp1, 1));
+        }
     }
     check_write_back(dst);
 }
@@ -761,6 +816,22 @@ void LoongArch::ProgramBuilder::visit(ir::global_def& node) {
 
 }
 
-void LoongArch::ProgramBuilder::visit(ir::trans& node) {}
+void LoongArch::ProgramBuilder::visit(ir::trans& node) {
+    if(node.target == vartype::FLOAT) {
 
-void LoongArch::ProgramBuilder::visit(ir::ir_libfunc& node) {}
+    }
+    else {
+        node.src->accept(*this);
+        Reg src = pass_reg;
+        is_dst = true;
+        node.dst->accept(*this);
+        Reg dst = pass_reg;
+        cur_block->instructions.push_back(std::make_shared<LoongArch::trans>(src, src, trans::fti));
+        cur_block->instructions.push_back(std::make_shared<LoongArch::mov>(dst, src, mov::ftg));
+        check_write_back(dst);
+    }
+}
+
+void LoongArch::ProgramBuilder::visit(ir::ir_libfunc& node) {
+    
+}

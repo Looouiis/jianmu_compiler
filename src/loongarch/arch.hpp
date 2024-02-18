@@ -12,7 +12,7 @@ constexpr int zero = 0, ra = 1, tp = 2, sp = 3, x = 21, fp = 22;  //记录不同
 constexpr int arch_bit_width = 16; //寄存器位宽
 
 enum RegisterUsage { caller_save, callee_save, special };
-enum Rtype { INT };
+enum Rtype {INT, FLOAT, FBOOL};
 enum Compare { Eq, Ne, Lt, Le, Gt, Ge };
 
 
@@ -85,7 +85,7 @@ struct Reg {
   Reg(int _id = -1,Rtype _type = INT) : id(_id),type(_type),offset(0) {}
   bool is_machine() const { return id < RegCount; }
   bool is_virtual() const { return id >= RegCount; }//这个就是编号大于可用的物理寄存器的东西
-  bool is_float() const {return false;}
+  bool is_float() const {return type == FLOAT;}
   bool operator<(const Reg &rhs) const { return id < rhs.id || (id == rhs.id && type < rhs.type); }
   bool operator==(const Reg &rhs) const { return ( id == rhs.id) && (is_float() == rhs.is_float()); }
   bool operator>(const Reg &rhs) const { return id > rhs.id || (id == rhs.id && type > rhs.type); }

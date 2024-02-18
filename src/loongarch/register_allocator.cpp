@@ -118,26 +118,53 @@ bool LoongArch::ColoringAllocator::conflict(std::shared_ptr<ir::ir_reg> r1, std:
     return true;
 }
 
+bool differ(ptr<ir::ir_reg> src, vartype dst) {
+  if(src->get_type() == vartype::FLOAT || src->get_type() == vartype::FLOATADDR) {
+    return dst != vartype::FLOAT && dst != vartype::FLOATADDR;
+  }
+  else {
+    return dst != vartype::INT && dst != vartype::INTADDR && dst != vartype::BOOL && dst != vartype::BOOLADDR && dst != vartype::VOID;
+  }
+}
+
 LoongArch::alloc_res LoongArch::ColoringAllocator::getAllocate() {
   SimplifyGraph();
   auto stk = s;
   std::vector<std::shared_ptr<ir::ir_reg>> colored;
-  std::unordered_map<std::shared_ptr<ir::ir_reg>, int> color_map;
+  std::unordered_map<std::shared_ptr<ir::ir_reg>, Reg> *color_map;
+  std::unordered_map<std::shared_ptr<ir::ir_reg>, Reg> i_color_map;
+  std::unordered_map<std::shared_ptr<ir::ir_reg>, Reg> f_color_map;
+  std::unordered_map<std::shared_ptr<ir::ir_reg>, Reg> fb_color_map;
   std::vector<int> total_color;
   for(int i = 0; i < color_count; i++) total_color.push_back(i);
   while(stk.size()) {
-    auto available_color = total_color;
+    vector<Reg> available_color;
+    // auto available_i = i_color;
+    // auto available_f = f_color;
     auto reg = stk.back();
+    if(reg->get_type() == vartype::FLOAT || reg->get_type() == vartype::FLOATADDR) {
+      available_color = f_color;
+      color_map = &f_color_map;
+    }
+    else if(reg->get_type() == vartype::FBOOL || reg->get_type() == vartype::FBOOLADDR) {
+      available_color = fb_color;
+      color_map = &fb_color_map;
+    }
+    else {
+      available_color = i_color;
+      color_map = &i_color_map;
+    }
     stk.pop_back();
-    for(auto [c, color] : color_map) {
+    for(auto [c, color] : *color_map) {
       auto it = std::find(conflictGraph[reg].begin(), conflictGraph[reg].end(), c);
       if(it != conflictGraph[reg].end()) {
         available_color.erase(std::remove(available_color.begin(), available_color.end(), color), available_color.end());
       }
     }
     if(available_color.size()) {
-      mappingToReg[reg] = available_color[0] + base_reg;
-      color_map[reg] = available_color[0];
+      // mappingToReg[reg] = available_color[0] + base_reg;
+      mappingToReg[reg] = available_color.front();
+      (*color_map)[reg] = available_color.front();
     }
   }
 

@@ -51,6 +51,8 @@ enum class vartype
   FLOAT,
   FLOATADDR,
   INTADDR,
+  FBOOL,
+  FBOOLADDR,
   BOOL,
   BOOLADDR
 };

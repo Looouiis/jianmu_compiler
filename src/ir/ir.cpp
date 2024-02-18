@@ -133,7 +133,7 @@ ir::ir_userfunc::ir_userfunc(std::string name, int reg_cnt) : ir_func(name), max
 }
 
 ptr<ir::ir_memobj> ir::ir_userfunc::new_obj(std::string name, vartype var_type) {
-    std::unordered_map<vartype, vartype> var_reg_trans = {{vartype::INT, vartype::INTADDR}, {vartype::FLOAT, vartype::FLOATADDR}, {vartype::BOOL, vartype::BOOLADDR}};
+    std::unordered_map<vartype, vartype> var_reg_trans = {{vartype::INT, vartype::INTADDR}, {vartype::FLOAT, vartype::FLOATADDR}, {vartype::BOOL, vartype::BOOLADDR}, {vartype::FBOOL, vartype::FBOOLADDR}};
   auto addr = this->new_reg(var_reg_trans[var_type]);
   auto obj = std::make_shared<ir_memobj>(name, addr, i32_size);
   this->scope->ir_objs.push_back(obj);
@@ -181,7 +181,7 @@ std::vector<ptr<ir::ir_basicblock>> ir::ir_userfunc::GetLinerSequence()
    
 }
 
-void ir::ir_userfunc::reg_allocate(std::unordered_map<std::shared_ptr<ir::ir_reg>,int> map, std::vector<std::shared_ptr<ir::ir_reg>> spill, std::vector<std::shared_ptr<ir::ir_memobj>> arrobj) {
+void ir::ir_userfunc::reg_allocate(std::unordered_map<std::shared_ptr<ir::ir_reg>, LoongArch::Reg> map, std::vector<std::shared_ptr<ir::ir_reg>> spill, std::vector<std::shared_ptr<ir::ir_memobj>> arrobj) {
     regAllocateOut = map;       // 成功分配的寄存器映射
     regSpill = spill;           // 无法分配，被流放到内存中的寄存器
     this->arrobj = arrobj;

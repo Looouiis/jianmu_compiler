@@ -36,6 +36,7 @@ protected:
     std::vector<std::shared_ptr<Function>> functions;
     std::vector<std::shared_ptr<Function>> lib_funcs;
     ptr_list<ir::global_def> global_var;
+    std::vector<string> float_nums;
     int block_n;
 public:
     Program();

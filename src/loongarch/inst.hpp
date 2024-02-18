@@ -15,7 +15,15 @@
 namespace LoongArch {
 class ColoringAllocator;
 inline std::ostream &operator<<(std::ostream &os, const Reg &reg) {
-  os << '$' << 'r' << reg.id << " ";
+  if(reg.is_float()) {
+    os << "$f" << reg.id << " ";
+  }
+  else if(reg.type == FBOOL) {
+    os << "$fcc" << reg.id << " ";
+  }
+  else {
+    os << '$' << 'r' << reg.id << " ";
+  }
   return os;
 }
 
@@ -132,6 +140,18 @@ struct LoadImm : Inst { //用于将立即数加载到寄存器的汇编代码。
   }
 };
 
+struct LoadFloat: Inst {
+  Reg dst;
+  int value_at;
+  LoadFloat(Reg _dst, int _value) : dst(_dst), value_at(_value) {}
+
+  virtual std::vector<Reg> def_reg() override { return {dst}; }
+  virtual std::vector<Reg *> regs() override { return {&dst}; }
+  virtual void gen_asm(std::ostream &out) override {
+    out << "la.local " << dst << ", .LC" << value_at << '\n';
+  }
+};
+
 struct Jump : Inst {  //用于生成无条件跳转指令的汇编代码。
   LoongArch::Block *target;
   Jump(Block *_target) : target(_target) { target->label_used = true; }
@@ -144,7 +164,7 @@ struct Jump : Inst {  //用于生成无条件跳转指令的汇编代码。
 
 struct Br : Inst {
   enum Type {
-    beqz, bnez
+    beqz, bnez, bceqz, bcnez
   };
   Type op;
   LoongArch::Reg cond;
@@ -154,7 +174,7 @@ struct Br : Inst {
   virtual bool side_effect() override { return true; }
   virtual void gen_asm(std::ostream &out) override {
     static const std::map<Type, std::string> asm_name {
-      {beqz, "beqz"}, {bnez, "bnez"}
+      {beqz, "beqz"}, {bnez, "bnez"}, {bceqz, "bceqz"}, {bcnez, "bcnez"}
     };
     auto what = asm_name.find(op)->second;
     out << asm_name.find(op)->second << " " << cond << ", " << target->name << '\n';
@@ -194,6 +214,8 @@ struct st : Inst {
   enum Type {
     st_d,
     st_w,
+    fst_f,
+    fst_d
   } op;
   Reg src, base;
   int32_t offset;
@@ -207,7 +229,7 @@ struct st : Inst {
   virtual bool side_effect() override { return true; }
   virtual void gen_asm(std::ostream &out) override {
     static const std::map<Type, std::string> asm_name {
-        {st_d, "st.d"}, {st_w, "st.w"}
+        {st_d, "st.d"}, {st_w, "st.w"}, {fst_f, "fst.s"}, {fst_d, "fst.w"}
     };
       out << asm_name.find(op)->second << ' ' << src << ", " << base <<  "," << offset <<"\n";
   }
@@ -217,6 +239,8 @@ struct ld : Inst {
   enum Type {
     ld_d,
     ld_w,
+    fld_f,
+    fld_d
   } op;
   Reg src, base;
   int32_t offset;
@@ -230,7 +254,7 @@ struct ld : Inst {
   virtual bool side_effect() override { return true; }
   virtual void gen_asm(std::ostream &out) override {
     static const std::map<Type, std::string> asm_name {
-        {ld_d, "ld.d"}, {ld_w, "ld.w"}
+        {ld_d, "ld.d"}, {ld_w, "ld.w"}, {fld_f, "fld.s"}, {fld_d, "fld.w"}
     };
       out << asm_name.find(op)->second << ' ' << src << ", "  << base << "," << this->offset << "\n";
   }
@@ -240,6 +264,8 @@ struct ldptr : Inst {
   enum Type {
     ld_d,
     ld_w,
+    fld_f,
+    fld_d
   } op;
   Reg src, base;
   int32_t offset;
@@ -253,7 +279,7 @@ struct ldptr : Inst {
   virtual bool side_effect() override { return true; }
   virtual void gen_asm(std::ostream &out) override {
     static const std::map<Type, std::string> asm_name {
-        {ld_d, "ldptr.d"}, {ld_w, "ldptr.w"}
+        {ld_d, "ldptr.d"}, {ld_w, "ldptr.w"}, {fld_f, "fldptr.s"}, {fld_d, "fldptr.w"}
     };
       out << asm_name.find(op)->second << ' ' << src << ", "  << base << "," << this->offset << "\n";
   }
@@ -263,6 +289,8 @@ struct stptr : Inst {
   enum Type {
     st_d,
     st_w,
+    fst_f,
+    fst_d
   } op;
   Reg src, base;
   int32_t offset;
@@ -276,7 +304,7 @@ struct stptr : Inst {
   virtual bool side_effect() override { return true; }
   virtual void gen_asm(std::ostream &out) override {
     static const std::map<Type, std::string> asm_name {
-        {st_d, "stptr.d"}, {st_w, "stptr.w"}
+        {st_d, "stptr.d"}, {st_w, "stptr.w"}, {fst_f, "fstptr.s"}, {fst_d, "fstptr.w"}
     };
       out << asm_name.find(op)->second << ' ' << src << ", "  << base << "," << this->offset << "\n";
   }
@@ -297,6 +325,59 @@ struct la : Inst {
         {local, "la.local"},
     };
       out << asm_name.find(op)->second << ' ' << dst << ", "  << src->get_name() << "\n";
+  }
+};
+
+struct FCMP : Inst {
+    enum Type {
+    eq, ne,
+    gt, ge,
+    lt, le
+  } op;
+  Reg dst, src1, src2;
+  FCMP(Reg dst, Reg src1, Reg src2, Type op) : dst(dst), src1(src1), src2(src2), op(op) {}
+  virtual std::vector<Reg> use_reg() override { return {src1, src2}; }
+  virtual std::vector<Reg *> regs() override { return {&src1, &src2}; }
+  virtual bool side_effect() override { return true; }
+  virtual void gen_asm(std::ostream &out) override {
+    static const std::map<Type, std::string> asm_name {
+        {eq, "ceq"}, {ne, "cune"}, {gt, "sgt"}, {ge, "sge"}, {lt, "slt"}, {le, "sle"}
+    };
+      out << "fcmp." << asm_name.find(op)->second << ".s" << ' ' << dst << ", " << src1 << ", "  << src2 << "\n";
+  }
+};
+
+struct trans : Inst {
+    enum Type {
+    fti, itf
+  } op;
+  Reg dst, src;
+  trans(Reg dst, Reg src, Type op) : dst(dst), src(src) {}
+  virtual std::vector<Reg> use_reg() override { return {src}; }
+  virtual std::vector<Reg *> regs() override { return {&src}; }
+  virtual bool side_effect() override { return true; }
+  virtual void gen_asm(std::ostream &out) override {
+    static const std::map<Type, std::string> asm_name {
+        {fti, "ftintrz.w.s"}, {itf, "cune"}
+    };
+      out << asm_name.find(op)->second << ' ' << dst << ", " << src << "\n";
+  }
+};
+
+struct mov : Inst {
+    enum Type {
+    ftg, gtf
+  } op;
+  Reg dst, src;
+  mov(Reg dst, Reg src, Type op) : dst(dst), src(src) {}
+  virtual std::vector<Reg> use_reg() override { return {src}; }
+  virtual std::vector<Reg *> regs() override { return {&src}; }
+  virtual bool side_effect() override { return true; }
+  virtual void gen_asm(std::ostream &out) override {
+    static const std::map<Type, std::string> asm_name {
+        {ftg, "movfr2gr.s"}, {gtf, "cune"}
+    };
+      out << asm_name.find(op)->second << ' ' << dst << ", " << src << "\n";
   }
 };
 

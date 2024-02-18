@@ -71,6 +71,11 @@ void LoongArch::Program::get_asm(std::ostream& out)
             out << "\t" << ".space" << "\t" << total_cnt << std::endl;
         }
     }
+    
+    for(int i = 0; i < float_nums.size(); i++) {
+        out << ".LC" << i << ":" << std::endl;
+        out << "\t.word\t" << float_nums[i] << std::endl;
+    }
 
     out << ".text" << '\n';      //标记代码段
     out << ".globl" << ' ' << "main" << '\n';    //标记main函数全局可见

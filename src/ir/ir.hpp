@@ -1,6 +1,7 @@
 #ifndef IR_HPP
 #define IR_HPP
 
+#include "loongarch/arch.hpp"
 #include "parser/SyntaxTree.hpp"
 #include <memory>
 #include <variant>
@@ -248,7 +249,7 @@ private:
     ptr<ir_basicblock> entry;
     std::unordered_map<int,std::shared_ptr<ir::ir_instr>> revInstLineNumber;
     std::unordered_map<std::shared_ptr<ir::ir_instr>,int> instLineNumber;
-    std::unordered_map<std::shared_ptr<ir::ir_reg>,int> regAllocateOut;
+    std::unordered_map<std::shared_ptr<ir::ir_reg>, LoongArch::Reg> regAllocateOut;
 
     std::vector<ptr<ir::ir_memobj>> func_args;
     std::vector<std::shared_ptr<ir::ir_reg>> regSpill;
@@ -262,7 +263,7 @@ public:
     virtual void print(std::ostream & out = std::cout) override;
     std::unordered_map<ptr<ir::ir_value>,Pass::LiveInterval> GetLiveInterval();
     std::vector<std::shared_ptr<ir_basicblock>> GetLinerSequence();
-    virtual void reg_allocate(std::unordered_map<std::shared_ptr<ir::ir_reg>,int> map, std::vector<std::shared_ptr<ir::ir_reg>> spill, std::vector<std::shared_ptr<ir::ir_memobj>> arrobj);
+    virtual void reg_allocate(std::unordered_map<std::shared_ptr<ir::ir_reg>, LoongArch::Reg> map, std::vector<std::shared_ptr<ir::ir_reg>> spill, std::vector<std::shared_ptr<ir::ir_memobj>> arrobj);
 };
 
 //below is instruction
@@ -542,6 +543,7 @@ public:
 class trans : public ir_instr {
     friend IrPrinter;
     friend IrBuilder;
+    friend LoongArch::ProgramBuilder;
 private:
     vartype target;
     ptr<ir_reg> dst;
