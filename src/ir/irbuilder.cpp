@@ -435,6 +435,8 @@ void ir::IrBuilder::visit(ast::lval_syntax &node)                   // self4----
         if(var->dim) {
             // auto element_ptr = cur_func->new_reg(vartype::INTADDR);
             auto element_ptr = cur_func->new_reg(var->addr->type);
+            element_ptr->is_arr = true;
+            element_ptr->size = 8;
             ptr_list<ir::ir_value> dim;
             if(node.dimension) {
                 int var_size = var->dim->dimensions.size();
@@ -639,6 +641,8 @@ void ir::IrBuilder::visit(ast::assign_stmt_syntax &node)        // self6
     if(!obj->addr->is_const) {
         if(node.target->dimension) {
             auto element_ptr = cur_func->new_reg(obj->get_addr()->type);
+            element_ptr->is_arr = true;
+            element_ptr->size = 8;
             ptr_list<ir::ir_value> dim;
             for(auto a : node.target->dimension->dimensions) {
                 a->accept(*this);
@@ -766,6 +770,8 @@ void ir::IrBuilder::visit(ast::func_f_param_syntax &node) {
     if(node.dimension) {
         mem->dim = node.dimension;
         this->scope.push_var(node.name, mem);
+        mem->addr->is_arr = true;
+        mem->addr->size = 8;
     }
     else {
         mem->addr->type = node.accept_type;
@@ -859,6 +865,8 @@ void ir::IrBuilder::visit(ast::init_syntax &node) {
             val = transed;
         }
         auto dst = cur_func->new_reg(obj->get_addr()->type);
+        dst->is_arr = true;
+        dst->size = 8;
         ptr_list<ir::ir_value> dim;
         for(auto dimension : node.current_dim) {
             dimension->accept(*this);

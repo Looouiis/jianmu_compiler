@@ -99,6 +99,7 @@ protected:
     std::unordered_map<int, LoongArch::Reg> spill_mapping;
     // ptr_list<ir::ir_memobj> mem_var;
     std::unordered_map<int, int> mem_var;
+    std::unordered_map<int, int> spill_offset;
     int used_mem = 0;
 public:
     //申请一个被预留的寄存器
