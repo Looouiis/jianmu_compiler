@@ -70,14 +70,14 @@ struct Inst {
 //modified
 struct RegRegInst : Inst {      //R-Type Instruction like add r1, r2 ——> r3
   enum Type {
-    add_w,add_d,
-    sub_w,sub_d,
-    mul_w, mul_d,
-    div_w,
+    add_w,add_d, fadd_f,
+    sub_w,sub_d, fsub_f,
+    mul_w, mul_d, fmul_f,
+    div_w, fdiv_f,
 
     andw,orw,
     slt
-    , mod_w                 // 我加一个：取余
+    , mod_w, fmod_f                 // 我加一个：取余
   } op;
   Reg dst, lhs, rhs;
   RegRegInst(Type _op, Reg _dst, Reg _lhs, Reg _rhs)
@@ -92,7 +92,7 @@ struct RegRegInst : Inst {      //R-Type Instruction like add r1, r2 ——> r3
     static const std::map<Type, std::string> asm_name
     {
         //Integer
-        {add_w, "add.w"}, {add_d, "add.d"}, {sub_w, "sub.w"}, {mul_w, "mul.w"},  {div_w, "div.w"}, {andw, "and"}, {orw, "or"},
+        {add_w, "add.w"}, {add_d, "add.d"}, {fadd_f, "fadd.s"}, {sub_w, "sub.w"}, {fsub_f, "fsub.s"}, {mul_w, "mul.w"}, {fmul_f, "fmul.s"},  {div_w, "div.w"},  {fdiv_f, "fdiv.s"},{andw, "and"}, {orw, "or"},
         {slt, "slt"}, {mul_d, "mul.d"}
         ,{mod_w, "mod.w"}   // 我加一个：取余
     };
@@ -352,13 +352,13 @@ struct trans : Inst {
     fti, itf
   } op;
   Reg dst, src;
-  trans(Reg dst, Reg src, Type op) : dst(dst), src(src) {}
+  trans(Reg dst, Reg src, Type op) : dst(dst), src(src), op(op) {}
   virtual std::vector<Reg> use_reg() override { return {src}; }
   virtual std::vector<Reg *> regs() override { return {&src}; }
   virtual bool side_effect() override { return true; }
   virtual void gen_asm(std::ostream &out) override {
     static const std::map<Type, std::string> asm_name {
-        {fti, "ftintrz.w.s"}, {itf, "cune"}
+        {fti, "ftintrz.w.s"}, {itf, "ffint.s.w"}
     };
       out << asm_name.find(op)->second << ' ' << dst << ", " << src << "\n";
   }
@@ -366,16 +366,33 @@ struct trans : Inst {
 
 struct mov : Inst {
     enum Type {
-    ftg, gtf
+    ftg, gtf, ftf_f
   } op;
   Reg dst, src;
-  mov(Reg dst, Reg src, Type op) : dst(dst), src(src) {}
+  mov(Reg dst, Reg src, Type op) : dst(dst), src(src), op(op) {}
   virtual std::vector<Reg> use_reg() override { return {src}; }
   virtual std::vector<Reg *> regs() override { return {&src}; }
   virtual bool side_effect() override { return true; }
   virtual void gen_asm(std::ostream &out) override {
     static const std::map<Type, std::string> asm_name {
-        {ftg, "movfr2gr.s"}, {gtf, "cune"}
+        {ftg, "movfr2gr.s"}, {gtf, "movgr2fr.w"}, {ftf_f, "fmov.s"}
+    };
+      out << asm_name.find(op)->second << ' ' << dst << ", " << src << "\n";
+  }
+};
+
+struct funary : Inst {
+    enum Type {
+    neg_f
+  } op;
+  Reg dst, src;
+  funary(Reg dst, Reg src, Type op) : dst(dst), src(src), op(op) {}
+  virtual std::vector<Reg> use_reg() override { return {src}; }
+  virtual std::vector<Reg *> regs() override { return {&src}; }
+  virtual bool side_effect() override { return true; }
+  virtual void gen_asm(std::ostream &out) override {
+    static const std::map<Type, std::string> asm_name {
+        {neg_f, "fneg.s"}
     };
       out << asm_name.find(op)->second << ' ' << dst << ", " << src << "\n";
   }

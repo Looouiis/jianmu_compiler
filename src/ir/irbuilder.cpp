@@ -838,7 +838,7 @@ void ir::IrBuilder::visit(ast::init_syntax &node) {
         auto obj = pass_obj;
         if(ini_value->get_type() != trans[obj->addr->type]) {
             auto transed = cur_func->new_reg(trans[obj->addr->type]);
-            cur_block->push_back(std::make_shared<ir::trans>(obj->addr->get_type(), transed, ini_value));
+            cur_block->push_back(std::make_shared<ir::trans>(trans[obj->addr->type], transed, ini_value));
             ini_value = transed;
         }
         cur_block->push_back(std::make_shared<ir::store>(obj->get_addr(), ini_value));
