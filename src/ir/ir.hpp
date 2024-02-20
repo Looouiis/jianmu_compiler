@@ -80,6 +80,7 @@ class ir_reg : public ir_value {
     friend IrPrinter;
     friend LoongArch::IrMapping;
     friend LoongArch::ProgramBuilder;
+    friend LoongArch::ColoringAllocator;
 private:
     int id;                                                     //virtual register id
     vartype type;                                               //int or float (extension)

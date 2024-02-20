@@ -546,7 +546,9 @@ void ir::get_element_ptr::print(std::ostream &out)
 }
 
 std::vector<ptr<ir::ir_value>> ir::get_element_ptr::use_reg() {
-  return {this->base->get_addr()};
+    ptr_list<ir_value> vec = this->obj_offset;
+    vec.push_back(this->base->get_addr());
+  return vec;
 }
 
 std::vector<ptr<ir::ir_value>> ir::get_element_ptr::def_reg() {

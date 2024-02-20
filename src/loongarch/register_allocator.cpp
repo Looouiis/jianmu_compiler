@@ -17,6 +17,15 @@ void LoongArch::ColoringAllocator::SimplifyGraph() {
       changed = false;
       std::vector<std::shared_ptr<ir::ir_reg>> del_list;
       for(auto [reg, vec] : conf_graph) {
+        if(reg->type == vartype::FLOAT) {
+          color_count = f_color.size();
+        }
+        else if(reg->type == vartype::FBOOL) {
+          color_count = fb_color.size();
+        }
+        else {
+          color_count = i_color.size();
+        }
         if(vec.size() < color_count) {
           s.push_back(reg);
           changed = true;
@@ -135,8 +144,8 @@ LoongArch::alloc_res LoongArch::ColoringAllocator::getAllocate() {
   std::unordered_map<std::shared_ptr<ir::ir_reg>, Reg> i_color_map;
   std::unordered_map<std::shared_ptr<ir::ir_reg>, Reg> f_color_map;
   std::unordered_map<std::shared_ptr<ir::ir_reg>, Reg> fb_color_map;
-  std::vector<int> total_color;
-  for(int i = 0; i < color_count; i++) total_color.push_back(i);
+  // std::vector<int> total_color;
+  // for(int i = 0; i < color_count; i++) total_color.push_back(i);
   while(stk.size()) {
     vector<Reg> available_color;
     // auto available_i = i_color;
