@@ -254,7 +254,7 @@ struct ld : Inst {
   virtual bool side_effect() override { return true; }
   virtual void gen_asm(std::ostream &out) override {
     static const std::map<Type, std::string> asm_name {
-        {ld_d, "ld.d"}, {ld_w, "ld.w"}, {fld_f, "fld.s"}, {fld_d, "fld.w"}
+        {ld_d, "ld.d"}, {ld_w, "ld.w"}, {fld_f, "fld.s"}, {fld_d, "fld.s"}
     };
       out << asm_name.find(op)->second << ' ' << src << ", "  << base << "," << this->offset << "\n";
   }
@@ -279,7 +279,7 @@ struct ldptr : Inst {
   virtual bool side_effect() override { return true; }
   virtual void gen_asm(std::ostream &out) override {
     static const std::map<Type, std::string> asm_name {
-        {ld_d, "ldptr.d"}, {ld_w, "ldptr.w"}, {fld_f, "fldptr.s"}, {fld_d, "fldptr.w"}
+        {ld_d, "ldptr.d"}, {ld_w, "ldptr.w"}, {fld_f, "fld.s"}, {fld_d, "fld.s"}
     };
       out << asm_name.find(op)->second << ' ' << src << ", "  << base << "," << this->offset << "\n";
   }
@@ -304,7 +304,7 @@ struct stptr : Inst {
   virtual bool side_effect() override { return true; }
   virtual void gen_asm(std::ostream &out) override {
     static const std::map<Type, std::string> asm_name {
-        {st_d, "stptr.d"}, {st_w, "stptr.w"}, {fst_f, "fstptr.s"}, {fst_d, "fstptr.w"}
+        {st_d, "stptr.d"}, {st_w, "stptr.w"}, {fst_f, "fst.s"}, {fst_d, "fst.s"}
     };
       out << asm_name.find(op)->second << ' ' << src << ", "  << base << "," << this->offset << "\n";
   }

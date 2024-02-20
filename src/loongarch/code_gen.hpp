@@ -101,6 +101,7 @@ protected:
     std::unordered_map<int, int> mem_var;
     std::unordered_map<int, int> spill_offset;
     int used_mem = 0;
+    int call_mem = 0;
 public:
     //申请一个被预留的寄存器
     Reg new_reg();

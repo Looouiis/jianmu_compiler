@@ -118,14 +118,14 @@ bool LoongArch::ColoringAllocator::conflict(std::shared_ptr<ir::ir_reg> r1, std:
     return true;
 }
 
-bool differ(ptr<ir::ir_reg> src, vartype dst) {
-  if(src->get_type() == vartype::FLOAT || src->get_type() == vartype::FLOATADDR) {
-    return dst != vartype::FLOAT && dst != vartype::FLOATADDR;
-  }
-  else {
-    return dst != vartype::INT && dst != vartype::INTADDR && dst != vartype::BOOL && dst != vartype::BOOLADDR && dst != vartype::VOID;
-  }
-}
+// bool differ(ptr<ir::ir_reg> src, vartype dst) {
+//   if(src->get_type() == vartype::FLOAT || src->get_type() == vartype::FLOATADDR) {
+//     return dst != vartype::FLOAT && dst != vartype::FLOATADDR;
+//   }
+//   else {
+//     return dst != vartype::INT && dst != vartype::INTADDR && dst != vartype::BOOL && dst != vartype::BOOLADDR && dst != vartype::VOID;
+//   }
+// }
 
 LoongArch::alloc_res LoongArch::ColoringAllocator::getAllocate() {
   SimplifyGraph();
@@ -142,7 +142,7 @@ LoongArch::alloc_res LoongArch::ColoringAllocator::getAllocate() {
     // auto available_i = i_color;
     // auto available_f = f_color;
     auto reg = stk.back();
-    if(reg->get_type() == vartype::FLOAT || reg->get_type() == vartype::FLOATADDR) {
+    if(reg->get_type() == vartype::FLOAT/* || reg->get_type() == vartype::FLOATADDR*/) {
       available_color = f_color;
       color_map = &f_color_map;
     }

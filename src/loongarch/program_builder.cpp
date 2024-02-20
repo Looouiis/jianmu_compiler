@@ -21,7 +21,7 @@ void LoongArch::ProgramBuilder::check_write_back(LoongArch::Reg tar) {
     if(it != cur_mapping->spill_vec.end()) {
         // int idx = std::distance(cur_mapping->spill_vec.begin(), it);
         // int offset = cur_func->stack_size - (4 * idx);
-        int offset = cur_func->stack_size - cur_mapping->spill_offset.find(tar.ir_id)->second;
+        int offset = cur_func->stack_size - cur_mapping->call_mem - cur_mapping->spill_offset.find(tar.ir_id)->second;
         if(tar.is_arr) {
             cur_block->instructions.push_back(std::make_shared<LoongArch::st>(tar, Reg{fp}, -offset, tar.is_float() ? st::fst_f : st::st_d));
         }
@@ -35,7 +35,7 @@ void LoongArch::ProgramBuilder::visit(ir::ir_reg &node) {
     auto it = std::find(cur_mapping->spill_vec.begin(), cur_mapping->spill_vec.end(), node.id);
     if(it != cur_mapping->spill_vec.end()) {
         Reg tar;
-        if(node.get_type() == vartype::FLOAT || node.get_type() == vartype::FLOATADDR) {
+        if(node.get_type() == vartype::FLOAT/* || node.get_type() == vartype::FLOATADDR*/) {
             tar.type = FLOAT;
         }
         else {
@@ -60,7 +60,7 @@ void LoongArch::ProgramBuilder::visit(ir::ir_reg &node) {
         }
         // int idx = std::distance(cur_mapping->spill_vec.begin(), it);
         // int offset = cur_func->stack_size - (4 * idx);
-        int offset = cur_func->stack_size - cur_mapping->spill_offset.find(node.id)->second;
+        int offset = cur_func->stack_size - cur_mapping->call_mem - cur_mapping->spill_offset.find(node.id)->second;
         cur_block->instructions.push_back(std::make_shared<LoongArch::ld>(tar, Reg{fp}, -offset, tar.is_float() ? ld::fld_f : ld::ld_w));
         pass_reg = tar;
     }
@@ -71,7 +71,7 @@ void LoongArch::ProgramBuilder::visit(ir::ir_reg &node) {
 
 void LoongArch::ProgramBuilder::visit(ir::ir_constant &node) {
     auto optional_val = node.init_val;
-    if(node.get_type() == vartype::FLOAT || node.get_type() == vartype::FLOATADDR) {
+    if(node.get_type() == vartype::FLOAT/* || node.get_type() == vartype::FLOATADDR*/) {
         using_reg.type = FLOAT;
     }
     else {
@@ -204,7 +204,7 @@ void LoongArch::ProgramBuilder::visit(ir::ir_userfunc &node) {
 
     for(auto reg : node.regSpill) {
         this->cur_mapping->spill_vec.push_back(reg->id);
-        this->cur_mapping->spill_offset.insert({reg->id, reg->size});
+        this->cur_mapping->spill_offset.insert({reg->id, cur_mapping->used_mem});
         this->cur_mapping->used_mem += reg->size;
     }
     
@@ -231,22 +231,26 @@ void LoongArch::ProgramBuilder::visit(ir::ir_userfunc &node) {
                 int f_par_num = 0;
                 int i_par_num = 0;
                 for(auto par : is_call->params) {
-                    if(par->get_type() == vartype::FLOAT || par->get_type() == vartype::FLOATADDR) {
+                    if(par->get_type() == vartype::FLOAT/* || par->get_type() == vartype::FLOATADDR*/) {
                         f_par_num++;
                     }
                     else {
                         i_par_num++;
                     }
                 }
-                // TODO int total = (i_par_num <= 8 ? 0 : i_par_num - 8) + (f_par_num <= 8 ? 0 : f_par_num - 8);
-                int total = (i_par_num <= 0 ? 0 : i_par_num - 0) + (f_par_num <= 8 ? 0 : f_par_num - 8);
+                if(f_par_num > 8) {
+                    i_par_num += f_par_num - 8;
+                }
+                int total = i_par_num <= 8 ? 0 : i_par_num - 8;
+                // int total = (i_par_num <= 8 ? 0 : i_par_num - 8) + (f_par_num <= 8 ? 0 : f_par_num - 8);
                 max_call = std::max(total, max_call);
             }
         }
     }
-    this->cur_mapping->used_mem += max_call * 8;
+    this->cur_mapping->call_mem += max_call * 8;
 
     cur_func->stack_size += this->cur_mapping->used_mem;
+    cur_func->stack_size += this->cur_mapping->call_mem;
     
     //处理内存变量
 
@@ -290,8 +294,7 @@ void LoongArch::ProgramBuilder::visit(ir::ir_userfunc &node) {
             }
         }
         else {
-            //TODO if(i_pointer < 12) {
-            if(i_pointer < 4) {
+            if(i_pointer < 12) {
                 cur_func->entry->instructions.push_back(std::make_shared<RegRegInst>(RegRegInst::add_d, reg, Reg{i_pointer++}, Reg{0}));
             }
             else {
@@ -414,7 +417,7 @@ void LoongArch::ProgramBuilder::visit(ir::ir_userfunc &node) {
                         auto it = std::find(cur_mapping->spill_vec.begin(), cur_mapping->spill_vec.end(), use_reg->id);
                         if(it != cur_mapping->spill_vec.end()) {
                             Reg tar;
-                            if(use_reg->get_type() == vartype::FLOAT || use_reg->get_type() == vartype::FLOATADDR) {
+                            if(use_reg->get_type() == vartype::FLOAT/* || use_reg->get_type() == vartype::FLOATADDR*/) {
                                 tar.type = FLOAT;
                             }
                             else {
@@ -437,7 +440,7 @@ void LoongArch::ProgramBuilder::visit(ir::ir_userfunc &node) {
                                 flag = !flag;
                                 // int idx = std::distance(cur_mapping->spill_vec.begin(), it);
                                 // int offset = cur_func->stack_size - (4 * idx);
-                                int offset = cur_func->stack_size - cur_mapping->spill_offset.find(use_reg->id)->second;
+                                int offset = cur_func->stack_size - cur_mapping->call_mem - cur_mapping->spill_offset.find(use_reg->id)->second;
                                 b->insert_before_jump(std::make_shared<LoongArch::ld>(tar, Reg{fp}, -offset, ld::ld_w));
                                 pass_reg = tar;
                             }
@@ -483,7 +486,7 @@ void LoongArch::ProgramBuilder::visit(ir::ir_userfunc &node) {
                         // auto value = use_constant->init_val.value();
                         // use_constant->accept(*this);
                         auto optional_val = use_constant->init_val;
-                        if(use_constant->get_type() == vartype::FLOAT || use_constant->get_type() == vartype::FLOATADDR) {
+                        if(use_constant->get_type() == vartype::FLOAT/* || use_constant->get_type() == vartype::FLOATADDR*/) {
                             using_reg.type = FLOAT;
                         }
                         else {
@@ -578,7 +581,7 @@ void LoongArch::ProgramBuilder::visit(ir::ir_userfunc &node) {
         auto it = std::find(cur_mapping->spill_vec.begin(), cur_mapping->spill_vec.end(), i.to->id);
         if(it != cur_mapping->spill_vec.end()) {
             Reg tar;
-            if(i.to->get_type() == vartype::FLOAT || i.to->get_type() == vartype::FLOATADDR) {
+            if(i.to->get_type() == vartype::FLOAT/* || i.to->get_type() == vartype::FLOATADDR*/) {
                 tar.type = FLOAT;
             }
             else {
@@ -602,7 +605,7 @@ void LoongArch::ProgramBuilder::visit(ir::ir_userfunc &node) {
                 flag = !flag;
                 // int idx = std::distance(cur_mapping->spill_vec.begin(), it);
                 // int offset = cur_func->stack_size - (4 * idx);
-                int offset = cur_func->stack_size - cur_mapping->spill_offset.find(i.to->id)->second;
+                int offset = cur_func->stack_size - cur_mapping->call_mem - cur_mapping->spill_offset.find(i.to->id)->second;
                 i.block->insert_before_jump(std::make_shared<LoongArch::ld>(tar, Reg{fp}, -offset, ld::ld_w));
                 pass_reg = tar;
             }
@@ -623,12 +626,12 @@ void LoongArch::ProgramBuilder::visit(ir::ir_userfunc &node) {
         if(it != cur_mapping->spill_vec.end()) {
             // int idx = std::distance(cur_mapping->spill_vec.begin(), it);
             // int offset = cur_func->stack_size - (4 * idx);
-            int offset = cur_func->stack_size - cur_mapping->spill_offset.find(to.ir_id)->second;
+            int offset = cur_func->stack_size - cur_mapping->call_mem - cur_mapping->spill_offset.find(to.ir_id)->second;
             if(to.is_arr) {
-                i.block->insert_before_jump(std::make_shared<LoongArch::st>(to, Reg{fp}, -offset, st::st_d));
+                i.block->insert_before_jump(std::make_shared<LoongArch::st>(to, Reg{fp}, -offset, to.is_float() ? st::fst_f : st::st_d));
             }
             else {
-                i.block->insert_before_jump(std::make_shared<LoongArch::st>(to, Reg{fp}, -offset, st::st_w));
+                i.block->insert_before_jump(std::make_shared<LoongArch::st>(to, Reg{fp}, -offset, to.is_float() ? st::fst_f : st::st_w));
             }
         }
         cur_func->regn = cur_mapping->regn;
@@ -677,7 +680,7 @@ void LoongArch::ProgramBuilder::visit(ir::store &node) {
     }
     else {
         int offset = cur_mapping->mem_var.find(node.addr->id)->second;
-        offset = cur_func->stack_size - offset;
+        offset = cur_func->stack_size - cur_mapping->call_mem - offset;
         cur_block->instructions.push_back(std::make_shared<st>(dst, Reg{fp}, -offset, type));
     }
     // check_write_back(reg);
@@ -780,7 +783,7 @@ void LoongArch::ProgramBuilder::visit(ir::load &node) {
     }
     else {
         int offset = cur_mapping->mem_var.find(node.addr->id)->second;
-        offset = cur_func->stack_size - offset;
+        offset = cur_func->stack_size - cur_mapping->call_mem - offset;
         cur_block->instructions.push_back(std::make_shared<ldptr>(dst, Reg{fp}, -offset, ldtype));
     }
     check_write_back(dst);
@@ -961,7 +964,7 @@ void LoongArch::ProgramBuilder::visit(ir::get_element_ptr& node) {
         cur_block->instructions.push_back(std::make_shared<la>(node.base->addr, dst, la::local));
     }
     else if(node.base->dim->has_first_dim) {
-        int offset = cur_mapping->mem_var.find(node.base->addr->id)->second - cur_func->stack_size;
+        int offset = cur_mapping->mem_var.find(node.base->addr->id)->second + cur_mapping->call_mem - cur_func->stack_size;
         cur_block->instructions.push_back(std::make_shared<RegImmInst>(RegImmInst::addi_d, dst, Reg{fp}, offset));
     }
     else {
@@ -1039,8 +1042,7 @@ void LoongArch::ProgramBuilder::visit(ir::func_call& node) {
             }
         }
         else {
-            //TODO if(i_pointer < 12) {
-            if(i_pointer < 4) {
+            if(i_pointer < 12) {
                 cur_block->instructions.push_back(std::make_shared<RegRegInst>(RegRegInst::add_d, Reg{i_pointer++}, reg, Reg{0}));
             }
             else {
