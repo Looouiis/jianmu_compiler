@@ -58,7 +58,6 @@ protected:
     Reg spill_dst = Reg{spill_base};
     Reg spill_use_1 = Reg{spill_base + 1};
     Reg spill_use_2 = Reg{spill_base + 2};
-    Reg la_reg = Reg{20};
     bool is_dst = false;
 };
 } // namespace archLA

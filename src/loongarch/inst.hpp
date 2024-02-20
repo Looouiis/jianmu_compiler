@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cassert>
+#include <cstdint>
 #include <iostream>
 #include <list>
 #include <map>
@@ -136,7 +137,17 @@ struct LoadImm : Inst { //用于将立即数加载到寄存器的汇编代码。
   virtual std::vector<Reg *> regs() override { return {&dst}; }
   virtual void gen_asm(std::ostream &out) override {
     // out << "ori " << dst << ", " << "$r0" << ", " << value << '\n';        // ori无法加载(unsigned)-1这类在无符号上过大的数
-    out << "addi.w " << dst << ", " << "$r0" << ", " << value << '\n';
+    uint32_t u_value = (uint32_t) value;
+    if(u_value >> 12) {
+      int32_t low = value & 0xFFF;
+      // std::stringstream high;
+      // high << std::hex << std::showbase << (u_value >> 12);
+      out << "lu12i.w " << dst << ", " << value << ">>12\n\t";
+      out << "ori " << dst << ", " << dst << ", " << low << '\n';
+    }
+    else {
+      out << "ori " << dst << ", " << "$r0" << ", " << value << '\n';
+    }
   }
 };
 
