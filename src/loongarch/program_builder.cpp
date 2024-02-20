@@ -61,7 +61,12 @@ void LoongArch::ProgramBuilder::visit(ir::ir_reg &node) {
         // int idx = std::distance(cur_mapping->spill_vec.begin(), it);
         // int offset = cur_func->stack_size - (4 * idx);
         int offset = cur_func->stack_size - cur_mapping->call_mem - cur_mapping->spill_offset.find(node.id)->second;
-        cur_block->instructions.push_back(std::make_shared<LoongArch::ld>(tar, Reg{fp}, -offset, tar.is_float() ? ld::fld_f : ld::ld_w));
+        if(node.is_arr) {
+            cur_block->instructions.push_back(std::make_shared<LoongArch::ld>(tar, Reg{fp}, -offset, tar.is_float() ? ld::fld_f : ld::ld_d));
+        }
+        else {
+            cur_block->instructions.push_back(std::make_shared<LoongArch::ld>(tar, Reg{fp}, -offset, tar.is_float() ? ld::fld_f : ld::ld_w));
+        }
         pass_reg = tar;
     }
     else {
@@ -983,6 +988,7 @@ void LoongArch::ProgramBuilder::visit(ir::get_element_ptr& node) {
             total_cnt *= node.base->dim->dimensions[j]->calc_res();
         }
         auto load_cnt = std::make_shared<ir::ir_constant>(total_cnt);
+        load_cnt->type = vartype::INT;
         using_reg = const_reg_r;
         load_cnt->accept(*this);
         Reg cnt = pass_reg;
