@@ -13,6 +13,8 @@
 #include "arch.hpp"
 #include "code_gen.hpp"
 
+
+
 namespace LoongArch {
 class ColoringAllocator;
 inline std::ostream &operator<<(std::ostream &os, const Reg &reg) {
@@ -66,6 +68,8 @@ struct Inst {
     for (Reg *i : regs())
       if ((*i).id == before.id) (*i) = after;
   }
+
+  LoongArch::Reg big_imm = LoongArch::Reg{20};
 };
 
 //modified
@@ -123,7 +127,19 @@ struct RegImmInst : Inst {
         {slti, "slti"}, {slli_w, "slli.w"}, {slli_d, "slli.d"}
         , {xori, "xori"}, {sltui, "sltui"}
     };
-      out << asm_name.find(op)->second << ' ' << dst << ", " << lhs << ", " << rhs<< '\n';
+    static const std::map<Type, string> rr_name {
+      {addi_d, "add.d"},{addi_w, "add.w"}, {andi, "and"}, {ori, "or"},
+      {slti, "slt"}, {slli_w, "sll.w"}, {slli_d, "sll.d"},
+      {xori, "xor"}, {sltui, "slt"}
+    };
+      if((uint32_t)abs(rhs) >> 12) {
+        out << "lu12i.w " << big_imm << ", " << rhs << ">>12\n\t";
+        out << "ori " << big_imm << ", " << big_imm << ", " << (rhs & 0xFFF) << "\n\t";
+        // out << "addi.d " << big << ", " << base << ", " << big << "\n\t";
+        out << rr_name.find(op)->second << ' ' << dst << ", " << lhs << ", " << big_imm<< '\n';
+      }
+      else
+        out << asm_name.find(op)->second << ' ' << dst << ", " << lhs << ", " << rhs<< '\n';
       
   }
 };
@@ -137,7 +153,7 @@ struct LoadImm : Inst { //用于将立即数加载到寄存器的汇编代码。
   virtual std::vector<Reg *> regs() override { return {&dst}; }
   virtual void gen_asm(std::ostream &out) override {
     // out << "ori " << dst << ", " << "$r0" << ", " << value << '\n';        // ori无法加载(unsigned)-1这类在无符号上过大的数
-    uint32_t u_value = (uint32_t) value;
+    uint32_t u_value = (uint32_t)value;
     if(u_value >> 12) {
       int32_t low = value & 0xFFF;
       // std::stringstream high;
@@ -242,7 +258,14 @@ struct st : Inst {
     static const std::map<Type, std::string> asm_name {
         {st_d, "st.d"}, {st_w, "st.w"}, {fst_f, "fst.s"}, {fst_d, "fst.w"}
     };
-      out << asm_name.find(op)->second << ' ' << src << ", " << base <<  "," << offset <<"\n";
+      if((uint32_t)offset >> 12) {
+        out << "lu12i.w " << big_imm << ", " << offset << ">>12\n\t";
+        out << "ori " << big_imm << ", " << big_imm << ", " << (offset & 0xFFF) << "\n\t";
+        out << "add.d " << big_imm << ", " << base << ", " << big_imm << "\n\t";
+        out << asm_name.find(op)->second << ' ' << src << ", " << big_imm <<  ", 0" <<"\n";
+      }
+      else
+        out << asm_name.find(op)->second << ' ' << src << ", " << base <<  "," << offset <<"\n";
   }
 };
 
@@ -267,7 +290,14 @@ struct ld : Inst {
     static const std::map<Type, std::string> asm_name {
         {ld_d, "ld.d"}, {ld_w, "ld.w"}, {fld_f, "fld.s"}, {fld_d, "fld.s"}
     };
-      out << asm_name.find(op)->second << ' ' << src << ", "  << base << "," << this->offset << "\n";
+      if((uint32_t)offset >> 12) {
+        out << "lu12i.w " << big_imm << ", " << offset << ">>12\n\t";
+        out << "ori " << big_imm << ", " << big_imm << ", " << (offset & 0xFFF) << "\n\t";
+        out << "add.d " << big_imm << ", " << base << ", " << big_imm << "\n\t";
+        out << asm_name.find(op)->second << ' ' << src << ", " << big_imm <<  ", 0" <<"\n";
+      }
+      else
+        out << asm_name.find(op)->second << ' ' << src << ", "  << base << "," << this->offset << "\n";
   }
 };
 
@@ -292,7 +322,14 @@ struct ldptr : Inst {
     static const std::map<Type, std::string> asm_name {
         {ld_d, "ldptr.d"}, {ld_w, "ldptr.w"}, {fld_f, "fld.s"}, {fld_d, "fld.s"}
     };
-      out << asm_name.find(op)->second << ' ' << src << ", "  << base << "," << this->offset << "\n";
+      if((uint32_t)offset >> 12) {
+        out << "lu12i.w " << big_imm << ", " << offset << ">>12\n\t";
+        out << "ori " << big_imm << ", " << big_imm << ", " << (offset & 0xFFF) << "\n\t";
+        out << "add.d " << big_imm << ", " << base << ", " << big_imm << "\n\t";
+        out << asm_name.find(op)->second << ' ' << src << ", " << big_imm <<  ", 0" <<"\n";
+      }
+      else
+        out << asm_name.find(op)->second << ' ' << src << ", "  << base << "," << this->offset << "\n";
   }
 };
 
@@ -317,7 +354,14 @@ struct stptr : Inst {
     static const std::map<Type, std::string> asm_name {
         {st_d, "stptr.d"}, {st_w, "stptr.w"}, {fst_f, "fst.s"}, {fst_d, "fst.s"}
     };
-      out << asm_name.find(op)->second << ' ' << src << ", "  << base << "," << this->offset << "\n";
+      if((uint32_t)offset >> 12) {
+        out << "lu12i.w " << big_imm << ", " << offset << ">>12\n\t";
+        out << "ori " << big_imm << ", " << big_imm << ", " << (offset & 0xFFF) << "\n\t";
+        out << "add.d " << big_imm << ", " << base << ", " << big_imm << "\n\t";
+        out << asm_name.find(op)->second << ' ' << src << ", " << big_imm <<  ", 0" <<"\n";
+      }
+      else
+        out << asm_name.find(op)->second << ' ' << src << ", "  << base << "," << this->offset << "\n";
   }
 };
 

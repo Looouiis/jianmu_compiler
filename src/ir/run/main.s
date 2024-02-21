@@ -14,308 +14,131 @@
 .extern putf
 main :
 .entry_main:
-        addi.d $r3 , $r3 , -92
-        st.d $r1 , $r3 ,84
-        st.d $r22 , $r3 ,76
-        addi.d $r22 , $r3 , 92
+        addi.d $r3 , $r3 , -64
+        st.d $r1 , $r3 ,56
+        st.d $r22 , $r3 ,48
+        addi.d $r22 , $r3 , 64
         b .L1
 .L1:
-        addi.d $r12 , $r22 , -80
-        addi.w $r15 , $r0, 0
-        addi.w $r16 , $r0, 2
-        mul.d $r15 , $r15 , $r16 
-        slli.d $r15 , $r15 , 2
-        add.d $r12 , $r12 , $r15 
-        addi.w $r16 , $r0, 0
-        slli.d $r16 , $r16 , 2
-        add.d $r12 , $r12 , $r16 
-        addi.w $r15 , $r0, 1
-        st.w $r15 , $r12 ,0
-        addi.d $r12 , $r22 , -80
-        addi.w $r15 , $r0, 0
-        addi.w $r16 , $r0, 2
-        mul.d $r15 , $r15 , $r16 
-        slli.d $r15 , $r15 , 2
-        add.d $r12 , $r12 , $r15 
-        addi.w $r16 , $r0, 1
-        slli.d $r16 , $r16 , 2
-        add.d $r12 , $r12 , $r16 
-        addi.w $r15 , $r0, 2
-        st.w $r15 , $r12 ,0
-        addi.d $r12 , $r22 , -80
-        addi.w $r15 , $r0, 1
-        addi.w $r16 , $r0, 2
-        mul.d $r15 , $r15 , $r16 
-        slli.d $r15 , $r15 , 2
-        add.d $r12 , $r12 , $r15 
-        addi.w $r16 , $r0, 0
-        slli.d $r16 , $r16 , 2
-        add.d $r12 , $r12 , $r16 
-        addi.w $r15 , $r0, 3
-        st.w $r15 , $r12 ,0
-        addi.d $r12 , $r22 , -80
-        addi.w $r15 , $r0, 1
-        addi.w $r16 , $r0, 2
-        mul.d $r15 , $r15 , $r16 
-        slli.d $r15 , $r15 , 2
-        add.d $r12 , $r12 , $r15 
-        addi.w $r16 , $r0, 1
-        slli.d $r16 , $r16 , 2
-        add.d $r12 , $r12 , $r16 
-        addi.w $r15 , $r0, 0
-        st.w $r15 , $r12 ,0
-        addi.d $r12 , $r22 , -80
-        addi.w $r15 , $r0, 2
-        addi.w $r16 , $r0, 2
-        mul.d $r15 , $r15 , $r16 
-        slli.d $r15 , $r15 , 2
-        add.d $r12 , $r12 , $r15 
-        addi.w $r16 , $r0, 0
-        slli.d $r16 , $r16 , 2
-        add.d $r12 , $r12 , $r16 
-        addi.w $r15 , $r0, 5
-        st.w $r15 , $r12 ,0
-        addi.d $r12 , $r22 , -80
-        addi.w $r15 , $r0, 2
-        addi.w $r16 , $r0, 2
-        mul.d $r15 , $r15 , $r16 
-        slli.d $r15 , $r15 , 2
-        add.d $r12 , $r12 , $r15 
-        addi.w $r16 , $r0, 1
-        slli.d $r16 , $r16 , 2
-        add.d $r12 , $r12 , $r16 
-        addi.w $r15 , $r0, 0
-        st.w $r15 , $r12 ,0
-        addi.d $r12 , $r22 , -80
-        addi.w $r15 , $r0, 3
-        addi.w $r16 , $r0, 2
-        mul.d $r15 , $r15 , $r16 
-        slli.d $r15 , $r15 , 2
-        add.d $r12 , $r12 , $r15 
-        addi.w $r16 , $r0, 0
-        slli.d $r16 , $r16 , 2
-        add.d $r12 , $r12 , $r16 
-        addi.w $r15 , $r0, 1
-        st.w $r15 , $r12 ,0
-        addi.d $r12 , $r22 , -80
-        addi.w $r15 , $r0, 3
-        addi.w $r16 , $r0, 2
-        mul.d $r15 , $r15 , $r16 
-        slli.d $r15 , $r15 , 2
-        add.d $r12 , $r12 , $r15 
-        addi.w $r16 , $r0, 1
-        slli.d $r16 , $r16 , 2
-        add.d $r12 , $r12 , $r16 
-        addi.w $r15 , $r0, 8
-        st.w $r15 , $r12 ,0
-        addi.d $r12 , $r22 , -80
-        addi.w $r15 , $r0, 2
-        addi.w $r16 , $r0, 2
-        mul.d $r15 , $r15 , $r16 
-        slli.d $r15 , $r15 , 2
-        add.d $r12 , $r12 , $r15 
-        addi.w $r16 , $r0, 1
-        slli.d $r16 , $r16 , 2
-        add.d $r12 , $r12 , $r16 
-        ldptr.w $r12 , $r12 ,0
-        addi.d $r17 , $r22 , -48
-        addi.w $r15 , $r0, 0
-        addi.w $r16 , $r0, 2
-        mul.d $r15 , $r15 , $r16 
-        slli.d $r15 , $r15 , 2
-        add.d $r17 , $r17 , $r15 
-        addi.w $r15 , $r0, 0
-        addi.w $r16 , $r0, 1
-        mul.d $r15 , $r15 , $r16 
-        slli.d $r15 , $r15 , 2
-        add.d $r17 , $r17 , $r15 
-        addi.w $r16 , $r0, 0
-        slli.d $r16 , $r16 , 2
-        add.d $r17 , $r17 , $r16 
-        st.d $r17 , $r22 ,-92
-        ld.d $r18 , $r22 ,-92
-        st.w $r12 , $r18 ,0
-        addi.d $r12 , $r22 , -48
-        addi.w $r15 , $r0, 0
-        addi.w $r16 , $r0, 2
-        mul.d $r15 , $r15 , $r16 
-        slli.d $r15 , $r15 , 2
-        add.d $r12 , $r12 , $r15 
-        addi.w $r15 , $r0, 1
-        addi.w $r16 , $r0, 1
-        mul.d $r15 , $r15 , $r16 
-        slli.d $r15 , $r15 , 2
-        add.d $r12 , $r12 , $r15 
-        addi.w $r16 , $r0, 0
-        slli.d $r16 , $r16 , 2
-        add.d $r12 , $r12 , $r16 
-        addi.w $r15 , $r0, 1
-        st.w $r15 , $r12 ,0
-        addi.d $r12 , $r22 , -48
-        addi.w $r15 , $r0, 1
-        addi.w $r16 , $r0, 2
-        mul.d $r15 , $r15 , $r16 
-        slli.d $r15 , $r15 , 2
-        add.d $r12 , $r12 , $r15 
-        addi.w $r15 , $r0, 0
-        addi.w $r16 , $r0, 1
-        mul.d $r15 , $r15 , $r16 
-        slli.d $r15 , $r15 , 2
-        add.d $r12 , $r12 , $r15 
-        addi.w $r16 , $r0, 0
-        slli.d $r16 , $r16 , 2
-        add.d $r12 , $r12 , $r16 
-        addi.w $r15 , $r0, 3
-        st.w $r15 , $r12 ,0
-        addi.d $r12 , $r22 , -48
-        addi.w $r15 , $r0, 1
-        addi.w $r16 , $r0, 2
-        mul.d $r15 , $r15 , $r16 
-        slli.d $r15 , $r15 , 2
-        add.d $r12 , $r12 , $r15 
-        addi.w $r15 , $r0, 1
-        addi.w $r16 , $r0, 1
-        mul.d $r15 , $r15 , $r16 
-        slli.d $r15 , $r15 , 2
-        add.d $r12 , $r12 , $r15 
-        addi.w $r16 , $r0, 0
-        slli.d $r16 , $r16 , 2
-        add.d $r12 , $r12 , $r16 
-        addi.w $r15 , $r0, 4
-        st.w $r15 , $r12 ,0
-        addi.d $r12 , $r22 , -48
-        addi.w $r15 , $r0, 2
-        addi.w $r16 , $r0, 2
-        mul.d $r15 , $r15 , $r16 
-        slli.d $r15 , $r15 , 2
-        add.d $r12 , $r12 , $r15 
-        addi.w $r15 , $r0, 0
-        addi.w $r16 , $r0, 1
-        mul.d $r15 , $r15 , $r16 
-        slli.d $r15 , $r15 , 2
-        add.d $r12 , $r12 , $r15 
-        addi.w $r16 , $r0, 0
-        slli.d $r16 , $r16 , 2
-        add.d $r12 , $r12 , $r16 
-        addi.w $r15 , $r0, 5
-        st.w $r15 , $r12 ,0
-        addi.d $r12 , $r22 , -48
-        addi.w $r15 , $r0, 2
-        addi.w $r16 , $r0, 2
-        mul.d $r15 , $r15 , $r16 
-        slli.d $r15 , $r15 , 2
-        add.d $r12 , $r12 , $r15 
-        addi.w $r15 , $r0, 1
-        addi.w $r16 , $r0, 1
-        mul.d $r15 , $r15 , $r16 
-        slli.d $r15 , $r15 , 2
-        add.d $r12 , $r12 , $r15 
-        addi.w $r16 , $r0, 0
-        slli.d $r16 , $r16 , 2
-        add.d $r12 , $r12 , $r16 
-        addi.w $r15 , $r0, 6
-        st.w $r15 , $r12 ,0
-        addi.d $r12 , $r22 , -48
-        addi.w $r15 , $r0, 3
-        addi.w $r16 , $r0, 2
-        mul.d $r15 , $r15 , $r16 
-        slli.d $r15 , $r15 , 2
-        add.d $r12 , $r12 , $r15 
-        addi.w $r15 , $r0, 0
-        addi.w $r16 , $r0, 1
-        mul.d $r15 , $r15 , $r16 
-        slli.d $r15 , $r15 , 2
-        add.d $r12 , $r12 , $r15 
-        addi.w $r16 , $r0, 0
-        slli.d $r16 , $r16 , 2
-        add.d $r12 , $r12 , $r16 
-        addi.w $r15 , $r0, 7
-        st.w $r15 , $r12 ,0
-        addi.d $r12 , $r22 , -48
-        addi.w $r15 , $r0, 3
-        addi.w $r16 , $r0, 2
-        mul.d $r15 , $r15 , $r16 
-        slli.d $r15 , $r15 , 2
-        add.d $r12 , $r12 , $r15 
-        addi.w $r15 , $r0, 1
-        addi.w $r16 , $r0, 1
-        mul.d $r15 , $r15 , $r16 
-        slli.d $r15 , $r15 , 2
-        add.d $r12 , $r12 , $r15 
-        addi.w $r16 , $r0, 0
-        slli.d $r16 , $r16 , 2
-        add.d $r12 , $r12 , $r16 
-        addi.w $r15 , $r0, 8
-        st.w $r15 , $r12 ,0
-        addi.d $r12 , $r22 , -48
-        addi.w $r15 , $r0, 3
-        addi.w $r16 , $r0, 2
-        mul.d $r15 , $r15 , $r16 
-        slli.d $r15 , $r15 , 2
-        add.d $r12 , $r12 , $r15 
-        addi.w $r15 , $r0, 1
-        addi.w $r16 , $r0, 1
-        mul.d $r15 , $r15 , $r16 
-        slli.d $r15 , $r15 , 2
-        add.d $r12 , $r12 , $r15 
-        addi.w $r16 , $r0, 0
-        slli.d $r16 , $r16 , 2
-        add.d $r12 , $r12 , $r16 
-        ldptr.w $r12 , $r12 ,0
-        addi.d $r14 , $r22 , -48
-        addi.w $r15 , $r0, 0
-        addi.w $r16 , $r0, 2
-        mul.d $r15 , $r15 , $r16 
-        slli.d $r15 , $r15 , 2
-        add.d $r14 , $r14 , $r15 
-        addi.w $r15 , $r0, 0
-        addi.w $r16 , $r0, 1
-        mul.d $r15 , $r15 , $r16 
-        slli.d $r15 , $r15 , 2
-        add.d $r14 , $r14 , $r15 
-        addi.w $r16 , $r0, 0
-        slli.d $r16 , $r16 , 2
-        add.d $r14 , $r14 , $r16 
-        ldptr.w $r14 , $r14 ,0
-        add.w $r14 , $r12 , $r14 
-        addi.d $r12 , $r22 , -48
-        addi.w $r15 , $r0, 0
-        addi.w $r16 , $r0, 2
-        mul.d $r15 , $r15 , $r16 
-        slli.d $r15 , $r15 , 2
-        add.d $r12 , $r12 , $r15 
-        addi.w $r15 , $r0, 1
-        addi.w $r16 , $r0, 1
-        mul.d $r15 , $r15 , $r16 
-        slli.d $r15 , $r15 , 2
-        add.d $r12 , $r12 , $r15 
-        addi.w $r16 , $r0, 0
-        slli.d $r16 , $r16 , 2
-        add.d $r12 , $r12 , $r16 
-        ldptr.w $r12 , $r12 ,0
-        add.w $r12 , $r14 , $r12 
-        addi.d $r14 , $r22 , -80
-        addi.w $r15 , $r0, 3
-        addi.w $r16 , $r0, 2
-        mul.d $r15 , $r15 , $r16 
-        slli.d $r15 , $r15 , 2
-        add.d $r14 , $r14 , $r15 
-        addi.w $r16 , $r0, 0
-        slli.d $r16 , $r16 , 2
-        add.d $r14 , $r14 , $r16 
-        ldptr.w $r13 , $r14 ,0
-        add.w $r12 , $r12 , $r13 
-        addi.w $r15 , $r12 , 0
-        addi.w $r13 , $r15 , 0
+        ori $r15 , $r0, 0
+        lu12i.w $r20 , -24>>12
+        ori $r20 , $r20 , 4072
+        add.d $r20 , $r22 , $r20 
+        st.w $r15 , $r20 , 0
+        lu12i.w $r20 , -24>>12
+        ori $r20 , $r20 , 4072
+        add.d $r20 , $r22 , $r20 
+        ldptr.w $r17 , $r20 , 0
+        lu12i.w $r20 , -44>>12
+        ori $r20 , $r20 , 4052
+        add.d $r20 , $r22 , $r20 
+        st.w $r17 , $r20 , 0
+        lu12i.w $r20 , -44>>12
+        ori $r20 , $r20 , 4052
+        add.d $r20 , $r22 , $r20 
+        ld.w $r18 , $r20 , 0
+        lu12i.w $r20 , -20>>12
+        ori $r20 , $r20 , 4076
+        add.d $r20 , $r22 , $r20 
+        st.w $r18 , $r20 , 0
+        lu12i.w $r20 , -24>>12
+        ori $r20 , $r20 , 4072
+        add.d $r20 , $r22 , $r20 
+        ldptr.w $r17 , $r20 , 0
+        lu12i.w $r20 , -32>>12
+        ori $r20 , $r20 , 4064
+        add.d $r20 , $r22 , $r20 
+        st.w $r17 , $r20 , 0
+        lu12i.w $r20 , -32>>12
+        ori $r20 , $r20 , 4064
+        add.d $r20 , $r22 , $r20 
+        ld.w $r19 , $r20 , 0
+        ori $r16 , $r0, 1
+        add.w $r17 , $r19 , $r16 
+        lu12i.w $r20 , -48>>12
+        ori $r20 , $r20 , 4048
+        add.d $r20 , $r22 , $r20 
+        st.w $r17 , $r20 , 0
+        lu12i.w $r20 , -48>>12
+        ori $r20 , $r20 , 4048
+        add.d $r20 , $r22 , $r20 
+        ld.w $r18 , $r20 , 0
+        lu12i.w $r20 , -24>>12
+        ori $r20 , $r20 , 4072
+        add.d $r20 , $r22 , $r20 
+        st.w $r18 , $r20 , 0
+        lu12i.w $r20 , -20>>12
+        ori $r20 , $r20 , 4076
+        add.d $r20 , $r22 , $r20 
+        ldptr.w $r17 , $r20 , 0
+        lu12i.w $r20 , -52>>12
+        ori $r20 , $r20 , 4044
+        add.d $r20 , $r22 , $r20 
+        st.w $r17 , $r20 , 0
+        lu12i.w $r20 , -24>>12
+        ori $r20 , $r20 , 4072
+        add.d $r20 , $r22 , $r20 
+        ldptr.w $r17 , $r20 , 0
+        lu12i.w $r20 , -56>>12
+        ori $r20 , $r20 , 4040
+        add.d $r20 , $r22 , $r20 
+        st.w $r17 , $r20 , 0
+        lu12i.w $r20 , -52>>12
+        ori $r20 , $r20 , 4044
+        add.d $r20 , $r22 , $r20 
+        ld.w $r19 , $r20 , 0
+        lu12i.w $r20 , -56>>12
+        ori $r20 , $r20 , 4040
+        add.d $r20 , $r22 , $r20 
+        ld.w $r18 , $r20 , 0
+        add.w $r17 , $r19 , $r18 
+        lu12i.w $r20 , -60>>12
+        ori $r20 , $r20 , 4036
+        add.d $r20 , $r22 , $r20 
+        st.w $r17 , $r20 , 0
+        lu12i.w $r20 , -60>>12
+        ori $r20 , $r20 , 4036
+        add.d $r20 , $r22 , $r20 
+        ld.w $r19 , $r20 , 0
+        lu12i.w $r20 , -20>>12
+        ori $r20 , $r20 , 4076
+        add.d $r20 , $r22 , $r20 
+        st.w $r19 , $r20 , 0
+        lu12i.w $r20 , -20>>12
+        ori $r20 , $r20 , 4076
+        add.d $r20 , $r22 , $r20 
+        ldptr.w $r17 , $r20 , 0
+        lu12i.w $r20 , -40>>12
+        ori $r20 , $r20 , 4056
+        add.d $r20 , $r22 , $r20 
+        st.w $r17 , $r20 , 0
+        lu12i.w $r20 , -40>>12
+        ori $r20 , $r20 , 4056
+        add.d $r20 , $r22 , $r20 
+        ld.w $r19 , $r20 , 0
+        addi.w $r15 , $r19 , 0
+        addi.w $r17 , $r15 , 0
+        lu12i.w $r20 , -64>>12
+        ori $r20 , $r20 , 4032
+        add.d $r20 , $r22 , $r20 
+        st.w $r17 , $r20 , 0
         b .L2
 .L2:
-        or $r4 , $r13 , $r0 
-        ld.d $r22 , $r3 ,76
-        ld.d $r1 , $r3 ,84
-        addi.d $r3 , $r3 , 92
+        lu12i.w $r20 , -64>>12
+        ori $r20 , $r20 , 4032
+        add.d $r20 , $r22 , $r20 
+        ld.w $r18 , $r20 , 0
+        or $r4 , $r18 , $r0 
+        ld.d $r22 , $r3 ,48
+        ld.d $r1 , $r3 ,56
+        addi.d $r3 , $r3 , 64
         jr      $ra
 .L3:
-        addi.w $r16 , $r0, 0
+        ori $r16 , $r0, 0
         add.w $r15 , $r16 , $r0 
-        addi.w $r13 , $r15 , 0
+        addi.w $r17 , $r15 , 0
+        lu12i.w $r20 , -64>>12
+        ori $r20 , $r20 , 4032
+        add.d $r20 , $r22 , $r20 
+        st.w $r17 , $r20 , 0
         b .L2

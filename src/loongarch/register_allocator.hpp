@@ -38,7 +38,7 @@ class ColoringAllocator {
   std::vector<std::shared_ptr<ir::ir_reg>> non_conf_regs;
   std::vector<std::shared_ptr<ir::ir_reg>> mappingToSpill;
   ptr_list<ir::global_def> global_var;
-  vector<Reg> i_color = {Reg{12}, Reg{13}, Reg{14}, Reg{20}};
+  vector<Reg> i_color = {Reg{12}, Reg{13}, Reg{14}};
   vector<Reg> f_color = {
     Reg(8, FLOAT),
     Reg(9, FLOAT),

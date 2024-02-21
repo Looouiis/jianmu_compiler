@@ -465,10 +465,10 @@ string ir::ir_constant::get_val() {
         return std::to_string(std::get<int>(value));
     }else{
         float num = std::get<float>(value);
-        double double_num = static_cast<double>(num);
-        std::bitset<64> bits(*reinterpret_cast<unsigned long long*>(&double_num));
+        // double double_num = static_cast<double>(num);
+        std::bitset<32> bits(*reinterpret_cast<unsigned int*>(&num));
         std::stringstream ss;
-        ss << std::hex << std::setw(16) << std::setfill('0') << bits.to_ullong();
+        ss << std::hex << std::setw(8) << std::setfill('0') << bits.to_ullong();
         return "0x" + ss.str();
     }
 }
@@ -617,7 +617,7 @@ void ir::global_def::print(std::ostream &out)
 }
 
 std::vector<ptr<ir::ir_value>> ir::global_def::use_reg() {
-  return {init_val};
+  return init_val;
 }
 
 std::vector<ptr<ir::ir_value>> ir::global_def::def_reg() {
