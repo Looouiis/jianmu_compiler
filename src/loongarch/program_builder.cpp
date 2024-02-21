@@ -1119,6 +1119,7 @@ void LoongArch::ProgramBuilder::visit(ir::func_call& node) {
         else {
             cur_block->instructions.push_back(std::make_shared<RegRegInst>(RegRegInst::add_d, dst, Reg{4}, Reg{0}));
         }
+        check_write_back(dst);
     }
 }
 
