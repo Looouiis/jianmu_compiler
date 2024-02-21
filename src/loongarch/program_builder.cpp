@@ -85,6 +85,7 @@ void LoongArch::ProgramBuilder::visit(ir::ir_reg &node) {
     else {
         is_dst = false;
         pass_reg = cur_mapping->transfer_reg(node);
+        pass_reg.ir_id = node.id;
     }
 }
 
@@ -485,6 +486,7 @@ void LoongArch::ProgramBuilder::visit(ir::ir_userfunc &node) {
                         }
                         else {
                             pass_reg = cur_mapping->transfer_reg(*use_reg);
+                            pass_reg.ir_id = use_reg->id;
                         }
                         Reg temp = pass_reg;
 

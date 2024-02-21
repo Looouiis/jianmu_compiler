@@ -89,6 +89,11 @@ void LoongArch::ColoringAllocator::BuildConflictGraph() {
         // }
       }
 
+      auto is_call = std::dynamic_pointer_cast<ir::func_call>(ins);
+      if(is_call) {
+        auto b = is_call->func_name;
+      }
+
       for(auto raw_reg : ins->def_reg()) {
         auto reg = std::dynamic_pointer_cast<ir::ir_reg>(raw_reg);
         if(reg != nullptr) {
@@ -164,6 +169,10 @@ LoongArch::alloc_res LoongArch::ColoringAllocator::getAllocate() {
       color_map = &i_color_map;
     }
     stk.pop_back();
+    if(available_color.empty()) {
+      mappingToSpill.push_back(reg);
+      continue;
+    }
     for(auto [c, color] : *color_map) {
       auto it = std::find(conflictGraph[reg].begin(), conflictGraph[reg].end(), c);
       if(it != conflictGraph[reg].end()) {
