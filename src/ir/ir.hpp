@@ -172,6 +172,7 @@ class ir_basicblock : public printable {
     std::string name;
     int id;
     std::list<std::shared_ptr<ir_instr>> instructions;
+    bool is_while_body = false;
 public:
     ir_basicblock(int id) : id(id) { name = "bb"+std::to_string(id); };
     void push_back(ptr<ir_instr> inst);
@@ -183,6 +184,7 @@ public:
     std::shared_ptr<ir_instr> getFirstInst();
     std::string getName();
     void for_each(std::function<void(std::shared_ptr<ir::ir_instr> inst)> f,bool isReverse);
+    void mark_while() {this->is_while_body = true;}
 };
 
 
@@ -463,6 +465,7 @@ public:
 class get_element_ptr : public ir_instr {
     friend IrPrinter;
     friend LoongArch::ProgramBuilder;
+    friend LoongArch::ColoringAllocator;
 private:
     ptr<ir_memobj> base;
     ptr<ir_reg> dst;

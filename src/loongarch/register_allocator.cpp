@@ -345,6 +345,7 @@ LoongArch::ColoringAllocator::ColoringAllocator(std::shared_ptr<ir::ir_userfunc>
   for(auto block_it = lines.rbegin(); block_it != lines.rend(); block_it++) {
     auto block = *block_it;
     int block_start = block_line_start[block];
+    int block_end = block_line_end[block];
     int cur_line = block_line_end[block];
     // for(auto instruction : block->instructions) {
     for(auto ins_it = block->instructions.rbegin(); ins_it != block->instructions.rend(); ins_it++) {
@@ -352,7 +353,17 @@ LoongArch::ColoringAllocator::ColoringAllocator(std::shared_ptr<ir::ir_userfunc>
       auto x = instruction->def_reg();
       auto phi = std::dynamic_pointer_cast<ir::phi>(instruction);
       auto get = std::dynamic_pointer_cast<ir::get_element_ptr>(instruction);
-      if(phi != nullptr) {
+      if(get) {
+        auto ss = get->base->addr->id;
+      }
+      if(block->is_while_body) {
+        for(auto r : x) {
+          auto reg = std::dynamic_pointer_cast<ir::ir_reg>(r);
+          if(reg != nullptr)
+            mappingToInterval[reg].l = block_start;
+        }
+      }
+      else if(phi != nullptr) {
         for(auto r : x) {
           auto reg = std::dynamic_pointer_cast<ir::ir_reg>(r);
           if(reg != nullptr)
@@ -373,7 +384,14 @@ LoongArch::ColoringAllocator::ColoringAllocator(std::shared_ptr<ir::ir_userfunc>
         }
       }
       auto y = instruction->use_reg();
-      if(phi != nullptr) {
+      if(block->is_while_body) {
+        for(auto r : y) {
+          auto reg = std::dynamic_pointer_cast<ir::ir_reg>(r);
+          if(reg != nullptr)
+            mappingToInterval[reg].r = block_end;
+        }
+      }
+      else if(phi != nullptr) {
         for(auto r : y) {
           auto reg = std::dynamic_pointer_cast<ir::ir_reg>(r);
           if(reg != nullptr)

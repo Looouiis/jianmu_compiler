@@ -1010,6 +1010,7 @@ void LoongArch::ProgramBuilder::visit(ir::logic_ins &node) {
 void LoongArch::ProgramBuilder::visit(ir::get_element_ptr& node) {
     auto dimensions = node.obj_offset;
     is_dst = true;
+    int base_dim_cnt = node.base->dim->dimensions.size() + (node.base->dim->has_first_dim ? 0 : 1);
     node.dst->accept(*this);
     auto dst = pass_reg;
     if(node.base->addr->is_global) {
@@ -1036,8 +1037,8 @@ void LoongArch::ProgramBuilder::visit(ir::get_element_ptr& node) {
         dimensions[i]->accept(*this);
         Reg ini = pass_reg;
         int total_cnt = 1;
-        for(int j = i + 1; j < node.base->dim->dimensions.size(); j++) {
-            total_cnt *= node.base->dim->dimensions[j]->calc_res();
+        for(int j = i + 1; j < base_dim_cnt; j++) {
+            total_cnt *= node.base->dim->dimensions[node.base->dim->has_first_dim ? j : j - 1]->calc_res();
         }
         auto load_cnt = std::make_shared<ir::ir_constant>(total_cnt);
         load_cnt->type = vartype::INT;
@@ -1049,8 +1050,21 @@ void LoongArch::ProgramBuilder::visit(ir::get_element_ptr& node) {
         cur_block->instructions.push_back(std::make_shared<RegRegInst>(RegRegInst::add_d, dst, dst, ini));
     }
     if(!dimensions.empty()) {
+        using_reg = const_reg_l;
         dimensions.back()->accept(*this);
         auto ini = pass_reg;
+        if(base_dim_cnt > dimensions.size()) {
+            int total_cnt = 1;
+            for(int j = dimensions.size(); j < base_dim_cnt; j++) {
+                total_cnt *= node.base->dim->dimensions[node.base->dim->has_first_dim ? j : j - 1]->calc_res();
+            }
+            auto load_cnt = std::make_shared<ir::ir_constant>(total_cnt);
+            load_cnt->type = vartype::INT;
+            using_reg = const_reg_r;
+            load_cnt->accept(*this);
+            Reg cnt = pass_reg;
+            cur_block->instructions.push_back(std::make_shared<LoongArch::RegRegInst>(RegRegInst::mul_d, ini, ini, cnt));
+        }
         cur_block->instructions.push_back(std::make_shared<LoongArch::RegImmInst>(RegImmInst::slli_d, ini, ini, 2));
         cur_block->instructions.push_back(std::make_shared<RegRegInst>(RegRegInst::add_d, dst, dst, ini));
     }
