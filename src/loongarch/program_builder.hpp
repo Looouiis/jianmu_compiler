@@ -59,6 +59,13 @@ protected:
     Reg spill_use_1 = Reg{spill_base + 1};
     Reg spill_use_2 = Reg{spill_base + 2};
     bool is_dst = false;
+    
+    vector<Reg> caller_save_regs = {
+        Reg{12}, Reg{13}, Reg{14}, Reg{15}, Reg{16}, Reg{17}, Reg{18}, Reg{19}, Reg{20},
+        Reg{8, FLOAT}, Reg{9, FLOAT}, Reg{10, FLOAT}, Reg{11, FLOAT}, Reg{12, FLOAT}, Reg{13, FLOAT}, Reg{14, FLOAT}, Reg{15, FLOAT},
+        Reg{16, FLOAT}, Reg{17, FLOAT}, Reg{18, FLOAT}, Reg{19, FLOAT}, Reg{20, FLOAT}, Reg{21, FLOAT}, Reg{22, FLOAT}, Reg{23, FLOAT}
+    };
+
 };
 } // namespace archLA
 

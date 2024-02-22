@@ -132,7 +132,7 @@ struct RegImmInst : Inst {
       {slti, "slt"}, {slli_w, "sll.w"}, {slli_d, "sll.d"},
       {xori, "xor"}, {sltui, "slt"}
     };
-      if((uint32_t)abs(rhs) >> 12) {
+      if((uint32_t)rhs >> 11) {
         out << "lu12i.w " << big_imm << ", " << rhs << ">>12\n\t";
         out << "ori " << big_imm << ", " << big_imm << ", " << (rhs & 0xFFF) << "\n\t";
         // out << "addi.d " << big << ", " << base << ", " << big << "\n\t";
@@ -154,10 +154,10 @@ struct LoadImm : Inst { //用于将立即数加载到寄存器的汇编代码。
   virtual void gen_asm(std::ostream &out) override {
     // out << "ori " << dst << ", " << "$r0" << ", " << value << '\n';        // ori无法加载(unsigned)-1这类在无符号上过大的数
     uint32_t u_value = (uint32_t)value;
-    if(u_value >> 12) {
+    if(u_value >> 11) {
       int32_t low = value & 0xFFF;
       // std::stringstream high;
-      // high << std::hex << std::showbase << (u_value >> 12);
+      // high << std::hex << std::showbase << (u_value >> 11);
       out << "lu12i.w " << dst << ", " << value << ">>12\n\t";
       out << "ori " << dst << ", " << dst << ", " << low << '\n';
     }
@@ -258,7 +258,7 @@ struct st : Inst {
     static const std::map<Type, std::string> asm_name {
         {st_d, "st.d"}, {st_w, "st.w"}, {fst_f, "fst.s"}, {fst_d, "fst.w"}
     };
-      if((uint32_t)offset >> 12) {
+      if((uint32_t)offset >> 11) {
         out << "lu12i.w " << big_imm << ", " << offset << ">>12\n\t";
         out << "ori " << big_imm << ", " << big_imm << ", " << (offset & 0xFFF) << "\n\t";
         out << "add.d " << big_imm << ", " << base << ", " << big_imm << "\n\t";
@@ -290,7 +290,7 @@ struct ld : Inst {
     static const std::map<Type, std::string> asm_name {
         {ld_d, "ld.d"}, {ld_w, "ld.w"}, {fld_f, "fld.s"}, {fld_d, "fld.s"}
     };
-      if((uint32_t)offset >> 12) {
+      if((uint32_t)offset >> 11) {
         out << "lu12i.w " << big_imm << ", " << offset << ">>12\n\t";
         out << "ori " << big_imm << ", " << big_imm << ", " << (offset & 0xFFF) << "\n\t";
         out << "add.d " << big_imm << ", " << base << ", " << big_imm << "\n\t";
@@ -322,7 +322,7 @@ struct ldptr : Inst {
     static const std::map<Type, std::string> asm_name {
         {ld_d, "ldptr.d"}, {ld_w, "ldptr.w"}, {fld_f, "fld.s"}, {fld_d, "fld.s"}
     };
-      if((uint32_t)offset >> 12) {
+      if((uint32_t)offset >> 11) {
         out << "lu12i.w " << big_imm << ", " << offset << ">>12\n\t";
         out << "ori " << big_imm << ", " << big_imm << ", " << (offset & 0xFFF) << "\n\t";
         out << "add.d " << big_imm << ", " << base << ", " << big_imm << "\n\t";
@@ -354,7 +354,7 @@ struct stptr : Inst {
     static const std::map<Type, std::string> asm_name {
         {st_d, "stptr.d"}, {st_w, "stptr.w"}, {fst_f, "fst.s"}, {fst_d, "fst.s"}
     };
-      if((uint32_t)offset >> 12) {
+      if((uint32_t)offset >> 11) {
         out << "lu12i.w " << big_imm << ", " << offset << ">>12\n\t";
         out << "ori " << big_imm << ", " << big_imm << ", " << (offset & 0xFFF) << "\n\t";
         out << "add.d " << big_imm << ", " << base << ", " << big_imm << "\n\t";

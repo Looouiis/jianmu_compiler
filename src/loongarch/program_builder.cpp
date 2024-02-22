@@ -22,7 +22,7 @@ void LoongArch::ProgramBuilder::check_write_back(LoongArch::Reg tar) {
     if(it != cur_mapping->spill_vec.end()) {
         // int idx = std::distance(cur_mapping->spill_vec.begin(), it);
         // int offset = cur_func->stack_size - (4 * idx);
-        int offset = cur_func->stack_size - cur_mapping->call_mem - cur_mapping->spill_offset.find(tar.ir_id)->second;
+        int offset = cur_func->stack_size/* - cur_mapping->call_mem*/ - cur_mapping->spill_offset.find(tar.ir_id)->second;
         if(tar.is_arr) {
             // if((uint32_t)offset >> 12) {
             //     cur_block->instructions.push_back(std::make_shared<LoadImm>(const_reg_l, offset));
@@ -73,7 +73,7 @@ void LoongArch::ProgramBuilder::visit(ir::ir_reg &node) {
         }
         // int idx = std::distance(cur_mapping->spill_vec.begin(), it);
         // int offset = cur_func->stack_size - (4 * idx);
-        int offset = cur_func->stack_size - cur_mapping->call_mem - cur_mapping->spill_offset.find(node.id)->second;
+        int offset = cur_func->stack_size/* - cur_mapping->call_mem*/ - cur_mapping->spill_offset.find(node.id)->second;
         if(node.is_arr) {
             cur_block->instructions.push_back(std::make_shared<LoongArch::ld>(tar, Reg{fp}, -offset, tar.is_float() ? ld::fld_f : ld::ld_d));
         }
@@ -277,7 +277,13 @@ void LoongArch::ProgramBuilder::visit(ir::ir_userfunc &node) {
     this->cur_mapping->call_mem += max_call * 8;
 
     cur_func->stack_size += this->cur_mapping->used_mem;
-    cur_func->stack_size += this->cur_mapping->call_mem;
+    // cur_func->stack_size += this->cur_mapping->call_mem;
+
+    for(auto obj : node.arrobj) {
+        // this->cur_mapping->mem_var.insert({obj->addr->id, this->cur_mapping->used_mem});
+        auto offset = this->cur_mapping->mem_var.find(obj->addr->id)->second;
+        std::cout << "# " << obj->name << " -> " << -(cur_func->stack_size - offset) << std::endl; 
+    }
     
     //处理内存变量
 
@@ -479,7 +485,7 @@ void LoongArch::ProgramBuilder::visit(ir::ir_userfunc &node) {
                                 flag = !flag;
                                 // int idx = std::distance(cur_mapping->spill_vec.begin(), it);
                                 // int offset = cur_func->stack_size - (4 * idx);
-                                int offset = cur_func->stack_size - cur_mapping->call_mem - cur_mapping->spill_offset.find(use_reg->id)->second;
+                                int offset = cur_func->stack_size/* - cur_mapping->call_mem*/ - cur_mapping->spill_offset.find(use_reg->id)->second;
                                 b->insert_before_jump(std::make_shared<LoongArch::ld>(tar, Reg{fp}, -offset, ld::ld_w));
                                 pass_reg = tar;
                             }
@@ -645,7 +651,7 @@ void LoongArch::ProgramBuilder::visit(ir::ir_userfunc &node) {
                 flag = !flag;
                 // int idx = std::distance(cur_mapping->spill_vec.begin(), it);
                 // int offset = cur_func->stack_size - (4 * idx);
-                int offset = cur_func->stack_size - cur_mapping->call_mem - cur_mapping->spill_offset.find(i.to->id)->second;
+                int offset = cur_func->stack_size/* - cur_mapping->call_mem*/ - cur_mapping->spill_offset.find(i.to->id)->second;
                 i.block->insert_before_jump(std::make_shared<LoongArch::ld>(tar, Reg{fp}, -offset, ld::ld_w));
                 pass_reg = tar;
             }
@@ -667,7 +673,7 @@ void LoongArch::ProgramBuilder::visit(ir::ir_userfunc &node) {
         if(it != cur_mapping->spill_vec.end()) {
             // int idx = std::distance(cur_mapping->spill_vec.begin(), it);
             // int offset = cur_func->stack_size - (4 * idx);
-            int offset = cur_func->stack_size - cur_mapping->call_mem - cur_mapping->spill_offset.find(to.ir_id)->second;
+            int offset = cur_func->stack_size/* - cur_mapping->call_mem*/ - cur_mapping->spill_offset.find(to.ir_id)->second;
             if(to.is_arr) {
                 i.block->insert_before_jump(std::make_shared<LoongArch::st>(to, Reg{fp}, -offset, to.is_float() ? st::fst_f : st::st_d));
             }
@@ -721,7 +727,7 @@ void LoongArch::ProgramBuilder::visit(ir::store &node) {
     }
     else {
         int offset = cur_mapping->mem_var.find(node.addr->id)->second;
-        offset = cur_func->stack_size - cur_mapping->call_mem - offset;
+        offset = cur_func->stack_size/* - cur_mapping->call_mem*/ - offset;
         cur_block->instructions.push_back(std::make_shared<st>(dst, Reg{fp}, -offset, type));
     }
     // check_write_back(reg);
@@ -829,7 +835,7 @@ void LoongArch::ProgramBuilder::visit(ir::load &node) {
     }
     else {
         int offset = cur_mapping->mem_var.find(node.addr->id)->second;
-        offset = cur_func->stack_size - cur_mapping->call_mem - offset;
+        offset = cur_func->stack_size/* - cur_mapping->call_mem*/ - offset;
         cur_block->instructions.push_back(std::make_shared<ldptr>(dst, Reg{fp}, -offset, ldtype));
     }
     check_write_back(dst);
@@ -975,7 +981,7 @@ void LoongArch::ProgramBuilder::visit(ir::cmp_ins &node) {
         }
         else if (node.op == relop::less_equal) {
             cur_block->instructions.push_back(std::make_shared<LoongArch::RegRegInst>(RegRegInst::slt, dst, exp2, exp1));
-            cur_block->instructions.push_back(std::make_shared<LoongArch::RegImmInst>(RegImmInst::xori, dst, exp1, 1));
+            cur_block->instructions.push_back(std::make_shared<LoongArch::RegImmInst>(RegImmInst::xori, dst, dst, 1));
         }
     }
     check_write_back(dst);
@@ -1010,7 +1016,7 @@ void LoongArch::ProgramBuilder::visit(ir::get_element_ptr& node) {
         cur_block->instructions.push_back(std::make_shared<la>(node.base->addr, dst, la::local));
     }
     else if(node.base->dim->has_first_dim) {
-        int offset = cur_mapping->mem_var.find(node.base->addr->id)->second + cur_mapping->call_mem - cur_func->stack_size;
+        int offset = cur_mapping->mem_var.find(node.base->addr->id)->second/* + cur_mapping->call_mem*/ - cur_func->stack_size;
         // if((uint32_t)offset >> 12) {
         //     cur_block->instructions.push_back(std::make_shared<LoadImm>(const_reg_l, offset));
         //     cur_block->instructions.push_back(std::make_shared<RegRegInst>(RegRegInst::add_d, dst, Reg{fp}, const_reg_l));
@@ -1067,9 +1073,17 @@ void LoongArch::ProgramBuilder::visit(ir::break_or_continue& node) {
 }
 
 void LoongArch::ProgramBuilder::visit(ir::func_call& node) {
+    // 保存自己的寄存器
+    cur_block->instructions.push_back(std::make_shared<LoongArch::RegImmInst>(RegImmInst::addi_d, Reg{sp}, Reg{sp}, -(caller_save_regs.size() * 8)));
+    for(int i = 0; i < caller_save_regs.size(); i++) {
+        cur_block->instructions.push_back(std::make_shared<LoongArch::st>(caller_save_regs[i], Reg{sp}, 8 * i, caller_save_regs[i].is_float()? st::fst_f : st::st_d));
+    }
+
     int i_pointer = 4;
     int f_pointer = 0;
     int cur_stk = 0;
+    // if(cur_mapping->call_mem)
+        // cur_block->instructions.push_back(std::make_shared<LoongArch::RegImmInst>(RegImmInst::addi_d, Reg{sp}, Reg{sp}, -cur_mapping->call_mem));
     for(auto par : node.params) {
         par->accept(*this);
         auto reg = pass_reg;
@@ -1111,6 +1125,14 @@ void LoongArch::ProgramBuilder::visit(ir::func_call& node) {
         }
     }
     cur_block->instructions.push_back(std::make_shared<LoongArch::Bl>(node.func_name));
+
+    // if(cur_mapping->call_mem)
+    //     cur_block->instructions.push_back(std::make_shared<LoongArch::RegImmInst>(RegImmInst::addi_d, Reg{sp}, Reg{sp}, cur_mapping->call_mem));
+    for(int i = 0; i < caller_save_regs.size(); i++) {
+        cur_block->instructions.push_back(std::make_shared<LoongArch::ld>(caller_save_regs[i], Reg{sp}, 8 * i, caller_save_regs[i].is_float()? ld::fld_f : ld::ld_d));
+    }
+    cur_block->instructions.push_back(std::make_shared<LoongArch::RegImmInst>(RegImmInst::addi_d, Reg{sp}, Reg{sp}, caller_save_regs.size() * 8));
+
     if(node.ret_reg) {
         is_dst = true;
         node.ret_reg->accept(*this);

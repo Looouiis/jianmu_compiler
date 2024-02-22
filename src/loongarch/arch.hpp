@@ -1,8 +1,10 @@
 #pragma once
 
+#include "parser/SyntaxTree.hpp"
 #include <array>
 #include <cstdint>
 #include <ostream>
+#include <vector>
 
 namespace LoongArch {
 
