@@ -73,8 +73,8 @@ void LoongArch::ColoringAllocator::Spill(std::unordered_map<std::shared_ptr<ir::
 }
 
 void LoongArch::ColoringAllocator::BuildConflictGraph() {
-  for(auto global : global_var) {
-    allregs.push_back(global->obj->addr);
+  for(auto global : func->current_globl) {
+    allregs.push_back(global.second->obj->addr);
   }
   for(auto funcf : func->func_args) {
     allregs.push_back(funcf->addr);

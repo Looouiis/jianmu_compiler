@@ -257,6 +257,7 @@ private:
     std::vector<ptr<ir::ir_memobj>> func_args;
     std::vector<std::shared_ptr<ir::ir_reg>> regSpill;
     ptr_list<ir::ir_memobj> arrobj;
+    std::list<std::pair<std::string, ptr<ir::global_def>>> current_globl;
 public:
     ir_userfunc(std::string name, int reg_cnt); 
     ptr<ir_memobj> new_obj(std::string name, vartype var_type);
@@ -267,6 +268,7 @@ public:
     std::unordered_map<ptr<ir::ir_value>,Pass::LiveInterval> GetLiveInterval();
     std::vector<std::shared_ptr<ir_basicblock>> GetLinerSequence();
     virtual void reg_allocate(std::unordered_map<std::shared_ptr<ir::ir_reg>, LoongArch::Reg> map, std::vector<std::shared_ptr<ir::ir_reg>> spill, std::vector<std::shared_ptr<ir::ir_memobj>> arrobj);
+    void save_current_globl(std::list<std::pair<std::string, ptr<ir::global_def>>> current_globl);
 };
 
 //below is instruction

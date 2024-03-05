@@ -187,6 +187,10 @@ void ir::ir_userfunc::reg_allocate(std::unordered_map<std::shared_ptr<ir::ir_reg
     this->arrobj = arrobj;
 }
 
+void ir::ir_userfunc::save_current_globl(std::list<std::pair<std::string, ptr<ir::global_def>>> current_globl) {
+    this->current_globl = current_globl;
+}
+
 bool ir::ir_func::set_retype(vartype rettype)
 {
     this->rettype = rettype; 

@@ -167,6 +167,7 @@ void ir::IrBuilder::visit(ast::func_def_syntax &node){
         break;
     }
     this->scope.exit();
+    this->cur_func->save_current_globl(this->compunit->global_var);
     this->in_func = false;
 }
 
