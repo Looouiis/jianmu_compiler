@@ -365,6 +365,16 @@ void ir::IrBuilder::visit(ast::binop_expr_syntax &node)
     else {
         dst = cur_func->new_reg(node.restype);
     }
+    if(exp1->get_type() == vartype::BOOL) {
+        auto transed = cur_func->new_reg(vartype::INT);
+        cur_block->push_back(std::make_shared<ir::trans>(vartype::INT, transed, exp1));
+        exp1 = transed;
+    }
+    if(exp2->get_type() == vartype::BOOL) {
+        auto transed = cur_func->new_reg(vartype::INT);
+        cur_block->push_back(std::make_shared<ir::trans>(vartype::INT, transed, exp2));
+        exp2 = transed;
+    }
     cur_block->push_back(std::make_shared<ir::binary_op_ins>(dst,exp1,exp2,node.op));
     this->pass_value=dst;
 }

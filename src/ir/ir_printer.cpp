@@ -466,10 +466,27 @@ void ir::IrPrinter::visit(ir::global_def &node) {
         }
     }
     else {
-        // if(node.obj->dim->dimensions.size() == 1) {
-            out << init_type << " ";
-        // }
-        out << "zeroinitializer";
+        // // if(node.obj->dim->dimensions.size() == 1) {
+        //     out << init_type << " ";
+        // // }
+        if(node.obj->dim && node.obj->dim->dimensions.size() != 1) {
+                for(auto a : node.obj->dim->dimensions) {
+                    if(node.obj->dim->dimensions.size() > 1)
+                        out << "[" << a->calc_res() << " x ";
+                    if(a == node.obj->dim->dimensions.back()) {
+                        if(node.obj->dim->dimensions.size() > 1)
+                            out<<base_type[node.obj->addr->type];
+                    }
+                }
+                for(auto a : node.obj->dim->dimensions) {
+                    if(node.obj->dim->dimensions.size() > 1)
+                        out << "]";
+                }
+        }
+        else {
+            out << init_type;
+        }
+        out << " zeroinitializer";
     }
     out << ", align " << node.obj->addr->size;
     out << std::endl;
@@ -478,20 +495,27 @@ void ir::IrPrinter::visit(ir::global_def &node) {
 void ir::IrPrinter::visit(ir::trans &node) {
     out << "\t";
     out << get_reg_name(node.dst) << " = ";
-    if(node.target == vartype::FLOAT) {
-        out << "sitofp i32";
+    if(node.src->get_type() == vartype::BOOL && node.target == vartype::INT) {
+        out << "zext ";
+        node.src->accept(*this);
+        out << " to i32";
     }
     else {
-        out << "fptosi float";
-    }
-    out << " ";
-    out << get_value(node.src);
-    out << " ";
-    if(node.target == vartype::FLOAT) {
-        out << "to float";
-    }
-    else {
-        out << "to i32";
+        if(node.target == vartype::FLOAT) {
+            out << "sitofp i32";
+        }
+        else {
+            out << "fptosi float";
+        }
+        out << " ";
+        out << get_value(node.src);
+        out << " ";
+        if(node.target == vartype::FLOAT) {
+            out << "to float";
+        }
+        else {
+            out << "to i32";
+        }
     }
     out << std::endl;
 }

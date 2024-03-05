@@ -106,7 +106,12 @@ void SynataxAnalyseStmtReturn(ast::stmt_syntax *&self, ast::expr_syntax *exp)
 void SynataxAnalysePrimaryExpIntConst(ast::expr_syntax *&self, char *current_symbol)
 {
     auto syntax = new ast::literal_syntax;
-    syntax->intConst = std::stoi(current_symbol);
+    if(current_symbol[0] == '0' && current_symbol[1] == 'x') {
+        syntax->intConst = std::stoi(current_symbol, 0, 16);
+    }
+    else {
+        syntax->intConst = std::stoi(current_symbol);
+    }
     syntax->restype = vartype::INT;
     self = static_cast<ast::expr_syntax*>(syntax);
 }
