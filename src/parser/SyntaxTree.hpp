@@ -363,9 +363,10 @@ struct continue_stmt_syntax : stmt_syntax
 struct init_syntax : expr_syntax
 {
     bool is_array = false;
+    bool is_zero_initialer = false;
     ptr_list<expr_syntax> initializer;
     ptr<expr_syntax> designed_size;
-    int transed_size;
+    int child_cnt = 1;
     ptr_list<expr_syntax> current_dim;
     // int to_bottom;
     virtual void accept(syntax_tree_visitor &visitor) override final;

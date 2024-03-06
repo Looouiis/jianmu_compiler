@@ -60,6 +60,7 @@ class break_or_continue;
 class func_call;
 class global_def;
 class trans;
+class memset;
 
 class printable {
     virtual void accept(ir_visitor& visitor) = 0;
@@ -212,6 +213,7 @@ public:
     ptr<ir_basicblock> init_block;
     std::list<std::pair<std::string,std::shared_ptr<ir_libfunc>>> libfuncs;
     std::list<std::pair<std::string,std::shared_ptr<global_def>>> global_var;
+    bool enable_mem_set = false;
     ir_module(){
         this->scope = std::make_unique<ir_scope>();
         this->global_init_func = std::make_shared<ir_userfunc>("global_init", global_var.size());
@@ -462,6 +464,7 @@ public:
     virtual void visit(func_call &node) = 0;
     virtual void visit(global_def &node) = 0;
     virtual void visit(trans &node) = 0;
+    virtual void visit(ir::memset &node) = 0;
 };
 
 class get_element_ptr : public ir_instr {
@@ -556,6 +559,23 @@ private:
     ptr<ir_value> src;
 public:
     trans(vartype target, ptr<ir_reg> dst, ptr<ir_value> src) : target(target), dst(dst), src(src) {}
+    virtual void accept(ir_visitor& visitor) override final;
+    virtual void print(std::ostream & out = std::cout) override final;
+    virtual std::vector<ptr<ir::ir_value>> use_reg() override final;
+    virtual std::vector<ptr<ir::ir_value>> def_reg() override final;
+};
+
+class memset : public ir_instr {
+    friend IrPrinter;
+    friend IrBuilder;
+    friend LoongArch::ProgramBuilder;
+private:
+    ptr<ir_reg> dst;
+    int32_t val;
+    int cnt;
+    bool is_volatile;
+public:
+    memset(ptr<ir_reg> dst, int32_t val, int cnt, bool is_volatile) : val(val), dst(dst), cnt(cnt), is_volatile(is_volatile) {}
     virtual void accept(ir_visitor& visitor) override final;
     virtual void print(std::ostream & out = std::cout) override final;
     virtual std::vector<ptr<ir::ir_value>> use_reg() override final;

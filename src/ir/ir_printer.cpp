@@ -65,6 +65,9 @@ void ir::IrPrinter::visit(ir_module& node){
     for(auto & [name, fun] : node.libfuncs) {
         fun->accept(*this);
     }
+    if(node.enable_mem_set) {
+        out << "declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg)" << std::endl;
+    }
     for(auto & [name, var] : node.global_var) {
         var->accept(*this);
     }
@@ -517,6 +520,17 @@ void ir::IrPrinter::visit(ir::trans &node) {
             out << "to i32";
         }
     }
+    out << std::endl;
+}
+
+void ir::IrPrinter::visit(ir::memset &node) {
+    out << "\t";
+    out << "call void @llvm.memset.p0.i64(";
+    node.dst->accept(*this);
+    out << ", i8 " << node.val;
+    out << ", i64 " << node.cnt;
+    out << ", i1 " << (node.is_volatile ? "true" : "false");
+    out << ")";
     out << std::endl;
 }
 

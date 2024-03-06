@@ -648,3 +648,20 @@ std::vector<ptr<ir::ir_value>> ir::trans::use_reg() {
 std::vector<ptr<ir::ir_value>> ir::trans::def_reg() {
   return {dst};
 }
+
+void ir::memset::accept(ir_visitor &visitor)
+{
+    visitor.visit(*this);
+}
+
+void ir::memset::print(std::ostream &out)
+{
+}
+
+std::vector<ptr<ir::ir_value>> ir::memset::use_reg() {
+  return {dst};
+}
+
+std::vector<ptr<ir::ir_value>> ir::memset::def_reg() {
+  return {};
+}

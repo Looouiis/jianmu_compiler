@@ -31,6 +31,7 @@ public:
     virtual void visit(ir::global_def& node) override final;
     virtual void visit(ir::trans& node) override final;
     virtual void visit(ir::ir_libfunc& node) override final;
+    virtual void visit(ir::memset& node) override final;
     std::shared_ptr<Program> prog;
     void check_write_back(LoongArch::Reg tar);
     // std::vector<std::shared_ptr<ir::ir_reg>> loaded;

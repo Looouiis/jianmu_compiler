@@ -202,6 +202,7 @@ void LoongArch::ProgramBuilder::visit(ir::ir_module &node) {
     if(node.init_block) {
         this->func_name = node.global_init_func->name;
         prog->functions.emplace_back(std::make_shared<LoongArch::Function>(node.global_init_func->name));
+        this->cur_mapping = std::make_shared<IrMapping>();
         node.global_init_func->accept(*this);
     }
 
@@ -1185,3 +1186,5 @@ void LoongArch::ProgramBuilder::visit(ir::trans& node) {
 void LoongArch::ProgramBuilder::visit(ir::ir_libfunc& node) {
     
 }
+
+void LoongArch::ProgramBuilder::visit(ir::memset& node) {}

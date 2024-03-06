@@ -526,8 +526,6 @@ void ir::IrBuilder::visit(ast::literal_syntax &node)
 }
 
 void ir::IrBuilder::global_init(ptr<ir::global_def> global, ptr<ast::init_syntax> init) {
-    if(!init)
-        return;
     if(!init->is_array) {
             auto backup = this->cur_func;
             auto backup_block = this->cur_block;
@@ -596,7 +594,7 @@ void ir::IrBuilder::visit(ast::var_def_stmt_syntax &node)       // self5
             // pass_list.clear();
             // node.initializer = obj
             pass_obj = obj;
-            node.initializer->accept(*this);
+            node.initializer->accept(*this);                        // TODO：为zero_initializer添加memset逻辑
             // if(pass_list.empty()) {
             //     auto ini_value = pass_value;
             //     cur_block->push_back(std::make_shared<ir::store>(obj->get_addr(), ini_value));
@@ -633,8 +631,29 @@ void ir::IrBuilder::visit(ast::var_def_stmt_syntax &node)       // self5
         //     node.initializer->accept(*this);
         //     init_val = pass_value;
         // }
-        global_init(def, node.initializer);
+        if(node.initializer) {
+            // global_init(def, node.initializer);
+            auto backup = this->cur_func;
+            auto backup_block = this->cur_block;
+            this->cur_func = compunit->global_init_func;
+            if(!compunit->init_block) {
+                compunit->init_block = compunit->global_init_func->new_block();
+                compunit->global_init_func->max_reg = compunit->global_var.size();
+                compunit->global_init_func->set_retype(vartype::VOID);
+                compunit->init_block->push_back(std::make_shared<ir::ret>(std::make_shared<ir::ir_constant>(0), false));
+            }
+            auto ret = compunit->init_block->pop_back();
+            this->cur_block = compunit->init_block;
+
+            pass_obj = obj;
+            node.initializer->accept(*this);
+
+            cur_block->push_back(ret);
+            this->cur_func = backup;
+            this->cur_block = backup_block;
+        }
         this->scope.push_global(node.name, def);
+        compunit->global_init_func->save_current_globl(compunit->global_var);
     }
 }
 
@@ -850,10 +869,10 @@ void ir::IrBuilder::visit(ast::continue_stmt_syntax &node) {
 }
 void ir::IrBuilder::visit(ast::init_syntax &node) {
     std::unordered_map<vartype, vartype> trans = {{vartype::INTADDR, vartype::INT}, {vartype::INT, vartype::INT}, {vartype::FLOATADDR, vartype::FLOAT}, {vartype::FLOAT, vartype::FLOAT}};
+    auto obj = pass_obj;
     if(!pass_obj->dim) {
         node.initializer.front()->accept(*this);
         auto ini_value = pass_value;
-        auto obj = pass_obj;
         if(ini_value->get_type() != trans[obj->addr->type]) {
             auto transed = cur_func->new_reg(trans[obj->addr->type]);
             cur_block->push_back(std::make_shared<ir::trans>(trans[obj->addr->type], transed, ini_value));
@@ -863,8 +882,14 @@ void ir::IrBuilder::visit(ast::init_syntax &node) {
         return;
     }
     if(node.is_array) {
-        for(auto ini : node.initializer) {
-            ini->accept(*this);
+        if(node.is_zero_initialer) {
+            compunit->enable_mem_set = true;
+            cur_block->push_back(std::make_shared<ir::memset>(obj->get_addr(), 0, node.child_cnt * node.designed_size->calc_res() * obj->get_addr()->size, false));
+        }
+        else {
+            for(auto ini : node.initializer) {
+                ini->accept(*this);
+            }
         }
     }
     else {

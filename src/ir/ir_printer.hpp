@@ -87,6 +87,7 @@ public:
    virtual void visit(func_call &node) override final;
    virtual void visit(global_def &node) override final;
    virtual void visit(trans &node) override final;
+   virtual void visit(ir::memset &node) override final;
    std::string get_value(const ptr<ir::ir_value> &val);
    std::string get_reg_name(ptr<ir_reg> &node);
    void llvm(ptr<int> pointer, ptr_list<ir::ir_value> init_val, ptr_list<ast::expr_syntax> dimensions, string init_type, vartype type);

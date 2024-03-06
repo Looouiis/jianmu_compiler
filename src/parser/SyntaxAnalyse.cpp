@@ -273,8 +273,18 @@ ptr<ast::init_syntax> reorganize_init(ptr<ast::init_syntax> init, ptr_list<ast::
     auto ret = std::make_shared<ast::init_syntax>();
     ret->is_array = true;
     ret->designed_size = dim.front();
-    ret->transed_size = dim.front()->calc_res();
+    // ret->transed_size = dim.front()->calc_res();
     ret->current_dim = current_dim;
+
+    int nxt_cnt = 1;
+    for(auto it = dim.begin() + 1; it != dim.end(); it++) {
+        nxt_cnt *= (*it)->calc_res();
+    }
+    ret->child_cnt = nxt_cnt;
+    if(init->is_array && init->initializer.empty()) {
+        ret->is_zero_initialer = true;
+        return ret;
+    }
 
     // auto zero = std::make_shared<ast::literal_syntax>(0);
     // zero->intConst = 0;
@@ -320,6 +330,9 @@ ptr<ast::init_syntax> reorganize_init(ptr<ast::init_syntax> init, ptr_list<ast::
                             nxt_ini->initializer.push_back(init->initializer[pointer++]);
                         }
                         else {
+                            if(nxt_ini->initializer.empty()) { // 代表打包的下一维度为空，启用zero_initializer，避免填充过多的0
+                                break;
+                            }
                             auto zero_ini = std::make_shared<ast::init_syntax>();
                             zero_ini->is_array = false;
                             zero_ini->initializer.push_back(std::make_shared<ast::literal_syntax>(0));
@@ -351,6 +364,7 @@ ptr<ast::init_syntax> reorganize_init(ptr<ast::init_syntax> init, ptr_list<ast::
                 }
             }
             else {
+                // 注：这里就不需要进行zero_initialzer的判断了，因为函数开始的时候已经判断过了
                 auto exp_zero = std::make_shared<ast::init_syntax>();
                 exp_zero->is_array = false;
                 exp_zero->initializer.push_back(std::make_shared<ast::literal_syntax>(0));
