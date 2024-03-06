@@ -6,6 +6,7 @@
 #include <cstring>
 #include <iterator>
 #include <memory>
+#include <unordered_map>
 #include <vector>
 
 extern ast::SyntaxTree syntax_tree;
@@ -51,8 +52,11 @@ void SyntaxAnalyseFuncFDecl(ast::func_def_syntax* &self, ast::func_f_param_synta
     // auto syntax = new ast::func_def_syntax;
     if(var_def_group) {
         self->params = var_def_group->params;
+        self->arg_types = var_def_group->arg_types;
     }
     self->params.insert(self->params.begin(), ptr<ast::func_f_param_syntax>(var_def));
+    std::unordered_map<vartype, vartype> toaddr = {{vartype::INT, vartype::INTADDR}, {vartype::FLOAT, vartype::FLOATADDR}};
+    self->arg_types.insert(self->arg_types.begin(), var_def->dimension ? toaddr[var_def->accept_type] : var_def->accept_type);
     // self = syntax;
 }
 
@@ -60,8 +64,11 @@ void SyntaxAnalyseFuncFDeclGroup(ast::func_def_syntax* &self, ast::func_f_param_
     auto syntax = new ast::func_def_syntax;
     if(var_def_group) {
         syntax->params = var_def_group->params;
+        syntax->arg_types = var_def_group->arg_types;
     }
     syntax->params.insert(syntax->params.begin(), ptr<ast::func_f_param_syntax>(var_def));
+    std::unordered_map<vartype, vartype> toaddr = {{vartype::INT, vartype::INTADDR}, {vartype::FLOAT, vartype::FLOATADDR}};
+    syntax->arg_types.insert(syntax->arg_types.begin(), var_def->dimension ? toaddr[var_def->accept_type] : var_def->accept_type);
     self = syntax;
 }
 
@@ -106,8 +113,13 @@ void SynataxAnalyseStmtReturn(ast::stmt_syntax *&self, ast::expr_syntax *exp)
 void SynataxAnalysePrimaryExpIntConst(ast::expr_syntax *&self, char *current_symbol)
 {
     auto syntax = new ast::literal_syntax;
-    if(current_symbol[0] == '0' && current_symbol[1] == 'x') {
-        syntax->intConst = std::stoi(current_symbol, 0, 16);
+    if(current_symbol[0] == '0') {
+        if(current_symbol[1] == 'x') {
+            syntax->intConst = std::stoi(current_symbol, 0, 16);
+        }
+        else {
+            syntax->intConst = std::stoi(current_symbol, 0, 8);
+        }
     }
     else {
         syntax->intConst = std::stoi(current_symbol);
@@ -282,7 +294,7 @@ ptr<ast::init_syntax> reorganize_init(ptr<ast::init_syntax> init, ptr_list<ast::
     }
     ret->child_cnt = nxt_cnt;
     if(init->is_array && init->initializer.empty()) {
-        ret->is_zero_initialer = true;
+        ret->is_zero_initializer = true;
         return ret;
     }
 

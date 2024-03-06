@@ -86,8 +86,8 @@ void ir::ir_basicblock::for_each(std::function<void(std::shared_ptr<ir::ir_instr
     }
 }
 
-ptr<ir::ir_userfunc> ir::ir_module::new_func(std::string name) {
-  auto pfunc = std::make_shared<ir_userfunc>(name, this->global_var.size());
+ptr<ir::ir_userfunc> ir::ir_module::new_func(std::string name, std::vector<vartype> arg_types) {
+  auto pfunc = std::make_shared<ir_userfunc>(name, this->global_var.size(), arg_types);
   usrfuncs.push_back({name, pfunc});
   return pfunc;
 }
@@ -128,7 +128,7 @@ void ir::ir_module::reg_allocate(int base_reg, ptr_list<global_def> global_var) 
     }
 }
 
-ir::ir_userfunc::ir_userfunc(std::string name, int reg_cnt) : ir_func(name), max_reg(reg_cnt) {
+ir::ir_userfunc::ir_userfunc(std::string name, int reg_cnt, std::vector<vartype> arg_types) : ir_func(name, arg_types), max_reg(reg_cnt) {
     this->scope = std::make_unique<ir::ir_scope>();
 }
 

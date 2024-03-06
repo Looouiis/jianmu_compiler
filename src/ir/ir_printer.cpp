@@ -281,7 +281,8 @@ void ir::IrPrinter::visit(cmp_ins &node)
         if(std::holds_alternative<int>(value)){
             out << std::get<int>(value);
         }else{
-            out << std::fixed << std::setprecision(1) << std::get<float>(value);
+            // out << std::fixed << std::setprecision(1) << std::get<float>(value);
+            out << float_to_hex_string(std::get<float>(value));
         }
     }else{
         auto aa = std::dynamic_pointer_cast<ir::ir_reg>(node.src1);
@@ -503,7 +504,7 @@ void ir::IrPrinter::visit(ir::global_def &node) {
 void ir::IrPrinter::visit(ir::trans &node) {
     out << "\t";
     out << get_reg_name(node.dst) << " = ";
-    if(node.src->get_type() == vartype::BOOL && node.target == vartype::INT) {
+    if((node.src->get_type() == vartype::BOOL || node.src->get_type() == vartype::FBOOL) && node.target == vartype::INT) {
         out << "zext ";
         node.src->accept(*this);
         out << " to i32";

@@ -190,12 +190,14 @@ public:
 
 
 class ir_func : public printable {
+friend IrBuilder;
 protected:
     std::string name;
     vartype rettype;
     std::unordered_map<int,ir_func_arg> args;                   // TODO: 我没有采用这个args
+    std::vector<vartype> arg_types;
 public:
-    ir_func(std::string name) : name(name) {}
+    ir_func(std::string name, vector<vartype> arg_types) : name(name), arg_types(arg_types) {}
     bool set_retype(vartype rettype);
     vartype get_rettype() {return rettype;}
     virtual void accept(ir_visitor& visitor) = 0;
@@ -216,9 +218,10 @@ public:
     bool enable_mem_set = false;
     ir_module(){
         this->scope = std::make_unique<ir_scope>();
-        this->global_init_func = std::make_shared<ir_userfunc>("global_init", global_var.size());
+        std::vector<vartype> empty;
+        this->global_init_func = std::make_shared<ir_userfunc>("global_init", global_var.size(), empty);
     }
-    ptr<ir_userfunc> new_func(std::string name);
+    ptr<ir_userfunc> new_func(std::string name, std::vector<vartype> arg_types);
     void add_lib_func(std::string name, ptr<ir_libfunc> fun);
     ptr<global_def> new_global(std::string name, vartype type);
     virtual void accept(ir_visitor& visitor) override final;
@@ -236,7 +239,7 @@ public:
 private:
     std::vector<ptr<ir::ir_memobj>> func_args;
 public:
-    ir_libfunc(std::string name, int reg_cnt) : ir_func(name) {} 
+    ir_libfunc(std::string name, int reg_cnt, std::vector<vartype> arg_types) : ir_func(name, arg_types) {} 
     virtual void accept(ir_visitor& visitor) override final;
     virtual void print(std::ostream & out = std::cout) override final;
 };
@@ -262,7 +265,7 @@ private:
     std::list<std::pair<std::string, ptr<ir::global_def>>> current_globl;
     ptr_list<ir::alloc> alloc_list;
 public:
-    ir_userfunc(std::string name, int reg_cnt); 
+    ir_userfunc(std::string name, int reg_cnt, std::vector<vartype> arg_tpyes); 
     ptr<ir_memobj> new_obj(std::string name, vartype var_type);
     ptr<ir_reg> new_reg(vartype type);//自动创建序号递增的寄存器
     ptr<ir_basicblock> new_block();//创建BB

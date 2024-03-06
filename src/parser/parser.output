@@ -26,15 +26,15 @@ Grammar
    10           | BType Ident LBRACKET RBRACKET ExpGroup
 
    11 ExpGroup: LBRACKET Exp RBRACKET ExpGroup
-   12         | %empty
+   12         | ε
 
    13 FuncFParamsGroup: COMMA FuncFParam FuncFParamsGroup
-   14                 | %empty
+   14                 | ε
 
    15 Block: LBRACE BlockItems RBRACE
 
    16 BlockItems: BlockItems Stmt
-   17           | %empty
+   17           | ε
    18           | BlockItems Decl
 
    19 Stmt: RETURN Exp SEMICOLON
@@ -62,7 +62,7 @@ Grammar
    37 VarDecl: BType VarDef VarDefGroup SEMICOLON
 
    38 VarDefGroup: COMMA VarDef VarDefGroup
-   39            | %empty
+   39            | ε
 
    40 VarDef: Ident
    41       | Ident ASSIGN InitVal
@@ -74,12 +74,12 @@ Grammar
    46        | LBRACE RBRACE
 
    47 InitValGroup: COMMA InitVal InitValGroup
-   48             | %empty
+   48             | ε
 
    49 ConstDecl: CONST BType ConstDef ConstDefGroup SEMICOLON
 
    50 ConstDefGroup: COMMA ConstDef ConstDefGroup
-   51              | %empty
+   51              | ε
 
    52 ConstDef: Ident ConstExpGroup ASSIGN ConstInitVal
 
@@ -88,10 +88,10 @@ Grammar
    55             | LBRACE RBRACE
 
    56 ConstInitValGroup: COMMA ConstInitVal ConstInitValGroup
-   57                  | %empty
+   57                  | ε
 
    58 ConstExpGroup: LBRACKET ConstExp RBRACKET ConstExpGroup
-   59              | %empty
+   59              | ε
 
    60 ConstExp: AddExp
 
@@ -135,7 +135,7 @@ Grammar
    88         | Ident LPAREN RPAREN
 
    89 FuncRParamsGroup: COMMA Exp FuncRParamsGroup
-   90                 | %empty
+   90                 | ε
 
    91 UnaryOp: ADD
    92        | SUB
@@ -301,7 +301,7 @@ Nonterminals, with rules where they appear
 
 State 0
 
-    0 $accept: . CompUnit $end
+    0 $accept: • CompUnit $end
 
     INT    shift, and go to state 1
     FLOAT  shift, and go to state 2
@@ -318,29 +318,29 @@ State 0
 
 State 1
 
-   61 BType: INT .
+   61 BType: INT •
 
     $default  reduce using rule 61 (BType)
 
 
 State 2
 
-   62 BType: FLOAT .
+   62 BType: FLOAT •
 
     $default  reduce using rule 62 (BType)
 
 
 State 3
 
-    6 FuncDef: VOID . Ident LPAREN RPAREN Block
-    8        | VOID . Ident LPAREN FuncFParam FuncFParamsGroup RPAREN Block
+    6 FuncDef: VOID • Ident LPAREN RPAREN Block
+    8        | VOID • Ident LPAREN FuncFParam FuncFParamsGroup RPAREN Block
 
     Ident  shift, and go to state 11
 
 
 State 4
 
-   49 ConstDecl: CONST . BType ConstDef ConstDefGroup SEMICOLON
+   49 ConstDecl: CONST • BType ConstDef ConstDefGroup SEMICOLON
 
     INT    shift, and go to state 1
     FLOAT  shift, and go to state 2
@@ -350,9 +350,9 @@ State 4
 
 State 5
 
-    0 $accept: CompUnit . $end
-    1 CompUnit: CompUnit . FuncDef
-    2         | CompUnit . Decl
+    0 $accept: CompUnit • $end
+    1 CompUnit: CompUnit • FuncDef
+    2         | CompUnit • Decl
 
     $end   shift, and go to state 13
     INT    shift, and go to state 1
@@ -369,37 +369,37 @@ State 5
 
 State 6
 
-    3 CompUnit: FuncDef .
+    3 CompUnit: FuncDef •
 
     $default  reduce using rule 3 (CompUnit)
 
 
 State 7
 
-    4 CompUnit: Decl .
+    4 CompUnit: Decl •
 
     $default  reduce using rule 4 (CompUnit)
 
 
 State 8
 
-   35 Decl: VarDecl .
+   35 Decl: VarDecl •
 
     $default  reduce using rule 35 (Decl)
 
 
 State 9
 
-   36 Decl: ConstDecl .
+   36 Decl: ConstDecl •
 
     $default  reduce using rule 36 (Decl)
 
 
 State 10
 
-    5 FuncDef: BType . Ident LPAREN RPAREN Block
-    7        | BType . Ident LPAREN FuncFParam FuncFParamsGroup RPAREN Block
-   37 VarDecl: BType . VarDef VarDefGroup SEMICOLON
+    5 FuncDef: BType • Ident LPAREN RPAREN Block
+    7        | BType • Ident LPAREN FuncFParam FuncFParamsGroup RPAREN Block
+   37 VarDecl: BType • VarDef VarDefGroup SEMICOLON
 
     Ident  shift, and go to state 16
 
@@ -408,15 +408,15 @@ State 10
 
 State 11
 
-    6 FuncDef: VOID Ident . LPAREN RPAREN Block
-    8        | VOID Ident . LPAREN FuncFParam FuncFParamsGroup RPAREN Block
+    6 FuncDef: VOID Ident • LPAREN RPAREN Block
+    8        | VOID Ident • LPAREN FuncFParam FuncFParamsGroup RPAREN Block
 
     LPAREN  shift, and go to state 18
 
 
 State 12
 
-   49 ConstDecl: CONST BType . ConstDef ConstDefGroup SEMICOLON
+   49 ConstDecl: CONST BType • ConstDef ConstDefGroup SEMICOLON
 
     Ident  shift, and go to state 19
 
@@ -425,33 +425,33 @@ State 12
 
 State 13
 
-    0 $accept: CompUnit $end .
+    0 $accept: CompUnit $end •
 
     $default  accept
 
 
 State 14
 
-    1 CompUnit: CompUnit FuncDef .
+    1 CompUnit: CompUnit FuncDef •
 
     $default  reduce using rule 1 (CompUnit)
 
 
 State 15
 
-    2 CompUnit: CompUnit Decl .
+    2 CompUnit: CompUnit Decl •
 
     $default  reduce using rule 2 (CompUnit)
 
 
 State 16
 
-    5 FuncDef: BType Ident . LPAREN RPAREN Block
-    7        | BType Ident . LPAREN FuncFParam FuncFParamsGroup RPAREN Block
-   40 VarDef: Ident .
-   41       | Ident . ASSIGN InitVal
-   42       | Ident . ConstExpGroup
-   43       | Ident . ConstExpGroup ASSIGN InitVal
+    5 FuncDef: BType Ident • LPAREN RPAREN Block
+    7        | BType Ident • LPAREN FuncFParam FuncFParamsGroup RPAREN Block
+   40 VarDef: Ident •
+   41       | Ident • ASSIGN InitVal
+   42       | Ident • ConstExpGroup
+   43       | Ident • ConstExpGroup ASSIGN InitVal
 
     LPAREN    shift, and go to state 21
     LBRACKET  shift, and go to state 22
@@ -469,7 +469,7 @@ State 16
 
 State 17
 
-   37 VarDecl: BType VarDef . VarDefGroup SEMICOLON
+   37 VarDecl: BType VarDef • VarDefGroup SEMICOLON
 
     COMMA  shift, and go to state 25
 
@@ -480,8 +480,8 @@ State 17
 
 State 18
 
-    6 FuncDef: VOID Ident LPAREN . RPAREN Block
-    8        | VOID Ident LPAREN . FuncFParam FuncFParamsGroup RPAREN Block
+    6 FuncDef: VOID Ident LPAREN • RPAREN Block
+    8        | VOID Ident LPAREN • FuncFParam FuncFParamsGroup RPAREN Block
 
     INT     shift, and go to state 1
     FLOAT   shift, and go to state 2
@@ -493,7 +493,7 @@ State 18
 
 State 19
 
-   52 ConstDef: Ident . ConstExpGroup ASSIGN ConstInitVal
+   52 ConstDef: Ident • ConstExpGroup ASSIGN ConstInitVal
 
     LBRACKET  shift, and go to state 22
 
@@ -504,7 +504,7 @@ State 19
 
 State 20
 
-   49 ConstDecl: CONST BType ConstDef . ConstDefGroup SEMICOLON
+   49 ConstDecl: CONST BType ConstDef • ConstDefGroup SEMICOLON
 
     COMMA  shift, and go to state 31
 
@@ -515,8 +515,8 @@ State 20
 
 State 21
 
-    5 FuncDef: BType Ident LPAREN . RPAREN Block
-    7        | BType Ident LPAREN . FuncFParam FuncFParamsGroup RPAREN Block
+    5 FuncDef: BType Ident LPAREN • RPAREN Block
+    7        | BType Ident LPAREN • FuncFParam FuncFParamsGroup RPAREN Block
 
     INT     shift, and go to state 1
     FLOAT   shift, and go to state 2
@@ -528,7 +528,7 @@ State 21
 
 State 22
 
-   58 ConstExpGroup: LBRACKET . ConstExp RBRACKET ConstExpGroup
+   58 ConstExpGroup: LBRACKET • ConstExp RBRACKET ConstExpGroup
 
     Ident       shift, and go to state 35
     ADD         shift, and go to state 36
@@ -550,7 +550,7 @@ State 22
 
 State 23
 
-   41 VarDef: Ident ASSIGN . InitVal
+   41 VarDef: Ident ASSIGN • InitVal
 
     Ident       shift, and go to state 35
     ADD         shift, and go to state 36
@@ -574,8 +574,8 @@ State 23
 
 State 24
 
-   42 VarDef: Ident ConstExpGroup .
-   43       | Ident ConstExpGroup . ASSIGN InitVal
+   42 VarDef: Ident ConstExpGroup •
+   43       | Ident ConstExpGroup • ASSIGN InitVal
 
     ASSIGN  shift, and go to state 54
 
@@ -584,7 +584,7 @@ State 24
 
 State 25
 
-   38 VarDefGroup: COMMA . VarDef VarDefGroup
+   38 VarDefGroup: COMMA • VarDef VarDefGroup
 
     Ident  shift, and go to state 55
 
@@ -593,14 +593,14 @@ State 25
 
 State 26
 
-   37 VarDecl: BType VarDef VarDefGroup . SEMICOLON
+   37 VarDecl: BType VarDef VarDefGroup • SEMICOLON
 
     SEMICOLON  shift, and go to state 57
 
 
 State 27
 
-    6 FuncDef: VOID Ident LPAREN RPAREN . Block
+    6 FuncDef: VOID Ident LPAREN RPAREN • Block
 
     LBRACE  shift, and go to state 58
 
@@ -609,7 +609,7 @@ State 27
 
 State 28
 
-    8 FuncDef: VOID Ident LPAREN FuncFParam . FuncFParamsGroup RPAREN Block
+    8 FuncDef: VOID Ident LPAREN FuncFParam • FuncFParamsGroup RPAREN Block
 
     COMMA  shift, and go to state 60
 
@@ -620,22 +620,22 @@ State 28
 
 State 29
 
-    9 FuncFParam: BType . Ident
-   10           | BType . Ident LBRACKET RBRACKET ExpGroup
+    9 FuncFParam: BType • Ident
+   10           | BType • Ident LBRACKET RBRACKET ExpGroup
 
     Ident  shift, and go to state 62
 
 
 State 30
 
-   52 ConstDef: Ident ConstExpGroup . ASSIGN ConstInitVal
+   52 ConstDef: Ident ConstExpGroup • ASSIGN ConstInitVal
 
     ASSIGN  shift, and go to state 63
 
 
 State 31
 
-   50 ConstDefGroup: COMMA . ConstDef ConstDefGroup
+   50 ConstDefGroup: COMMA • ConstDef ConstDefGroup
 
     Ident  shift, and go to state 19
 
@@ -644,14 +644,14 @@ State 31
 
 State 32
 
-   49 ConstDecl: CONST BType ConstDef ConstDefGroup . SEMICOLON
+   49 ConstDecl: CONST BType ConstDef ConstDefGroup • SEMICOLON
 
     SEMICOLON  shift, and go to state 65
 
 
 State 33
 
-    5 FuncDef: BType Ident LPAREN RPAREN . Block
+    5 FuncDef: BType Ident LPAREN RPAREN • Block
 
     LBRACE  shift, and go to state 58
 
@@ -660,7 +660,7 @@ State 33
 
 State 34
 
-    7 FuncDef: BType Ident LPAREN FuncFParam . FuncFParamsGroup RPAREN Block
+    7 FuncDef: BType Ident LPAREN FuncFParam • FuncFParamsGroup RPAREN Block
 
     COMMA  shift, and go to state 60
 
@@ -671,9 +671,9 @@ State 34
 
 State 35
 
-   71 Lval: Ident . ExpGroup
-   87 UnaryExp: Ident . LPAREN Exp FuncRParamsGroup RPAREN
-   88         | Ident . LPAREN RPAREN
+   71 Lval: Ident • ExpGroup
+   87 UnaryExp: Ident • LPAREN Exp FuncRParamsGroup RPAREN
+   88         | Ident • LPAREN RPAREN
 
     LPAREN    shift, and go to state 68
     LBRACKET  shift, and go to state 69
@@ -685,21 +685,21 @@ State 35
 
 State 36
 
-   91 UnaryOp: ADD .
+   91 UnaryOp: ADD •
 
     $default  reduce using rule 91 (UnaryOp)
 
 
 State 37
 
-   92 UnaryOp: SUB .
+   92 UnaryOp: SUB •
 
     $default  reduce using rule 92 (UnaryOp)
 
 
 State 38
 
-   32 PrimaryExp: LPAREN . Exp RPAREN
+   32 PrimaryExp: LPAREN • Exp RPAREN
 
     Ident       shift, and go to state 35
     ADD         shift, and go to state 36
@@ -721,51 +721,51 @@ State 38
 
 State 39
 
-   33 Number: IntConst .
+   33 Number: IntConst •
 
     $default  reduce using rule 33 (Number)
 
 
 State 40
 
-   34 Number: FloatConst .
+   34 Number: FloatConst •
 
     $default  reduce using rule 34 (Number)
 
 
 State 41
 
-   93 UnaryOp: NOT .
+   93 UnaryOp: NOT •
 
     $default  reduce using rule 93 (UnaryOp)
 
 
 State 42
 
-   85 UnaryExp: PrimaryExp .
+   85 UnaryExp: PrimaryExp •
 
     $default  reduce using rule 85 (UnaryExp)
 
 
 State 43
 
-   30 PrimaryExp: Number .
+   30 PrimaryExp: Number •
 
     $default  reduce using rule 30 (PrimaryExp)
 
 
 State 44
 
-   58 ConstExpGroup: LBRACKET ConstExp . RBRACKET ConstExpGroup
+   58 ConstExpGroup: LBRACKET ConstExp • RBRACKET ConstExpGroup
 
     RBRACKET  shift, and go to state 72
 
 
 State 45
 
-   60 ConstExp: AddExp .
-   64 AddExp: AddExp . ADD MulExp
-   65       | AddExp . SUB MulExp
+   60 ConstExp: AddExp •
+   64 AddExp: AddExp • ADD MulExp
+   65       | AddExp • SUB MulExp
 
     ADD  shift, and go to state 73
     SUB  shift, and go to state 74
@@ -775,10 +775,10 @@ State 45
 
 State 46
 
-   63 AddExp: MulExp .
-   68 MulExp: MulExp . MUL UnaryExp
-   69       | MulExp . DIV UnaryExp
-   70       | MulExp . MOD UnaryExp
+   63 AddExp: MulExp •
+   68 MulExp: MulExp • MUL UnaryExp
+   69       | MulExp • DIV UnaryExp
+   70       | MulExp • MOD UnaryExp
 
     MUL  shift, and go to state 75
     DIV  shift, and go to state 76
@@ -789,21 +789,21 @@ State 46
 
 State 47
 
-   31 PrimaryExp: Lval .
+   31 PrimaryExp: Lval •
 
     $default  reduce using rule 31 (PrimaryExp)
 
 
 State 48
 
-   67 MulExp: UnaryExp .
+   67 MulExp: UnaryExp •
 
     $default  reduce using rule 67 (MulExp)
 
 
 State 49
 
-   86 UnaryExp: UnaryOp . UnaryExp
+   86 UnaryExp: UnaryOp • UnaryExp
 
     Ident       shift, and go to state 35
     ADD         shift, and go to state 36
@@ -822,8 +822,8 @@ State 49
 
 State 50
 
-   45 InitVal: LBRACE . InitVal InitValGroup RBRACE
-   46        | LBRACE . RBRACE
+   45 InitVal: LBRACE • InitVal InitValGroup RBRACE
+   46        | LBRACE • RBRACE
 
     Ident       shift, and go to state 35
     ADD         shift, and go to state 36
@@ -848,16 +848,16 @@ State 50
 
 State 51
 
-   41 VarDef: Ident ASSIGN InitVal .
+   41 VarDef: Ident ASSIGN InitVal •
 
     $default  reduce using rule 41 (VarDef)
 
 
 State 52
 
-   64 AddExp: AddExp . ADD MulExp
-   65       | AddExp . SUB MulExp
-   66 Exp: AddExp .
+   64 AddExp: AddExp • ADD MulExp
+   65       | AddExp • SUB MulExp
+   66 Exp: AddExp •
 
     ADD  shift, and go to state 73
     SUB  shift, and go to state 74
@@ -867,14 +867,14 @@ State 52
 
 State 53
 
-   44 InitVal: Exp .
+   44 InitVal: Exp •
 
     $default  reduce using rule 44 (InitVal)
 
 
 State 54
 
-   43 VarDef: Ident ConstExpGroup ASSIGN . InitVal
+   43 VarDef: Ident ConstExpGroup ASSIGN • InitVal
 
     Ident       shift, and go to state 35
     ADD         shift, and go to state 36
@@ -898,10 +898,10 @@ State 54
 
 State 55
 
-   40 VarDef: Ident .
-   41       | Ident . ASSIGN InitVal
-   42       | Ident . ConstExpGroup
-   43       | Ident . ConstExpGroup ASSIGN InitVal
+   40 VarDef: Ident •
+   41       | Ident • ASSIGN InitVal
+   42       | Ident • ConstExpGroup
+   43       | Ident • ConstExpGroup ASSIGN InitVal
 
     LBRACKET  shift, and go to state 22
     ASSIGN    shift, and go to state 23
@@ -918,7 +918,7 @@ State 55
 
 State 56
 
-   38 VarDefGroup: COMMA VarDef . VarDefGroup
+   38 VarDefGroup: COMMA VarDef • VarDefGroup
 
     COMMA  shift, and go to state 25
 
@@ -929,14 +929,14 @@ State 56
 
 State 57
 
-   37 VarDecl: BType VarDef VarDefGroup SEMICOLON .
+   37 VarDecl: BType VarDef VarDefGroup SEMICOLON •
 
     $default  reduce using rule 37 (VarDecl)
 
 
 State 58
 
-   15 Block: LBRACE . BlockItems RBRACE
+   15 Block: LBRACE • BlockItems RBRACE
 
     $default  reduce using rule 17 (BlockItems)
 
@@ -945,14 +945,14 @@ State 58
 
 State 59
 
-    6 FuncDef: VOID Ident LPAREN RPAREN Block .
+    6 FuncDef: VOID Ident LPAREN RPAREN Block •
 
     $default  reduce using rule 6 (FuncDef)
 
 
 State 60
 
-   13 FuncFParamsGroup: COMMA . FuncFParam FuncFParamsGroup
+   13 FuncFParamsGroup: COMMA • FuncFParam FuncFParamsGroup
 
     INT    shift, and go to state 1
     FLOAT  shift, and go to state 2
@@ -963,15 +963,15 @@ State 60
 
 State 61
 
-    8 FuncDef: VOID Ident LPAREN FuncFParam FuncFParamsGroup . RPAREN Block
+    8 FuncDef: VOID Ident LPAREN FuncFParam FuncFParamsGroup • RPAREN Block
 
     RPAREN  shift, and go to state 85
 
 
 State 62
 
-    9 FuncFParam: BType Ident .
-   10           | BType Ident . LBRACKET RBRACKET ExpGroup
+    9 FuncFParam: BType Ident •
+   10           | BType Ident • LBRACKET RBRACKET ExpGroup
 
     LBRACKET  shift, and go to state 86
 
@@ -980,7 +980,7 @@ State 62
 
 State 63
 
-   52 ConstDef: Ident ConstExpGroup ASSIGN . ConstInitVal
+   52 ConstDef: Ident ConstExpGroup ASSIGN • ConstInitVal
 
     Ident       shift, and go to state 35
     ADD         shift, and go to state 36
@@ -1004,7 +1004,7 @@ State 63
 
 State 64
 
-   50 ConstDefGroup: COMMA ConstDef . ConstDefGroup
+   50 ConstDefGroup: COMMA ConstDef • ConstDefGroup
 
     COMMA  shift, and go to state 31
 
@@ -1015,29 +1015,29 @@ State 64
 
 State 65
 
-   49 ConstDecl: CONST BType ConstDef ConstDefGroup SEMICOLON .
+   49 ConstDecl: CONST BType ConstDef ConstDefGroup SEMICOLON •
 
     $default  reduce using rule 49 (ConstDecl)
 
 
 State 66
 
-    5 FuncDef: BType Ident LPAREN RPAREN Block .
+    5 FuncDef: BType Ident LPAREN RPAREN Block •
 
     $default  reduce using rule 5 (FuncDef)
 
 
 State 67
 
-    7 FuncDef: BType Ident LPAREN FuncFParam FuncFParamsGroup . RPAREN Block
+    7 FuncDef: BType Ident LPAREN FuncFParam FuncFParamsGroup • RPAREN Block
 
     RPAREN  shift, and go to state 91
 
 
 State 68
 
-   87 UnaryExp: Ident LPAREN . Exp FuncRParamsGroup RPAREN
-   88         | Ident LPAREN . RPAREN
+   87 UnaryExp: Ident LPAREN • Exp FuncRParamsGroup RPAREN
+   88         | Ident LPAREN • RPAREN
 
     Ident       shift, and go to state 35
     ADD         shift, and go to state 36
@@ -1060,7 +1060,7 @@ State 68
 
 State 69
 
-   11 ExpGroup: LBRACKET . Exp RBRACKET ExpGroup
+   11 ExpGroup: LBRACKET • Exp RBRACKET ExpGroup
 
     Ident       shift, and go to state 35
     ADD         shift, and go to state 36
@@ -1082,21 +1082,21 @@ State 69
 
 State 70
 
-   71 Lval: Ident ExpGroup .
+   71 Lval: Ident ExpGroup •
 
     $default  reduce using rule 71 (Lval)
 
 
 State 71
 
-   32 PrimaryExp: LPAREN Exp . RPAREN
+   32 PrimaryExp: LPAREN Exp • RPAREN
 
     RPAREN  shift, and go to state 95
 
 
 State 72
 
-   58 ConstExpGroup: LBRACKET ConstExp RBRACKET . ConstExpGroup
+   58 ConstExpGroup: LBRACKET ConstExp RBRACKET • ConstExpGroup
 
     LBRACKET  shift, and go to state 22
 
@@ -1107,7 +1107,7 @@ State 72
 
 State 73
 
-   64 AddExp: AddExp ADD . MulExp
+   64 AddExp: AddExp ADD • MulExp
 
     Ident       shift, and go to state 35
     ADD         shift, and go to state 36
@@ -1127,7 +1127,7 @@ State 73
 
 State 74
 
-   65 AddExp: AddExp SUB . MulExp
+   65 AddExp: AddExp SUB • MulExp
 
     Ident       shift, and go to state 35
     ADD         shift, and go to state 36
@@ -1147,7 +1147,7 @@ State 74
 
 State 75
 
-   68 MulExp: MulExp MUL . UnaryExp
+   68 MulExp: MulExp MUL • UnaryExp
 
     Ident       shift, and go to state 35
     ADD         shift, and go to state 36
@@ -1166,7 +1166,7 @@ State 75
 
 State 76
 
-   69 MulExp: MulExp DIV . UnaryExp
+   69 MulExp: MulExp DIV • UnaryExp
 
     Ident       shift, and go to state 35
     ADD         shift, and go to state 36
@@ -1185,7 +1185,7 @@ State 76
 
 State 77
 
-   70 MulExp: MulExp MOD . UnaryExp
+   70 MulExp: MulExp MOD • UnaryExp
 
     Ident       shift, and go to state 35
     ADD         shift, and go to state 36
@@ -1204,21 +1204,21 @@ State 77
 
 State 78
 
-   86 UnaryExp: UnaryOp UnaryExp .
+   86 UnaryExp: UnaryOp UnaryExp •
 
     $default  reduce using rule 86 (UnaryExp)
 
 
 State 79
 
-   46 InitVal: LBRACE RBRACE .
+   46 InitVal: LBRACE RBRACE •
 
     $default  reduce using rule 46 (InitVal)
 
 
 State 80
 
-   45 InitVal: LBRACE InitVal . InitValGroup RBRACE
+   45 InitVal: LBRACE InitVal • InitValGroup RBRACE
 
     COMMA  shift, and go to state 102
 
@@ -1229,23 +1229,23 @@ State 80
 
 State 81
 
-   43 VarDef: Ident ConstExpGroup ASSIGN InitVal .
+   43 VarDef: Ident ConstExpGroup ASSIGN InitVal •
 
     $default  reduce using rule 43 (VarDef)
 
 
 State 82
 
-   38 VarDefGroup: COMMA VarDef VarDefGroup .
+   38 VarDefGroup: COMMA VarDef VarDefGroup •
 
     $default  reduce using rule 38 (VarDefGroup)
 
 
 State 83
 
-   15 Block: LBRACE BlockItems . RBRACE
-   16 BlockItems: BlockItems . Stmt
-   18           | BlockItems . Decl
+   15 Block: LBRACE BlockItems • RBRACE
+   16 BlockItems: BlockItems • Stmt
+   18           | BlockItems • Decl
 
     INT         shift, and go to state 1
     FLOAT       shift, and go to state 2
@@ -1284,7 +1284,7 @@ State 83
 
 State 84
 
-   13 FuncFParamsGroup: COMMA FuncFParam . FuncFParamsGroup
+   13 FuncFParamsGroup: COMMA FuncFParam • FuncFParamsGroup
 
     COMMA  shift, and go to state 60
 
@@ -1295,7 +1295,7 @@ State 84
 
 State 85
 
-    8 FuncDef: VOID Ident LPAREN FuncFParam FuncFParamsGroup RPAREN . Block
+    8 FuncDef: VOID Ident LPAREN FuncFParam FuncFParamsGroup RPAREN • Block
 
     LBRACE  shift, and go to state 58
 
@@ -1304,15 +1304,15 @@ State 85
 
 State 86
 
-   10 FuncFParam: BType Ident LBRACKET . RBRACKET ExpGroup
+   10 FuncFParam: BType Ident LBRACKET • RBRACKET ExpGroup
 
     RBRACKET  shift, and go to state 119
 
 
 State 87
 
-   54 ConstInitVal: LBRACE . ConstInitVal ConstInitValGroup RBRACE
-   55             | LBRACE . RBRACE
+   54 ConstInitVal: LBRACE • ConstInitVal ConstInitValGroup RBRACE
+   55             | LBRACE • RBRACE
 
     Ident       shift, and go to state 35
     ADD         shift, and go to state 36
@@ -1337,28 +1337,28 @@ State 87
 
 State 88
 
-   52 ConstDef: Ident ConstExpGroup ASSIGN ConstInitVal .
+   52 ConstDef: Ident ConstExpGroup ASSIGN ConstInitVal •
 
     $default  reduce using rule 52 (ConstDef)
 
 
 State 89
 
-   53 ConstInitVal: ConstExp .
+   53 ConstInitVal: ConstExp •
 
     $default  reduce using rule 53 (ConstInitVal)
 
 
 State 90
 
-   50 ConstDefGroup: COMMA ConstDef ConstDefGroup .
+   50 ConstDefGroup: COMMA ConstDef ConstDefGroup •
 
     $default  reduce using rule 50 (ConstDefGroup)
 
 
 State 91
 
-    7 FuncDef: BType Ident LPAREN FuncFParam FuncFParamsGroup RPAREN . Block
+    7 FuncDef: BType Ident LPAREN FuncFParam FuncFParamsGroup RPAREN • Block
 
     LBRACE  shift, and go to state 58
 
@@ -1367,14 +1367,14 @@ State 91
 
 State 92
 
-   88 UnaryExp: Ident LPAREN RPAREN .
+   88 UnaryExp: Ident LPAREN RPAREN •
 
     $default  reduce using rule 88 (UnaryExp)
 
 
 State 93
 
-   87 UnaryExp: Ident LPAREN Exp . FuncRParamsGroup RPAREN
+   87 UnaryExp: Ident LPAREN Exp • FuncRParamsGroup RPAREN
 
     COMMA  shift, and go to state 123
 
@@ -1385,31 +1385,31 @@ State 93
 
 State 94
 
-   11 ExpGroup: LBRACKET Exp . RBRACKET ExpGroup
+   11 ExpGroup: LBRACKET Exp • RBRACKET ExpGroup
 
     RBRACKET  shift, and go to state 125
 
 
 State 95
 
-   32 PrimaryExp: LPAREN Exp RPAREN .
+   32 PrimaryExp: LPAREN Exp RPAREN •
 
     $default  reduce using rule 32 (PrimaryExp)
 
 
 State 96
 
-   58 ConstExpGroup: LBRACKET ConstExp RBRACKET ConstExpGroup .
+   58 ConstExpGroup: LBRACKET ConstExp RBRACKET ConstExpGroup •
 
     $default  reduce using rule 58 (ConstExpGroup)
 
 
 State 97
 
-   64 AddExp: AddExp ADD MulExp .
-   68 MulExp: MulExp . MUL UnaryExp
-   69       | MulExp . DIV UnaryExp
-   70       | MulExp . MOD UnaryExp
+   64 AddExp: AddExp ADD MulExp •
+   68 MulExp: MulExp • MUL UnaryExp
+   69       | MulExp • DIV UnaryExp
+   70       | MulExp • MOD UnaryExp
 
     MUL  shift, and go to state 75
     DIV  shift, and go to state 76
@@ -1420,10 +1420,10 @@ State 97
 
 State 98
 
-   65 AddExp: AddExp SUB MulExp .
-   68 MulExp: MulExp . MUL UnaryExp
-   69       | MulExp . DIV UnaryExp
-   70       | MulExp . MOD UnaryExp
+   65 AddExp: AddExp SUB MulExp •
+   68 MulExp: MulExp • MUL UnaryExp
+   69       | MulExp • DIV UnaryExp
+   70       | MulExp • MOD UnaryExp
 
     MUL  shift, and go to state 75
     DIV  shift, and go to state 76
@@ -1434,28 +1434,28 @@ State 98
 
 State 99
 
-   68 MulExp: MulExp MUL UnaryExp .
+   68 MulExp: MulExp MUL UnaryExp •
 
     $default  reduce using rule 68 (MulExp)
 
 
 State 100
 
-   69 MulExp: MulExp DIV UnaryExp .
+   69 MulExp: MulExp DIV UnaryExp •
 
     $default  reduce using rule 69 (MulExp)
 
 
 State 101
 
-   70 MulExp: MulExp MOD UnaryExp .
+   70 MulExp: MulExp MOD UnaryExp •
 
     $default  reduce using rule 70 (MulExp)
 
 
 State 102
 
-   47 InitValGroup: COMMA . InitVal InitValGroup
+   47 InitValGroup: COMMA • InitVal InitValGroup
 
     Ident       shift, and go to state 35
     ADD         shift, and go to state 36
@@ -1479,44 +1479,44 @@ State 102
 
 State 103
 
-   45 InitVal: LBRACE InitVal InitValGroup . RBRACE
+   45 InitVal: LBRACE InitVal InitValGroup • RBRACE
 
     RBRACE  shift, and go to state 127
 
 
 State 104
 
-   23 Stmt: IF . LPAREN Cond RPAREN Stmt
-   24     | IF . LPAREN Cond RPAREN Stmt ELSE Stmt
+   23 Stmt: IF • LPAREN Cond RPAREN Stmt
+   24     | IF • LPAREN Cond RPAREN Stmt ELSE Stmt
 
     LPAREN  shift, and go to state 128
 
 
 State 105
 
-   27 Stmt: WHILE . LPAREN Cond RPAREN Stmt
+   27 Stmt: WHILE • LPAREN Cond RPAREN Stmt
 
     LPAREN  shift, and go to state 129
 
 
 State 106
 
-   28 Stmt: BREAK . SEMICOLON
+   28 Stmt: BREAK • SEMICOLON
 
     SEMICOLON  shift, and go to state 130
 
 
 State 107
 
-   29 Stmt: CONTINUE . SEMICOLON
+   29 Stmt: CONTINUE • SEMICOLON
 
     SEMICOLON  shift, and go to state 131
 
 
 State 108
 
-   19 Stmt: RETURN . Exp SEMICOLON
-   21     | RETURN . SEMICOLON
+   19 Stmt: RETURN • Exp SEMICOLON
+   21     | RETURN • SEMICOLON
 
     Ident       shift, and go to state 35
     ADD         shift, and go to state 36
@@ -1539,42 +1539,42 @@ State 108
 
 State 109
 
-   15 Block: LBRACE BlockItems RBRACE .
+   15 Block: LBRACE BlockItems RBRACE •
 
     $default  reduce using rule 15 (Block)
 
 
 State 110
 
-   26 Stmt: SEMICOLON .
+   26 Stmt: SEMICOLON •
 
     $default  reduce using rule 26 (Stmt)
 
 
 State 111
 
-   20 Stmt: Block .
+   20 Stmt: Block •
 
     $default  reduce using rule 20 (Stmt)
 
 
 State 112
 
-   16 BlockItems: BlockItems Stmt .
+   16 BlockItems: BlockItems Stmt •
 
     $default  reduce using rule 16 (BlockItems)
 
 
 State 113
 
-   18 BlockItems: BlockItems Decl .
+   18 BlockItems: BlockItems Decl •
 
     $default  reduce using rule 18 (BlockItems)
 
 
 State 114
 
-   37 VarDecl: BType . VarDef VarDefGroup SEMICOLON
+   37 VarDecl: BType • VarDef VarDefGroup SEMICOLON
 
     Ident  shift, and go to state 55
 
@@ -1583,15 +1583,15 @@ State 114
 
 State 115
 
-   25 Stmt: Exp . SEMICOLON
+   25 Stmt: Exp • SEMICOLON
 
     SEMICOLON  shift, and go to state 134
 
 
 State 116
 
-   22 Stmt: Lval . ASSIGN Exp SEMICOLON
-   31 PrimaryExp: Lval .
+   22 Stmt: Lval • ASSIGN Exp SEMICOLON
+   31 PrimaryExp: Lval •
 
     ASSIGN  shift, and go to state 135
 
@@ -1600,21 +1600,21 @@ State 116
 
 State 117
 
-   13 FuncFParamsGroup: COMMA FuncFParam FuncFParamsGroup .
+   13 FuncFParamsGroup: COMMA FuncFParam FuncFParamsGroup •
 
     $default  reduce using rule 13 (FuncFParamsGroup)
 
 
 State 118
 
-    8 FuncDef: VOID Ident LPAREN FuncFParam FuncFParamsGroup RPAREN Block .
+    8 FuncDef: VOID Ident LPAREN FuncFParam FuncFParamsGroup RPAREN Block •
 
     $default  reduce using rule 8 (FuncDef)
 
 
 State 119
 
-   10 FuncFParam: BType Ident LBRACKET RBRACKET . ExpGroup
+   10 FuncFParam: BType Ident LBRACKET RBRACKET • ExpGroup
 
     LBRACKET  shift, and go to state 69
 
@@ -1625,14 +1625,14 @@ State 119
 
 State 120
 
-   55 ConstInitVal: LBRACE RBRACE .
+   55 ConstInitVal: LBRACE RBRACE •
 
     $default  reduce using rule 55 (ConstInitVal)
 
 
 State 121
 
-   54 ConstInitVal: LBRACE ConstInitVal . ConstInitValGroup RBRACE
+   54 ConstInitVal: LBRACE ConstInitVal • ConstInitValGroup RBRACE
 
     COMMA  shift, and go to state 137
 
@@ -1643,14 +1643,14 @@ State 121
 
 State 122
 
-    7 FuncDef: BType Ident LPAREN FuncFParam FuncFParamsGroup RPAREN Block .
+    7 FuncDef: BType Ident LPAREN FuncFParam FuncFParamsGroup RPAREN Block •
 
     $default  reduce using rule 7 (FuncDef)
 
 
 State 123
 
-   89 FuncRParamsGroup: COMMA . Exp FuncRParamsGroup
+   89 FuncRParamsGroup: COMMA • Exp FuncRParamsGroup
 
     Ident       shift, and go to state 35
     ADD         shift, and go to state 36
@@ -1672,14 +1672,14 @@ State 123
 
 State 124
 
-   87 UnaryExp: Ident LPAREN Exp FuncRParamsGroup . RPAREN
+   87 UnaryExp: Ident LPAREN Exp FuncRParamsGroup • RPAREN
 
     RPAREN  shift, and go to state 140
 
 
 State 125
 
-   11 ExpGroup: LBRACKET Exp RBRACKET . ExpGroup
+   11 ExpGroup: LBRACKET Exp RBRACKET • ExpGroup
 
     LBRACKET  shift, and go to state 69
 
@@ -1690,7 +1690,7 @@ State 125
 
 State 126
 
-   47 InitValGroup: COMMA InitVal . InitValGroup
+   47 InitValGroup: COMMA InitVal • InitValGroup
 
     COMMA  shift, and go to state 102
 
@@ -1701,15 +1701,15 @@ State 126
 
 State 127
 
-   45 InitVal: LBRACE InitVal InitValGroup RBRACE .
+   45 InitVal: LBRACE InitVal InitValGroup RBRACE •
 
     $default  reduce using rule 45 (InitVal)
 
 
 State 128
 
-   23 Stmt: IF LPAREN . Cond RPAREN Stmt
-   24     | IF LPAREN . Cond RPAREN Stmt ELSE Stmt
+   23 Stmt: IF LPAREN • Cond RPAREN Stmt
+   24     | IF LPAREN • Cond RPAREN Stmt ELSE Stmt
 
     Ident       shift, and go to state 35
     ADD         shift, and go to state 36
@@ -1735,7 +1735,7 @@ State 128
 
 State 129
 
-   27 Stmt: WHILE LPAREN . Cond RPAREN Stmt
+   27 Stmt: WHILE LPAREN • Cond RPAREN Stmt
 
     Ident       shift, and go to state 35
     ADD         shift, and go to state 36
@@ -1761,42 +1761,42 @@ State 129
 
 State 130
 
-   28 Stmt: BREAK SEMICOLON .
+   28 Stmt: BREAK SEMICOLON •
 
     $default  reduce using rule 28 (Stmt)
 
 
 State 131
 
-   29 Stmt: CONTINUE SEMICOLON .
+   29 Stmt: CONTINUE SEMICOLON •
 
     $default  reduce using rule 29 (Stmt)
 
 
 State 132
 
-   21 Stmt: RETURN SEMICOLON .
+   21 Stmt: RETURN SEMICOLON •
 
     $default  reduce using rule 21 (Stmt)
 
 
 State 133
 
-   19 Stmt: RETURN Exp . SEMICOLON
+   19 Stmt: RETURN Exp • SEMICOLON
 
     SEMICOLON  shift, and go to state 150
 
 
 State 134
 
-   25 Stmt: Exp SEMICOLON .
+   25 Stmt: Exp SEMICOLON •
 
     $default  reduce using rule 25 (Stmt)
 
 
 State 135
 
-   22 Stmt: Lval ASSIGN . Exp SEMICOLON
+   22 Stmt: Lval ASSIGN • Exp SEMICOLON
 
     Ident       shift, and go to state 35
     ADD         shift, and go to state 36
@@ -1818,14 +1818,14 @@ State 135
 
 State 136
 
-   10 FuncFParam: BType Ident LBRACKET RBRACKET ExpGroup .
+   10 FuncFParam: BType Ident LBRACKET RBRACKET ExpGroup •
 
     $default  reduce using rule 10 (FuncFParam)
 
 
 State 137
 
-   56 ConstInitValGroup: COMMA . ConstInitVal ConstInitValGroup
+   56 ConstInitValGroup: COMMA • ConstInitVal ConstInitValGroup
 
     Ident       shift, and go to state 35
     ADD         shift, and go to state 36
@@ -1849,14 +1849,14 @@ State 137
 
 State 138
 
-   54 ConstInitVal: LBRACE ConstInitVal ConstInitValGroup . RBRACE
+   54 ConstInitVal: LBRACE ConstInitVal ConstInitValGroup • RBRACE
 
     RBRACE  shift, and go to state 153
 
 
 State 139
 
-   89 FuncRParamsGroup: COMMA Exp . FuncRParamsGroup
+   89 FuncRParamsGroup: COMMA Exp • FuncRParamsGroup
 
     COMMA  shift, and go to state 123
 
@@ -1867,30 +1867,30 @@ State 139
 
 State 140
 
-   87 UnaryExp: Ident LPAREN Exp FuncRParamsGroup RPAREN .
+   87 UnaryExp: Ident LPAREN Exp FuncRParamsGroup RPAREN •
 
     $default  reduce using rule 87 (UnaryExp)
 
 
 State 141
 
-   11 ExpGroup: LBRACKET Exp RBRACKET ExpGroup .
+   11 ExpGroup: LBRACKET Exp RBRACKET ExpGroup •
 
     $default  reduce using rule 11 (ExpGroup)
 
 
 State 142
 
-   47 InitValGroup: COMMA InitVal InitValGroup .
+   47 InitValGroup: COMMA InitVal InitValGroup •
 
     $default  reduce using rule 47 (InitValGroup)
 
 
 State 143
 
-   64 AddExp: AddExp . ADD MulExp
-   65       | AddExp . SUB MulExp
-   80 RelExp: AddExp .
+   64 AddExp: AddExp • ADD MulExp
+   65       | AddExp • SUB MulExp
+   80 RelExp: AddExp •
 
     ADD  shift, and go to state 73
     SUB  shift, and go to state 74
@@ -1900,16 +1900,16 @@ State 143
 
 State 144
 
-   23 Stmt: IF LPAREN Cond . RPAREN Stmt
-   24     | IF LPAREN Cond . RPAREN Stmt ELSE Stmt
+   23 Stmt: IF LPAREN Cond • RPAREN Stmt
+   24     | IF LPAREN Cond • RPAREN Stmt ELSE Stmt
 
     RPAREN  shift, and go to state 155
 
 
 State 145
 
-   72 Cond: LOrExp .
-   74 LOrExp: LOrExp . OR LAndExp
+   72 Cond: LOrExp •
+   74 LOrExp: LOrExp • OR LAndExp
 
     OR  shift, and go to state 156
 
@@ -1918,8 +1918,8 @@ State 145
 
 State 146
 
-   73 LOrExp: LAndExp .
-   76 LAndExp: LAndExp . AND EqExp
+   73 LOrExp: LAndExp •
+   76 LAndExp: LAndExp • AND EqExp
 
     AND  shift, and go to state 157
 
@@ -1928,9 +1928,9 @@ State 146
 
 State 147
 
-   75 LAndExp: EqExp .
-   78 EqExp: EqExp . EQUAL RelExp
-   79      | EqExp . NOT_EQUAL RelExp
+   75 LAndExp: EqExp •
+   78 EqExp: EqExp • EQUAL RelExp
+   79      | EqExp • NOT_EQUAL RelExp
 
     EQUAL      shift, and go to state 158
     NOT_EQUAL  shift, and go to state 159
@@ -1940,11 +1940,11 @@ State 147
 
 State 148
 
-   77 EqExp: RelExp .
-   81 RelExp: RelExp . LESS AddExp
-   82       | RelExp . GREATER AddExp
-   83       | RelExp . LESS_EQUAL AddExp
-   84       | RelExp . GREATER_EQUAL AddExp
+   77 EqExp: RelExp •
+   81 RelExp: RelExp • LESS AddExp
+   82       | RelExp • GREATER AddExp
+   83       | RelExp • LESS_EQUAL AddExp
+   84       | RelExp • GREATER_EQUAL AddExp
 
     LESS           shift, and go to state 160
     GREATER        shift, and go to state 161
@@ -1956,28 +1956,28 @@ State 148
 
 State 149
 
-   27 Stmt: WHILE LPAREN Cond . RPAREN Stmt
+   27 Stmt: WHILE LPAREN Cond • RPAREN Stmt
 
     RPAREN  shift, and go to state 164
 
 
 State 150
 
-   19 Stmt: RETURN Exp SEMICOLON .
+   19 Stmt: RETURN Exp SEMICOLON •
 
     $default  reduce using rule 19 (Stmt)
 
 
 State 151
 
-   22 Stmt: Lval ASSIGN Exp . SEMICOLON
+   22 Stmt: Lval ASSIGN Exp • SEMICOLON
 
     SEMICOLON  shift, and go to state 165
 
 
 State 152
 
-   56 ConstInitValGroup: COMMA ConstInitVal . ConstInitValGroup
+   56 ConstInitValGroup: COMMA ConstInitVal • ConstInitValGroup
 
     COMMA  shift, and go to state 137
 
@@ -1988,22 +1988,22 @@ State 152
 
 State 153
 
-   54 ConstInitVal: LBRACE ConstInitVal ConstInitValGroup RBRACE .
+   54 ConstInitVal: LBRACE ConstInitVal ConstInitValGroup RBRACE •
 
     $default  reduce using rule 54 (ConstInitVal)
 
 
 State 154
 
-   89 FuncRParamsGroup: COMMA Exp FuncRParamsGroup .
+   89 FuncRParamsGroup: COMMA Exp FuncRParamsGroup •
 
     $default  reduce using rule 89 (FuncRParamsGroup)
 
 
 State 155
 
-   23 Stmt: IF LPAREN Cond RPAREN . Stmt
-   24     | IF LPAREN Cond RPAREN . Stmt ELSE Stmt
+   23 Stmt: IF LPAREN Cond RPAREN • Stmt
+   24     | IF LPAREN Cond RPAREN • Stmt ELSE Stmt
 
     IF          shift, and go to state 104
     WHILE       shift, and go to state 105
@@ -2034,7 +2034,7 @@ State 155
 
 State 156
 
-   74 LOrExp: LOrExp OR . LAndExp
+   74 LOrExp: LOrExp OR • LAndExp
 
     Ident       shift, and go to state 35
     ADD         shift, and go to state 36
@@ -2058,7 +2058,7 @@ State 156
 
 State 157
 
-   76 LAndExp: LAndExp AND . EqExp
+   76 LAndExp: LAndExp AND • EqExp
 
     Ident       shift, and go to state 35
     ADD         shift, and go to state 36
@@ -2081,7 +2081,7 @@ State 157
 
 State 158
 
-   78 EqExp: EqExp EQUAL . RelExp
+   78 EqExp: EqExp EQUAL • RelExp
 
     Ident       shift, and go to state 35
     ADD         shift, and go to state 36
@@ -2103,7 +2103,7 @@ State 158
 
 State 159
 
-   79 EqExp: EqExp NOT_EQUAL . RelExp
+   79 EqExp: EqExp NOT_EQUAL • RelExp
 
     Ident       shift, and go to state 35
     ADD         shift, and go to state 36
@@ -2125,7 +2125,7 @@ State 159
 
 State 160
 
-   81 RelExp: RelExp LESS . AddExp
+   81 RelExp: RelExp LESS • AddExp
 
     Ident       shift, and go to state 35
     ADD         shift, and go to state 36
@@ -2146,7 +2146,7 @@ State 160
 
 State 161
 
-   82 RelExp: RelExp GREATER . AddExp
+   82 RelExp: RelExp GREATER • AddExp
 
     Ident       shift, and go to state 35
     ADD         shift, and go to state 36
@@ -2167,7 +2167,7 @@ State 161
 
 State 162
 
-   83 RelExp: RelExp LESS_EQUAL . AddExp
+   83 RelExp: RelExp LESS_EQUAL • AddExp
 
     Ident       shift, and go to state 35
     ADD         shift, and go to state 36
@@ -2188,7 +2188,7 @@ State 162
 
 State 163
 
-   84 RelExp: RelExp GREATER_EQUAL . AddExp
+   84 RelExp: RelExp GREATER_EQUAL • AddExp
 
     Ident       shift, and go to state 35
     ADD         shift, and go to state 36
@@ -2209,7 +2209,7 @@ State 163
 
 State 164
 
-   27 Stmt: WHILE LPAREN Cond RPAREN . Stmt
+   27 Stmt: WHILE LPAREN Cond RPAREN • Stmt
 
     IF          shift, and go to state 104
     WHILE       shift, and go to state 105
@@ -2240,22 +2240,22 @@ State 164
 
 State 165
 
-   22 Stmt: Lval ASSIGN Exp SEMICOLON .
+   22 Stmt: Lval ASSIGN Exp SEMICOLON •
 
     $default  reduce using rule 22 (Stmt)
 
 
 State 166
 
-   56 ConstInitValGroup: COMMA ConstInitVal ConstInitValGroup .
+   56 ConstInitValGroup: COMMA ConstInitVal ConstInitValGroup •
 
     $default  reduce using rule 56 (ConstInitValGroup)
 
 
 State 167
 
-   23 Stmt: IF LPAREN Cond RPAREN Stmt .
-   24     | IF LPAREN Cond RPAREN Stmt . ELSE Stmt
+   23 Stmt: IF LPAREN Cond RPAREN Stmt •
+   24     | IF LPAREN Cond RPAREN Stmt • ELSE Stmt
 
     ELSE  shift, and go to state 177
 
@@ -2265,8 +2265,8 @@ State 167
 
 State 168
 
-   74 LOrExp: LOrExp OR LAndExp .
-   76 LAndExp: LAndExp . AND EqExp
+   74 LOrExp: LOrExp OR LAndExp •
+   76 LAndExp: LAndExp • AND EqExp
 
     AND  shift, and go to state 157
 
@@ -2275,9 +2275,9 @@ State 168
 
 State 169
 
-   76 LAndExp: LAndExp AND EqExp .
-   78 EqExp: EqExp . EQUAL RelExp
-   79      | EqExp . NOT_EQUAL RelExp
+   76 LAndExp: LAndExp AND EqExp •
+   78 EqExp: EqExp • EQUAL RelExp
+   79      | EqExp • NOT_EQUAL RelExp
 
     EQUAL      shift, and go to state 158
     NOT_EQUAL  shift, and go to state 159
@@ -2287,11 +2287,11 @@ State 169
 
 State 170
 
-   78 EqExp: EqExp EQUAL RelExp .
-   81 RelExp: RelExp . LESS AddExp
-   82       | RelExp . GREATER AddExp
-   83       | RelExp . LESS_EQUAL AddExp
-   84       | RelExp . GREATER_EQUAL AddExp
+   78 EqExp: EqExp EQUAL RelExp •
+   81 RelExp: RelExp • LESS AddExp
+   82       | RelExp • GREATER AddExp
+   83       | RelExp • LESS_EQUAL AddExp
+   84       | RelExp • GREATER_EQUAL AddExp
 
     LESS           shift, and go to state 160
     GREATER        shift, and go to state 161
@@ -2303,11 +2303,11 @@ State 170
 
 State 171
 
-   79 EqExp: EqExp NOT_EQUAL RelExp .
-   81 RelExp: RelExp . LESS AddExp
-   82       | RelExp . GREATER AddExp
-   83       | RelExp . LESS_EQUAL AddExp
-   84       | RelExp . GREATER_EQUAL AddExp
+   79 EqExp: EqExp NOT_EQUAL RelExp •
+   81 RelExp: RelExp • LESS AddExp
+   82       | RelExp • GREATER AddExp
+   83       | RelExp • LESS_EQUAL AddExp
+   84       | RelExp • GREATER_EQUAL AddExp
 
     LESS           shift, and go to state 160
     GREATER        shift, and go to state 161
@@ -2319,9 +2319,9 @@ State 171
 
 State 172
 
-   64 AddExp: AddExp . ADD MulExp
-   65       | AddExp . SUB MulExp
-   81 RelExp: RelExp LESS AddExp .
+   64 AddExp: AddExp • ADD MulExp
+   65       | AddExp • SUB MulExp
+   81 RelExp: RelExp LESS AddExp •
 
     ADD  shift, and go to state 73
     SUB  shift, and go to state 74
@@ -2331,9 +2331,9 @@ State 172
 
 State 173
 
-   64 AddExp: AddExp . ADD MulExp
-   65       | AddExp . SUB MulExp
-   82 RelExp: RelExp GREATER AddExp .
+   64 AddExp: AddExp • ADD MulExp
+   65       | AddExp • SUB MulExp
+   82 RelExp: RelExp GREATER AddExp •
 
     ADD  shift, and go to state 73
     SUB  shift, and go to state 74
@@ -2343,9 +2343,9 @@ State 173
 
 State 174
 
-   64 AddExp: AddExp . ADD MulExp
-   65       | AddExp . SUB MulExp
-   83 RelExp: RelExp LESS_EQUAL AddExp .
+   64 AddExp: AddExp • ADD MulExp
+   65       | AddExp • SUB MulExp
+   83 RelExp: RelExp LESS_EQUAL AddExp •
 
     ADD  shift, and go to state 73
     SUB  shift, and go to state 74
@@ -2355,9 +2355,9 @@ State 174
 
 State 175
 
-   64 AddExp: AddExp . ADD MulExp
-   65       | AddExp . SUB MulExp
-   84 RelExp: RelExp GREATER_EQUAL AddExp .
+   64 AddExp: AddExp • ADD MulExp
+   65       | AddExp • SUB MulExp
+   84 RelExp: RelExp GREATER_EQUAL AddExp •
 
     ADD  shift, and go to state 73
     SUB  shift, and go to state 74
@@ -2367,14 +2367,14 @@ State 175
 
 State 176
 
-   27 Stmt: WHILE LPAREN Cond RPAREN Stmt .
+   27 Stmt: WHILE LPAREN Cond RPAREN Stmt •
 
     $default  reduce using rule 27 (Stmt)
 
 
 State 177
 
-   24 Stmt: IF LPAREN Cond RPAREN Stmt ELSE . Stmt
+   24 Stmt: IF LPAREN Cond RPAREN Stmt ELSE • Stmt
 
     IF          shift, and go to state 104
     WHILE       shift, and go to state 105
@@ -2405,6 +2405,6 @@ State 177
 
 State 178
 
-   24 Stmt: IF LPAREN Cond RPAREN Stmt ELSE Stmt .
+   24 Stmt: IF LPAREN Cond RPAREN Stmt ELSE Stmt •
 
     $default  reduce using rule 24 (Stmt)

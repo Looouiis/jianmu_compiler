@@ -83,9 +83,11 @@ return { return handle_token(RETURN);}
 [a-zA-Z_][a-zA-Z_0-9]* { return handle_token( Ident);}
 [0-9]+ { return handle_token( IntConst);}
 0[xX][0-9a-fA-F]+ {return handle_token(IntConst);}
-[0-9]+\.[0-9]+ {return handle_token(FloatConst);}
+0[0-9a-fA-F]+ {return handle_token(IntConst);}
+[0-9]*\.[0-9]* {return handle_token(FloatConst);}
 [0-9]+\.?[0-9]*e-?[0-9]+ {return handle_token(FloatConst);}
-0[xX][0-9a-fA-F]+(\.[0-9a-fA-F]+)?([pP][+-]?\d+)? {return handle_token(FloatConst);}
+[0-9]*\.[0-9]*[eE][+-]?[0-9]+ {return handle_token(FloatConst);}
+0[xX][0-9a-fA-F]*(\.[0-9a-fA-F]*)?([pP][+-]?[0-9]+)? {return handle_token(FloatConst);}
 "+" { return handle_token( ADD);}
 "-" { return handle_token( SUB); }
 "*" { return handle_token( MUL); }
