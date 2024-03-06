@@ -215,11 +215,12 @@ public:
     ptr<ir_basicblock> init_block;
     std::list<std::pair<std::string,std::shared_ptr<ir_libfunc>>> libfuncs;
     std::list<std::pair<std::string,std::shared_ptr<global_def>>> global_var;
+    int global_var_cnt = 0;
     bool enable_mem_set = false;
     ir_module(){
         this->scope = std::make_unique<ir_scope>();
         std::vector<vartype> empty;
-        this->global_init_func = std::make_shared<ir_userfunc>("global_init", global_var.size(), empty);
+        this->global_init_func = std::make_shared<ir_userfunc>("global_init", global_var_cnt, empty);
     }
     ptr<ir_userfunc> new_func(std::string name, std::vector<vartype> arg_types);
     void add_lib_func(std::string name, ptr<ir_libfunc> fun);
@@ -574,12 +575,12 @@ class memset : public ir_instr {
     friend IrBuilder;
     friend LoongArch::ProgramBuilder;
 private:
-    ptr<ir_reg> dst;
+    ptr<ir_reg> base;
     int32_t val;
     int cnt;
     bool is_volatile;
 public:
-    memset(ptr<ir_reg> dst, int32_t val, int cnt, bool is_volatile) : val(val), dst(dst), cnt(cnt), is_volatile(is_volatile) {}
+    memset(ptr<ir_reg> dst, int32_t val, int cnt, bool is_volatile) : val(val), base(dst), cnt(cnt), is_volatile(is_volatile) {}
     virtual void accept(ir_visitor& visitor) override final;
     virtual void print(std::ostream & out = std::cout) override final;
     virtual std::vector<ptr<ir::ir_value>> use_reg() override final;

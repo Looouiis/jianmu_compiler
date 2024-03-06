@@ -206,6 +206,21 @@ void LoongArch::ProgramBuilder::visit(ir::ir_module &node) {
         node.global_init_func->accept(*this);
     }
 
+    if(node.enable_mem_set) {
+        auto fun = std::make_shared<LoongArch::Function>("Looouiiis_self_memset");
+        prog->functions.emplace_back(fun);
+        auto loop_block = std::make_shared<LoongArch::Block>("Looouiiis_self_memset_loop");
+        auto ret_block = std::make_shared<LoongArch::Block>("Looouiiis_self_memset_ret");
+        loop_block->instructions.push_back(std::make_shared<LoongArch::Br>(Br::beqz, spill_use_1, ret_block.get()));
+        loop_block->instructions.push_back(std::make_shared<LoongArch::st>(Reg{0}, spill_dst, 0, st::st_w));
+        loop_block->instructions.push_back(std::make_shared<LoongArch::RegRegInst>(RegRegInst::add_d, spill_dst, spill_dst, spill_use_2));
+        loop_block->instructions.push_back(std::make_shared<LoongArch::RegRegInst>(RegRegInst::sub_d, spill_use_1, spill_use_1, spill_use_2));
+        loop_block->instructions.push_back(std::make_shared<LoongArch::Jump>(loop_block.get()));
+        ret_block->instructions.push_back(std::make_shared<LoongArch::jr>(true));
+        fun->blocks.push_back(loop_block);
+        fun->blocks.push_back(ret_block);
+    }
+
     for(auto & [name,func] : node.usrfuncs){
         this->func_name = name;
         prog->functions.emplace_back(std::make_shared<LoongArch::Function>(name));
@@ -280,11 +295,11 @@ void LoongArch::ProgramBuilder::visit(ir::ir_userfunc &node) {
     cur_func->stack_size += this->cur_mapping->used_mem;
     // cur_func->stack_size += this->cur_mapping->call_mem;
 
-    for(auto obj : node.arrobj) {
-        // this->cur_mapping->mem_var.insert({obj->addr->id, this->cur_mapping->used_mem});
-        auto offset = this->cur_mapping->mem_var.find(obj->addr->id)->second;
-        std::cout << "# " << obj->name << " -> " << -(cur_func->stack_size - offset) << std::endl; 
-    }
+    // for(auto obj : node.arrobj) {
+    //     // this->cur_mapping->mem_var.insert({obj->addr->id, this->cur_mapping->used_mem});
+    //     auto offset = this->cur_mapping->mem_var.find(obj->addr->id)->second;
+    //     std::cout << "# " << obj->name << " -> " << -(cur_func->stack_size - offset) << std::endl; 
+    // }
     
     //处理内存变量
 
@@ -1172,7 +1187,10 @@ void LoongArch::ProgramBuilder::visit(ir::trans& node) {
     is_dst = true;
     node.dst->accept(*this);
     Reg dst = pass_reg;
-    if(node.target == vartype::FLOAT) {
+    if((node.src->get_type() == vartype::BOOL || node.src->get_type() == vartype::FBOOL) && node.target == vartype::INT) {
+        // 好像是真的啥也不用做
+    }
+    else if(node.target == vartype::FLOAT) {
         cur_block->instructions.push_back(std::make_shared<LoongArch::mov>(dst, src, mov::gtf));
         cur_block->instructions.push_back(std::make_shared<LoongArch::trans>(dst, dst, trans::itf));
     }
@@ -1187,4 +1205,21 @@ void LoongArch::ProgramBuilder::visit(ir::ir_libfunc& node) {
     
 }
 
-void LoongArch::ProgramBuilder::visit(ir::memset& node) {}
+void LoongArch::ProgramBuilder::visit(ir::memset& node) {
+    auto var_it = cur_mapping->mem_var.find(node.base->id);
+    int cnt = node.cnt * node.base->size;
+    if(var_it != cur_mapping->mem_var.end()) {
+        int offset = var_it->second - cur_func->stack_size;
+        cur_block->instructions.push_back(std::make_shared<RegImmInst>(RegImmInst::addi_d, spill_dst, Reg{fp}, offset));
+    }
+    else if(node.base->is_global) {
+        cur_block->instructions.push_back(std::make_shared<la>(node.base, spill_dst, la::local));
+    }
+    else {
+        abort();
+    }
+    cur_block->instructions.push_back(std::make_shared<LoadImm>(spill_use_1, cnt));
+    // cur_block->instructions.push_back(std::make_shared<RegRegInst>(RegRegInst::add_d, spill_use_1, spill_dst, spill_use_1));
+    cur_block->instructions.push_back(std::make_shared<LoadImm>(spill_use_2, node.base->size));
+    cur_block->instructions.push_back(std::make_shared<Bl>("Looouiiis_self_memset"));
+}

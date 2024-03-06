@@ -98,7 +98,7 @@ struct RegRegInst : Inst {      //R-Type Instruction like add r1, r2 ——> r3
     {
         //Integer
         {add_w, "add.w"}, {add_d, "add.d"}, {fadd_f, "fadd.s"}, {sub_w, "sub.w"}, {fsub_f, "fsub.s"}, {mul_w, "mul.w"}, {fmul_f, "fmul.s"},  {div_w, "div.w"},  {fdiv_f, "fdiv.s"},{andw, "and"}, {orw, "or"},
-        {slt, "slt"}, {mul_d, "mul.d"}
+        {slt, "slt"}, {mul_d, "mul.d"}, {sub_d, "sub.d"}
         ,{mod_w, "mod.w"}   // 我加一个：取余
     };
     out << asm_name.find(op)->second << ' ' << dst << ", " << lhs << ", " << rhs<< '\n';

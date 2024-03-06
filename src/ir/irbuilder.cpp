@@ -17,68 +17,76 @@ void ir::IrBuilder::visit(ast::compunit_syntax &node)
     /*
         register lib functions
     */
+
+    for(auto & i : node.global_defs) {
+        auto is_def = std::dynamic_pointer_cast<ast::var_decl_stmt_syntax>(i);
+        if(is_def) {
+            this->compunit->global_var_cnt += is_def->var_def_list.size();
+        }
+    }
+
     vector<vartype> v_getint = {};
-    ptr<ir_libfunc> getint = std::make_shared<ir_libfunc>("getint", compunit->global_var.size(), v_getint);
+    ptr<ir_libfunc> getint = std::make_shared<ir_libfunc>("getint", compunit->global_var_cnt, v_getint);
     getint->set_retype(vartype::INT);
     this->functions.push_func("getint", getint);
     this->compunit->add_lib_func("getint", getint);
 
     vector<vartype> v_getch = {};
-    ptr<ir_libfunc> getch = std::make_shared<ir_libfunc>("getch", compunit->global_var.size(), v_getch);
+    ptr<ir_libfunc> getch = std::make_shared<ir_libfunc>("getch", compunit->global_var_cnt, v_getch);
     getch->set_retype(vartype::INT);
     this->functions.push_func("getch", getch);
     this->compunit->add_lib_func("getch", getch);
 
     vector<vartype> v_getarray = {vartype::INTADDR};
-    ptr<ir_libfunc> getarray = std::make_shared<ir_libfunc>("getarray", compunit->global_var.size(), v_getarray);
+    ptr<ir_libfunc> getarray = std::make_shared<ir_libfunc>("getarray", compunit->global_var_cnt, v_getarray);
     getarray->set_retype(vartype::INT);
     this->functions.push_func("getarray", getarray);
     this->compunit->add_lib_func("getarray", getarray);
 
     vector<vartype> v_getfloat = {};
-    ptr<ir_libfunc> getfloat = std::make_shared<ir_libfunc>("getfloat", compunit->global_var.size(), v_getfloat);
+    ptr<ir_libfunc> getfloat = std::make_shared<ir_libfunc>("getfloat", compunit->global_var_cnt, v_getfloat);
     getfloat->set_retype(vartype::FLOAT);
     this->functions.push_func("getfloat", getfloat);
     this->compunit->add_lib_func("getfloat", getfloat);
 
     vector<vartype> v_getfarray = {vartype::FLOATADDR};
-    ptr<ir_libfunc> getfarray = std::make_shared<ir_libfunc>("getfarray", compunit->global_var.size(), v_getfarray);
+    ptr<ir_libfunc> getfarray = std::make_shared<ir_libfunc>("getfarray", compunit->global_var_cnt, v_getfarray);
     getfarray->set_retype(vartype::INT);
     this->functions.push_func("getfarray", getfarray);
     this->compunit->add_lib_func("getfarray", getfarray);
 
     vector<vartype> v_putint = {vartype::INT};
-    ptr<ir_libfunc> putint= std::make_shared<ir_libfunc>("putint", compunit->global_var.size(), v_putint);
+    ptr<ir_libfunc> putint= std::make_shared<ir_libfunc>("putint", compunit->global_var_cnt, v_putint);
     putint->set_retype(vartype::VOID);
     this->functions.push_func("putint", putint);
     this->compunit->add_lib_func("putint", putint);
 
     vector<vartype> v_putch = {vartype::INT};
-    ptr<ir_libfunc> putch = std::make_shared<ir_libfunc>("putch", compunit->global_var.size(), v_putch);
+    ptr<ir_libfunc> putch = std::make_shared<ir_libfunc>("putch", compunit->global_var_cnt, v_putch);
     putch->set_retype(vartype::VOID);
     this->functions.push_func("putch", putch);
     this->compunit->add_lib_func("putch", putch);
 
     vector<vartype> v_putarray = {vartype::INT, vartype::INTADDR};
-    ptr<ir_libfunc> putarray = std::make_shared<ir_libfunc>("putarray", compunit->global_var.size(), v_putarray);
+    ptr<ir_libfunc> putarray = std::make_shared<ir_libfunc>("putarray", compunit->global_var_cnt, v_putarray);
     putarray->set_retype(vartype::VOID);
     this->functions.push_func("putarray", putarray);
     this->compunit->add_lib_func("putarray", putarray);
 
     vector<vartype> v_putfloat = {vartype::FLOAT};
-    ptr<ir_libfunc> putfloat = std::make_shared<ir_libfunc>("putfloat", compunit->global_var.size(), v_putfloat);
+    ptr<ir_libfunc> putfloat = std::make_shared<ir_libfunc>("putfloat", compunit->global_var_cnt, v_putfloat);
     putfloat->set_retype(vartype::VOID);
     this->functions.push_func("putfloat", putfloat);
     this->compunit->add_lib_func("putfloat", putfloat);
 
     vector<vartype> v_putfarray = {vartype::INT, vartype::FLOATADDR};
-    ptr<ir_libfunc> putfarray = std::make_shared<ir_libfunc>("putfarray", compunit->global_var.size(), v_putfarray);
+    ptr<ir_libfunc> putfarray = std::make_shared<ir_libfunc>("putfarray", compunit->global_var_cnt, v_putfarray);
     putfarray->set_retype(vartype::VOID);
     this->functions.push_func("putfarray", putfarray);
     this->compunit->add_lib_func("putfarray", putfarray);
 
     vector<vartype> v_putf = {};
-    ptr<ir_libfunc> putf = std::make_shared<ir_libfunc>("putf", compunit->global_var.size(), v_putf);
+    ptr<ir_libfunc> putf = std::make_shared<ir_libfunc>("putf", compunit->global_var_cnt, v_putf);
     putf->set_retype(vartype::VOID);
     this->functions.push_func("putf", putf);
     this->compunit->add_lib_func("putf", putf);
@@ -559,7 +567,7 @@ void ir::IrBuilder::global_init(ptr<ir::global_def> global, ptr<ast::init_syntax
             this->cur_func = compunit->global_init_func;
             if(!compunit->init_block) {
                 compunit->init_block = compunit->global_init_func->new_block();
-                compunit->global_init_func->max_reg = compunit->global_var.size();
+                compunit->global_init_func->max_reg = compunit->global_var_cnt;
                 compunit->global_init_func->set_retype(vartype::VOID);
                 compunit->init_block->push_back(std::make_shared<ir::ret>(std::make_shared<ir::ir_constant>(0), false));
             }
@@ -624,7 +632,7 @@ void ir::IrBuilder::visit(ast::var_def_stmt_syntax &node)       // self5
             pass_obj = obj;
             if(node.initializer->is_array) {
                 compunit->enable_mem_set = true;
-                cur_block->push_back(std::make_shared<ir::memset>(obj->get_addr(), 0, node.initializer->child_cnt * node.initializer->designed_size->calc_res() * obj->get_addr()->size, false));
+                cur_block->push_back(std::make_shared<ir::memset>(obj->get_addr(), 0, node.initializer->child_cnt * node.initializer->designed_size->calc_res(), false));
             }
             node.initializer->accept(*this);                        // TODO：为zero_initializer添加memset逻辑
             // if(pass_list.empty()) {
@@ -670,7 +678,7 @@ void ir::IrBuilder::visit(ast::var_def_stmt_syntax &node)       // self5
             this->cur_func = compunit->global_init_func;
             if(!compunit->init_block) {
                 compunit->init_block = compunit->global_init_func->new_block();
-                compunit->global_init_func->max_reg = compunit->global_var.size();
+                compunit->global_init_func->max_reg = compunit->global_var_cnt;
                 compunit->global_init_func->set_retype(vartype::VOID);
                 compunit->init_block->push_back(std::make_shared<ir::ret>(std::make_shared<ir::ir_constant>(0), false));
             }
@@ -679,7 +687,7 @@ void ir::IrBuilder::visit(ast::var_def_stmt_syntax &node)       // self5
 
             if(node.initializer->is_array) {
                 compunit->enable_mem_set = true;
-                cur_block->push_back(std::make_shared<ir::memset>(obj->get_addr(), 0, node.initializer->child_cnt * node.initializer->designed_size->calc_res() * obj->get_addr()->size, false));
+                cur_block->push_back(std::make_shared<ir::memset>(obj->get_addr(), 0, node.initializer->child_cnt * node.initializer->designed_size->calc_res(), false));
             }
             pass_obj = obj;
             node.initializer->accept(*this);

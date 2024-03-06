@@ -87,7 +87,7 @@ void ir::ir_basicblock::for_each(std::function<void(std::shared_ptr<ir::ir_instr
 }
 
 ptr<ir::ir_userfunc> ir::ir_module::new_func(std::string name, std::vector<vartype> arg_types) {
-  auto pfunc = std::make_shared<ir_userfunc>(name, this->global_var.size(), arg_types);
+  auto pfunc = std::make_shared<ir_userfunc>(name, this->global_var_cnt, arg_types);
   usrfuncs.push_back({name, pfunc});
   return pfunc;
 }
@@ -659,7 +659,7 @@ void ir::memset::print(std::ostream &out)
 }
 
 std::vector<ptr<ir::ir_value>> ir::memset::use_reg() {
-  return {dst};
+  return {base};
 }
 
 std::vector<ptr<ir::ir_value>> ir::memset::def_reg() {

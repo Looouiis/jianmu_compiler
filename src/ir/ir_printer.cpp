@@ -532,9 +532,9 @@ void ir::IrPrinter::visit(ir::trans &node) {
 void ir::IrPrinter::visit(ir::memset &node) {
     out << "\t";
     out << "call void @llvm.memset.p0.i64(";
-    node.dst->accept(*this);
+    node.base->accept(*this);
     out << ", i8 " << node.val;
-    out << ", i64 " << node.cnt;
+    out << ", i64 " << node.cnt * node.base->size;
     out << ", i1 " << (node.is_volatile ? "true" : "false");
     out << ")";
     out << std::endl;
