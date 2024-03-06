@@ -80,14 +80,17 @@ void LoongArch::ColoringAllocator::BuildConflictGraph() {
     allregs.push_back(funcf->addr);
   }
   for(auto block : func->bbs) {
+    for(auto alloc : func->alloc_list) {
+      arrobj.push_back(alloc->var);
+    }
     for(auto ins : block->instructions) {
-      auto is_alloc = std::dynamic_pointer_cast<ir::alloc>(ins);
-      if(is_alloc) {
-        // if(is_alloc->var->dim) {
-          arrobj.push_back(is_alloc->var);
-          // continue;
-        // }
-      }
+      // auto is_alloc = std::dynamic_pointer_cast<ir::alloc>(ins);
+      // if(is_alloc) {
+      //   // if(is_alloc->var->dim) {
+      //     arrobj.push_back(is_alloc->var);
+      //     // continue;
+      //   // }
+      // }
 
       auto is_call = std::dynamic_pointer_cast<ir::func_call>(ins);
       if(is_call) {

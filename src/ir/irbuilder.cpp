@@ -214,7 +214,8 @@ void ir::IrBuilder::visit(ast::logic_cond_syntax &node)         // self2
         auto false_block = cur_func->new_block();
         auto nxt_block = cur_func->new_block();
         auto ret_obj = cur_func->new_obj("tmp_bool", vartype::BOOL);
-        cur_block->push_back(std::make_shared<alloc>(ret_obj));
+        // cur_block->push_back(std::make_shared<alloc>(ret_obj));
+        cur_func->alloc_list.push_back(std::make_shared<alloc>(ret_obj));
         cur_block->push_back(std::make_shared<jump>(lhs_block));
         cur_block = lhs_block;
         node.lhs->accept((*this));
@@ -589,7 +590,8 @@ void ir::IrBuilder::visit(ast::var_def_stmt_syntax &node)       // self5
         }
         obj->addr->is_const = node.is_const;
         this->scope.push_var(node.name, obj);
-        cur_block->push_back(std::make_shared<ir::alloc>(obj));
+        // cur_block->push_back(std::make_shared<ir::alloc>(obj));
+        cur_func->alloc_list.push_back(std::make_shared<ir::alloc>(obj));
         if(node.initializer != nullptr) {
             // pass_list.clear();
             // node.initializer = obj
@@ -807,7 +809,8 @@ void ir::IrBuilder::visit(ast::func_f_param_syntax &node) {
         mem->addr->type = node.accept_type;
         // changeable->dim = node.dimension;
         auto changeable = this->cur_func->new_obj(node.name, node.accept_type);
-        cur_block->push_back(std::make_shared<ir::alloc>(changeable));
+        // cur_block->push_back(std::make_shared<ir::alloc>(changeable));
+        cur_func->alloc_list.push_back(std::make_shared<ir::alloc>(changeable));
         cur_block->push_back(std::make_shared<ir::store>(changeable->get_addr(), mem->get_addr()));
         this->scope.push_var(node.name, changeable);
     }

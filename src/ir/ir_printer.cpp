@@ -90,6 +90,11 @@ void ir::IrPrinter::visit(ir_userfunc &node)
         out << mapping[a->addr->type] << " " << get_reg_name(a->addr);
     }
     out << ")"<< " " <<"{" << std::endl;
+    for(auto alloc : node.alloc_list) {
+        alloc->accept(*this);
+    }
+    ir::jump to_first_bb(node.bbs.front());
+    to_first_bb.accept(*this);
     for(auto & bb : node.bbs)
         bb->accept(*this);
     out << "}" << std::endl;

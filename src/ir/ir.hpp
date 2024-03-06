@@ -260,6 +260,7 @@ private:
     std::vector<std::shared_ptr<ir::ir_reg>> regSpill;
     ptr_list<ir::ir_memobj> arrobj;
     std::list<std::pair<std::string, ptr<ir::global_def>>> current_globl;
+    ptr_list<ir::alloc> alloc_list;
 public:
     ir_userfunc(std::string name, int reg_cnt); 
     ptr<ir_memobj> new_obj(std::string name, vartype var_type);
