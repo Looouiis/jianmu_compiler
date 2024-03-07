@@ -60,6 +60,7 @@ protected:
     Reg spill_use_1 = Reg{spill_base + 1};
     Reg spill_use_2 = Reg{spill_base + 2};
     bool is_dst = false;
+    int set_cnt = 0;
     
     vector<Reg> caller_save_regs = {
         Reg{12}, Reg{13}, Reg{14}, Reg{15}, Reg{16}, Reg{17}, Reg{18}, Reg{19}, Reg{20},

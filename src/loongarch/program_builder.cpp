@@ -12,6 +12,7 @@
 #include <iomanip>
 #include <iterator>
 #include <memory>
+#include <string>
 #include <unordered_map>
 #include <variant>
 #include <vector>
@@ -293,6 +294,10 @@ void LoongArch::ProgramBuilder::visit(ir::ir_userfunc &node) {
     this->cur_mapping->call_mem += max_call * 8;
 
     cur_func->stack_size += this->cur_mapping->used_mem;
+
+    // if((cur_func->stack_size % 16) != 0) {
+        cur_func->stack_size += 16 - (cur_func->stack_size % 16);
+    // }
     // cur_func->stack_size += this->cur_mapping->call_mem;
 
     // for(auto obj : node.arrobj) {
@@ -440,6 +445,10 @@ void LoongArch::ProgramBuilder::visit(ir::ir_userfunc &node) {
             else this->next_block = nullptr;
             this->cur_mapping->rev_blockmapping[cur_func->blocks[i]]->accept(*this);
         }
+    }
+
+    for(auto block : cur_func->waiting_blocks) {
+        cur_func->blocks.push_back(block);
     }
 
     //消解phi指令
@@ -736,8 +745,8 @@ void LoongArch::ProgramBuilder::visit(ir::store &node) {
         cur_block->instructions.push_back(std::make_shared<st>(dst, reg, 0, type));
     }
     else if(node.addr->is_global) {
-        node.addr->accept(*this);
-        Reg reg = pass_reg;
+        // node.addr->accept(*this);
+        Reg reg = const_reg_r;
         cur_block->instructions.push_back(std::make_shared<la>(node.addr, reg));
         cur_block->instructions.push_back(std::make_shared<stptr>(dst, reg, 0, sttype));
     }
@@ -845,7 +854,7 @@ void LoongArch::ProgramBuilder::visit(ir::load &node) {
     }
     else if(node.addr->is_global) {
         node.addr->accept(*this);
-        Reg reg = pass_reg;
+        Reg reg = const_reg_r;
         cur_block->instructions.push_back(std::make_shared<la>(node.addr, reg));
         cur_block->instructions.push_back(std::make_shared<ldptr>(dst, reg, 0, ldtype));
     }
@@ -913,7 +922,25 @@ void LoongArch::ProgramBuilder::visit(ir::unary_op_ins &node) {
         }
     }
     else if(node.op == unaryop::op_not) {                                                               // 当op为布尔非
-        cur_block->instructions.push_back(std::make_shared<LoongArch::RegImmInst>(RegImmInst::xori, dst, src, true)); // （xori是我自己加的）
+        if(src.type == FBOOL) {
+            auto set_true = std::make_shared<LoongArch::Block>("set_true" + std::to_string(set_cnt));
+            auto set_false = std::make_shared<LoongArch::Block>("set_false" + std::to_string(set_cnt));
+            auto nxt = std::make_shared<LoongArch::Block>("after_set" + std::to_string(set_cnt));
+            set_cnt++;
+            cur_block->instructions.push_back(std::make_shared<LoongArch::Br>(Br::bceqz, src, set_true.get()));
+            cur_block->instructions.push_back(std::make_shared<LoongArch::Jump>(set_false.get()));
+            set_true->instructions.push_back(std::make_shared<LoongArch::LoadImm>(dst, 1));
+            set_true->instructions.push_back(std::make_shared<LoongArch::Jump>(nxt.get()));
+            set_false->instructions.push_back(std::make_shared<LoongArch::LoadImm>(dst, 0));
+            set_false->instructions.push_back(std::make_shared<LoongArch::Jump>(nxt.get()));
+            cur_block = nxt;
+            cur_func->waiting_blocks.push_back(set_true);
+            cur_func->waiting_blocks.push_back(set_false);
+            cur_func->waiting_blocks.push_back(nxt);
+        }
+        else {
+            cur_block->instructions.push_back(std::make_shared<LoongArch::RegImmInst>(RegImmInst::xori, dst, src, true)); // （xori是我自己加的）
+        }
     }
     check_write_back(dst);
 }
@@ -1112,8 +1139,8 @@ void LoongArch::ProgramBuilder::visit(ir::func_call& node) {
     int i_pointer = 4;
     int f_pointer = 0;
     int cur_stk = 0;
-    // if(cur_mapping->call_mem)
-        // cur_block->instructions.push_back(std::make_shared<LoongArch::RegImmInst>(RegImmInst::addi_d, Reg{sp}, Reg{sp}, -cur_mapping->call_mem));
+    if(cur_mapping->call_mem)
+        cur_block->instructions.push_back(std::make_shared<LoongArch::RegImmInst>(RegImmInst::addi_d, Reg{sp}, Reg{sp}, -cur_mapping->call_mem));
     for(auto par : node.params) {
         par->accept(*this);
         auto reg = pass_reg;
@@ -1156,8 +1183,8 @@ void LoongArch::ProgramBuilder::visit(ir::func_call& node) {
     }
     cur_block->instructions.push_back(std::make_shared<LoongArch::Bl>(node.func_name));
 
-    // if(cur_mapping->call_mem)
-    //     cur_block->instructions.push_back(std::make_shared<LoongArch::RegImmInst>(RegImmInst::addi_d, Reg{sp}, Reg{sp}, cur_mapping->call_mem));
+    if(cur_mapping->call_mem)
+        cur_block->instructions.push_back(std::make_shared<LoongArch::RegImmInst>(RegImmInst::addi_d, Reg{sp}, Reg{sp}, cur_mapping->call_mem));
     for(int i = 0; i < caller_save_regs.size(); i++) {
         cur_block->instructions.push_back(std::make_shared<LoongArch::ld>(caller_save_regs[i], Reg{sp}, 8 * i, caller_save_regs[i].is_float()? ld::fld_f : ld::ld_d));
     }

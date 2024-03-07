@@ -872,9 +872,10 @@ void ir::IrBuilder::visit(ast::exp_stmt_syntax &node) {
 }
 void ir::IrBuilder::visit(ast::while_stmt_syntax &node) {
     auto while_start = this->cur_func->new_block();
-    auto while_body = this->cur_func->new_block();
     auto out_block = this->cur_func->new_block();
-    while_body->mark_while();
+    cur_func->dealing_while = true;
+    auto while_body = this->cur_func->new_block();
+    // while_body->mark_while();
     break_list.push_back(out_block);
     continue_list.push_back(while_start);
     cur_block->push_back(std::make_shared<ir::jump>(while_start));
@@ -905,6 +906,7 @@ void ir::IrBuilder::visit(ast::while_stmt_syntax &node) {
     cur_block = out_block;
     break_list.pop_back();
     continue_list.pop_back();
+    cur_func->dealing_while = false;
 }
 void ir::IrBuilder::visit(ast::empty_stmt_syntax &node) {}
 void ir::IrBuilder::visit(ast::break_stmt_syntax &node) {

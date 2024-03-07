@@ -2,6 +2,7 @@
 #include "ir/ir.hpp"
 #include "parser/SyntaxTree.hpp"
 #include <algorithm>
+#include <cstdlib>
 #include <iterator>
 #include <memory>
 #include <pstl/glue_algorithm_defs.h>
@@ -61,6 +62,8 @@ void LoongArch::ColoringAllocator::SimplifyGraph() {
 
 void LoongArch::ColoringAllocator::Spill(std::unordered_map<std::shared_ptr<ir::ir_reg> ,std::vector<std::shared_ptr<ir::ir_reg>>> &conf_graph) {
   auto it = conf_graph.begin();
+  while(it->first->type == vartype::FBOOL && it != conf_graph.end()) it++;
+  if(it == conf_graph.end()) abort(); // Sysy中不存在bool变量，理论上fcc寄存器是用不完的
   auto del_item = it->first;
   auto vec = it->second;
   mappingToSpill.push_back(del_item);
@@ -350,6 +353,47 @@ LoongArch::ColoringAllocator::ColoringAllocator(std::shared_ptr<ir::ir_userfunc>
     int block_start = block_line_start[block];
     int block_end = block_line_end[block];
     int cur_line = block_line_end[block];
+    int ultimate_block_start = block_start;
+    int ultimate_block_end = block_end;
+    if(block->is_while_body) {
+      ptr_list<ir::ir_basicblock> block_set = {block};
+      ptr_list<ir::ir_basicblock> ins_del_list = {};
+      std::unordered_map<ptr<ir::ir_basicblock>, bool> visit;
+      while(!block_set.empty()) {
+        for(auto s_block : block_set) {
+          for(auto check_block : successor[s_block]) {
+            if(check_block->is_while_body) {
+              ultimate_block_start = std::min(ultimate_block_start, block_line_start[check_block]);
+              ultimate_block_end = std::max(ultimate_block_end, block_line_end[check_block]);
+              if(!visit[check_block])
+                ins_del_list.push_back(check_block);
+              visit[check_block] = true;
+            }
+          }
+        }
+        block_set = ins_del_list;
+        ins_del_list.clear();
+      }
+
+      block_set = {block};
+      ins_del_list = {};
+      visit.clear();
+      while(!block_set.empty()) {
+        for(auto s_block : block_set) {
+          for(auto check_block : nxt[s_block]) {
+            if(check_block->is_while_body) {
+              ultimate_block_start = std::min(ultimate_block_start, block_line_start[check_block]);
+              ultimate_block_end = std::max(ultimate_block_end, block_line_end[check_block]);
+              if(!visit[check_block])
+                ins_del_list.push_back(check_block);
+              visit[check_block] = true;
+            }
+          }
+        }
+        block_set = ins_del_list;
+        ins_del_list.clear();
+      }
+    }
     // for(auto instruction : block->instructions) {
     for(auto ins_it = block->instructions.rbegin(); ins_it != block->instructions.rend(); ins_it++) {
       auto instruction = *ins_it;
@@ -363,7 +407,7 @@ LoongArch::ColoringAllocator::ColoringAllocator(std::shared_ptr<ir::ir_userfunc>
         for(auto r : x) {
           auto reg = std::dynamic_pointer_cast<ir::ir_reg>(r);
           if(reg != nullptr)
-            mappingToInterval[reg].l = block_start;
+            mappingToInterval[reg].l = ultimate_block_start;
         }
       }
       else if(phi != nullptr) {
@@ -391,7 +435,7 @@ LoongArch::ColoringAllocator::ColoringAllocator(std::shared_ptr<ir::ir_userfunc>
         for(auto r : y) {
           auto reg = std::dynamic_pointer_cast<ir::ir_reg>(r);
           if(reg != nullptr)
-            mappingToInterval[reg].r = block_end;
+            mappingToInterval[reg].r = ultimate_block_end;
         }
       }
       else if(phi != nullptr) {

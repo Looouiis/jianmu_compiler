@@ -93,7 +93,8 @@ private:
 public:
     ir_reg(int id,vartype type,int size, bool is_global) : id(id) , type(type), size(size), is_global(is_global) {}
     // ir_reg(string global_name, vartype type, int size) : global_name(global_name), type(type), size(size), is_global(true) {}
-    bool operator==(ir_reg& rhs) {return id == rhs.id;}
+    bool operator==(const ir_reg& rhs) {return (id == rhs.id && type == rhs.type && is_global == rhs.is_global);}
+    bool operator==(ir_reg& rhs) {return (id == rhs.id && type == rhs.type && is_global == rhs.is_global);}
     bool operator<(ir_reg& rhs) {return id < rhs.id;}
     virtual void accept(ir_visitor& visitor) override final;
     virtual void print(std::ostream & out = std::cout) override final;
@@ -265,6 +266,7 @@ private:
     ptr_list<ir::ir_memobj> arrobj;
     std::list<std::pair<std::string, ptr<ir::global_def>>> current_globl;
     ptr_list<ir::alloc> alloc_list;
+    bool dealing_while = false;
 public:
     ir_userfunc(std::string name, int reg_cnt, std::vector<vartype> arg_tpyes); 
     ptr<ir_memobj> new_obj(std::string name, vartype var_type);

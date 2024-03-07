@@ -149,6 +149,9 @@ ptr<ir::ir_reg> ir::ir_userfunc::new_reg(vartype type)
 ptr<ir::ir_basicblock> ir::ir_userfunc::new_block()
 {
     auto bb = std::make_shared<ir_basicblock>(max_bb++);
+    if(dealing_while) {
+        bb->mark_while();
+    }
     this->bbs.push_back(bb);
     return bb;
 }

@@ -52,6 +52,7 @@ protected:
     std::string name;
     std::shared_ptr<LoongArch::Block> entry,ret_block;
     std::vector<std::shared_ptr<LoongArch::Block>> blocks;
+    std::vector<std::shared_ptr<LoongArch::Block>> waiting_blocks;
     std::stringstream asm_code;
     int stack_size;                                         //用来存储使用栈的字节数
     int cur_pos;                                            //用来存储当前的变量的栈帧
@@ -95,6 +96,7 @@ protected:
     std::unordered_map<std::shared_ptr<ir::ir_memobj>,std::shared_ptr<ir::ir_reg>> revAddMemObj;
 
     // std::vector<std::shared_ptr<ir::ir_reg>> spill_vec;
+    // std::vector<ir::ir_reg> spill_vec;
     std::vector<int> spill_vec;
     std::unordered_map<int, LoongArch::Reg> spill_mapping;
     // ptr_list<ir::ir_memobj> mem_var;

@@ -85,7 +85,7 @@ struct Reg {
   int offset;
   int ir_id;
   bool is_arr = false;
-  Reg(int _id = -1,Rtype _type = INT) : id(_id),type(_type),offset(0) {}
+  Reg(int _id = -1,Rtype _type = INT) : id(_id),type(_type),offset(-1) {}
   bool is_machine() const { return id < RegCount; }
   bool is_virtual() const { return id >= RegCount; }//这个就是编号大于可用的物理寄存器的东西
   bool is_float() const {return type == FLOAT;}
