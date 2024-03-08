@@ -949,6 +949,10 @@ void ir::IrBuilder::visit(ast::init_syntax &node) {
         // }
     }
     else {
+        auto is_literal = node.initializer.front();
+        if(is_literal && is_literal->calc_res() == 0) {
+            return;
+        } 
         node.initializer.front()->accept(*this);
         auto val = pass_value;
         auto obj = pass_obj;
