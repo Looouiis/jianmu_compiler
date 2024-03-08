@@ -36,6 +36,7 @@ public:
     void check_write_back(LoongArch::Reg tar);
     // std::vector<std::shared_ptr<ir::ir_reg>> loaded;
 protected:
+    void fb2gr(Reg src, Reg dst);
     std::shared_ptr<Function> cur_func;
     std::shared_ptr<Block> cur_block, next_block;
     std::string func_name;     

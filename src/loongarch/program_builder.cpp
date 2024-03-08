@@ -896,6 +896,23 @@ void LoongArch::ProgramBuilder::visit(ir::phi &node) {                  // 上�
     // }
 }
 
+void LoongArch::ProgramBuilder::fb2gr(Reg src, Reg dst) {
+    auto set_true = std::make_shared<LoongArch::Block>("set_true" + std::to_string(set_cnt));
+    auto set_false = std::make_shared<LoongArch::Block>("set_false" + std::to_string(set_cnt));
+    auto nxt = std::make_shared<LoongArch::Block>("after_set" + std::to_string(set_cnt));
+    set_cnt++;
+    cur_block->instructions.push_back(std::make_shared<LoongArch::Br>(Br::bceqz, src, set_true.get()));
+    cur_block->instructions.push_back(std::make_shared<LoongArch::Jump>(set_false.get()));
+    set_true->instructions.push_back(std::make_shared<LoongArch::LoadImm>(dst, 1));
+    set_true->instructions.push_back(std::make_shared<LoongArch::Jump>(nxt.get()));
+    set_false->instructions.push_back(std::make_shared<LoongArch::LoadImm>(dst, 0));
+    set_false->instructions.push_back(std::make_shared<LoongArch::Jump>(nxt.get()));
+    cur_block = nxt;
+    cur_func->waiting_blocks.push_back(set_true);
+    cur_func->waiting_blocks.push_back(set_false);
+    cur_func->waiting_blocks.push_back(nxt);
+}
+
 void LoongArch::ProgramBuilder::visit(ir::unary_op_ins &node) {
     is_dst = true;
     node.def_reg()[0]->accept(*this);
@@ -923,20 +940,7 @@ void LoongArch::ProgramBuilder::visit(ir::unary_op_ins &node) {
     }
     else if(node.op == unaryop::op_not) {                                                               // 当op为布尔非
         if(src.type == FBOOL) {
-            auto set_true = std::make_shared<LoongArch::Block>("set_true" + std::to_string(set_cnt));
-            auto set_false = std::make_shared<LoongArch::Block>("set_false" + std::to_string(set_cnt));
-            auto nxt = std::make_shared<LoongArch::Block>("after_set" + std::to_string(set_cnt));
-            set_cnt++;
-            cur_block->instructions.push_back(std::make_shared<LoongArch::Br>(Br::bceqz, src, set_true.get()));
-            cur_block->instructions.push_back(std::make_shared<LoongArch::Jump>(set_false.get()));
-            set_true->instructions.push_back(std::make_shared<LoongArch::LoadImm>(dst, 1));
-            set_true->instructions.push_back(std::make_shared<LoongArch::Jump>(nxt.get()));
-            set_false->instructions.push_back(std::make_shared<LoongArch::LoadImm>(dst, 0));
-            set_false->instructions.push_back(std::make_shared<LoongArch::Jump>(nxt.get()));
-            cur_block = nxt;
-            cur_func->waiting_blocks.push_back(set_true);
-            cur_func->waiting_blocks.push_back(set_false);
-            cur_func->waiting_blocks.push_back(nxt);
+            fb2gr(src, dst);
         }
         else {
             cur_block->instructions.push_back(std::make_shared<LoongArch::RegImmInst>(RegImmInst::xori, dst, src, true)); // （xori是我自己加的）
@@ -1215,7 +1219,12 @@ void LoongArch::ProgramBuilder::visit(ir::trans& node) {
     node.dst->accept(*this);
     Reg dst = pass_reg;
     if((node.src->get_type() == vartype::BOOL || node.src->get_type() == vartype::FBOOL) && node.target == vartype::INT) {
-        // 好像是真的啥也不用做
+        if(node.src->get_type() == vartype::FBOOL) {
+            fb2gr(src, dst);
+        }
+        else {
+            cur_block->instructions.push_back(std::make_shared<LoongArch::RegRegInst>(RegRegInst::add_w, dst, Reg{0}, src));
+        }
     }
     else if(node.target == vartype::FLOAT) {
         cur_block->instructions.push_back(std::make_shared<LoongArch::mov>(dst, src, mov::gtf));
