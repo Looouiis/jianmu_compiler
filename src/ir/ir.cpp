@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <set>
 #include "ir.hpp"
+#include "loongarch/arch.hpp"
 #include "loongarch/register_allocator.hpp"
 #include "parser/SyntaxTree.hpp"
 #include <functional>
@@ -118,13 +119,13 @@ void ir::ir_module::print(std::ostream & out)
 void ir::ir_module::reg_allocate(int base_reg, ptr_list<global_def> global_var) {
     if(this->init_block) {
         LoongArch::ColoringAllocator allocator(this->global_init_func, base_reg, global_var);
-        auto ret = allocator.run();
-        this->global_init_func->reg_allocate(ret.mapping_to_reg, ret.mapping_to_spill, ret.arrobj);
+        // auto ret = allocator.run();
+        this->global_init_func->reg_allocate(allocator);
     }
     for(auto & [name, func] : this->usrfuncs){
         LoongArch::ColoringAllocator allocator(func, base_reg, global_var);     // 我修改了allocator的构造函数
-        auto ret = allocator.run();                                 // 我也修改了run方法的返回值
-        func->reg_allocate(ret.mapping_to_reg, ret.mapping_to_spill, ret.arrobj);
+        // auto ret = allocator.run();                                 // 我也修改了run方法的返回值
+        func->reg_allocate(allocator);
     }
 }
 
@@ -184,10 +185,35 @@ std::vector<ptr<ir::ir_basicblock>> ir::ir_userfunc::GetLinerSequence()
    
 }
 
-void ir::ir_userfunc::reg_allocate(std::unordered_map<std::shared_ptr<ir::ir_reg>, LoongArch::Reg> map, std::vector<std::shared_ptr<ir::ir_reg>> spill, std::vector<std::shared_ptr<ir::ir_memobj>> arrobj) {
-    regAllocateOut = map;       // 成功分配的寄存器映射
-    regSpill = spill;           // 无法分配，被流放到内存中的寄存器
-    this->arrobj = arrobj;
+void ir::ir_userfunc::reg_allocate(LoongArch::ColoringAllocator allocator) {
+
+    auto ret_int = allocator.run(LoongArch::Rtype::INT);
+    for(auto res : ret_int.mapping_to_reg) {
+        regAllocateOut.insert(res);
+    }
+    for(auto res : ret_int.mapping_to_spill) {
+        regSpill.push_back(res);
+    }
+    auto ret_float = allocator.run(LoongArch::Rtype::FLOAT);
+    for(auto res : ret_float.mapping_to_reg) {
+        regAllocateOut.insert(res);
+    }
+    for(auto res : ret_float.mapping_to_spill) {
+        regSpill.push_back(res);
+    }
+    auto ret_fbool = allocator.run(LoongArch::Rtype::FBOOL);
+    for(auto res : ret_fbool.mapping_to_reg) {
+        regAllocateOut.insert(res);
+    }
+    for(auto res : ret_fbool.mapping_to_spill) {
+        regSpill.push_back(res);
+    }
+    for(auto alloc : this->alloc_list) {
+        this->arrobj.push_back(alloc->get_var());
+    }
+    // regAllocateOut = map;       // 成功分配的寄存器映射
+    // regSpill = spill;           // 无法分配，被流放到内存中的寄存器
+    // this->arrobj = arrobj;
 }
 
 void ir::ir_userfunc::save_current_globl(std::list<std::pair<std::string, ptr<ir::global_def>>> current_globl) {

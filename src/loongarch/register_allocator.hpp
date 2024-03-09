@@ -38,7 +38,7 @@ class ColoringAllocator {
   std::vector<std::shared_ptr<ir::ir_reg>> non_conf_regs;
   std::vector<std::shared_ptr<ir::ir_reg>> mappingToSpill;
   ptr_list<ir::global_def> global_var;
-  vector<Reg> i_color = {Reg{12}, Reg{13}, Reg{14}};
+  vector<Reg> i_color = {Reg{12}, Reg{13}};
   vector<Reg> f_color = {
     Reg(8, FLOAT),
     Reg(9, FLOAT),
@@ -76,10 +76,12 @@ class ColoringAllocator {
   void BuildConflictGraph();
   // std::pair<std::unordered_map<std::shared_ptr<ir::ir_reg>,int>, std::vector<std::shared_ptr<ir::ir_reg>>> getAllocate();
   alloc_res getAllocate();
+  std::function<bool(const ptr<ir::ir_reg>)> is_target;
+  Rtype dealing;
  public:
   ColoringAllocator(std::shared_ptr<ir::ir_userfunc> _func, int base_reg, ptr_list<ir::global_def> global_var);
   // std::pair<std::unordered_map<std::shared_ptr<ir::ir_reg>,int>, std::vector<std::shared_ptr<ir::ir_reg>>> run();
-  alloc_res run();
+  alloc_res run(Rtype target);
 };
 
 struct alloc_res {

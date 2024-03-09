@@ -276,7 +276,7 @@ public:
     virtual void print(std::ostream & out = std::cout) override;
     std::unordered_map<ptr<ir::ir_value>,Pass::LiveInterval> GetLiveInterval();
     std::vector<std::shared_ptr<ir_basicblock>> GetLinerSequence();
-    virtual void reg_allocate(std::unordered_map<std::shared_ptr<ir::ir_reg>, LoongArch::Reg> map, std::vector<std::shared_ptr<ir::ir_reg>> spill, std::vector<std::shared_ptr<ir::ir_memobj>> arrobj);
+    virtual void reg_allocate(LoongArch::ColoringAllocator allocator);
     void save_current_globl(std::list<std::pair<std::string, ptr<ir::global_def>>> current_globl);
 };
 
@@ -373,6 +373,7 @@ class alloc : public reg_write_ins {
     ptr<ir_memobj> var;
 public:
     alloc(ptr<ir_memobj>  var):var(var){}
+    ptr<ir_memobj> get_var() {return var;}
     virtual void accept(ir_visitor& visitor) override final;
     virtual void print(std::ostream & out = std::cout) override final;
     virtual std::vector<ptr<ir::ir_value>> use_reg() override final;

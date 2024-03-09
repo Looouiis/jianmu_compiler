@@ -949,7 +949,7 @@ void ir::IrBuilder::visit(ast::init_syntax &node) {
         // }
     }
     else {
-        auto is_literal = node.initializer.front();
+        auto is_literal = std::dynamic_pointer_cast<ast::literal_syntax>(node.initializer.front());
         if(is_literal && is_literal->calc_res() == 0) {
             return;
         } 

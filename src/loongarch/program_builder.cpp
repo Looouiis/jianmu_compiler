@@ -296,7 +296,7 @@ void LoongArch::ProgramBuilder::visit(ir::ir_userfunc &node) {
     cur_func->stack_size += this->cur_mapping->used_mem;
 
     // if((cur_func->stack_size % 16) != 0) {
-        cur_func->stack_size += 16 - (cur_func->stack_size % 16);
+        // cur_func->stack_size += 16 - (cur_func->stack_size % 16);
     // }
     // cur_func->stack_size += this->cur_mapping->call_mem;
 

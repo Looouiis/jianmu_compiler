@@ -1,5 +1,6 @@
 #include "register_allocator.hpp"
 #include "ir/ir.hpp"
+#include "loongarch/arch.hpp"
 #include "parser/SyntaxTree.hpp"
 #include <algorithm>
 #include <cstdlib>
@@ -12,21 +13,13 @@
 void LoongArch::ColoringAllocator::SimplifyGraph() {
   auto conf_graph = conflictGraph;
   bool try_again = true;
+  color_count = (this->dealing == Rtype::INT ? i_color.size() : (this->dealing == Rtype::FLOAT ? f_color.size() : fb_color.size()));
   while(try_again) {
     bool changed = true;
     while(changed) {
       changed = false;
       std::vector<std::shared_ptr<ir::ir_reg>> del_list;
       for(auto [reg, vec] : conf_graph) {
-        if(reg->type == vartype::FLOAT) {
-          color_count = f_color.size();
-        }
-        else if(reg->type == vartype::FBOOL) {
-          color_count = fb_color.size();
-        }
-        else {
-          color_count = i_color.size();
-        }
         if(vec.size() < color_count) {
           s.push_back(reg);
           changed = true;
@@ -61,9 +54,8 @@ void LoongArch::ColoringAllocator::SimplifyGraph() {
 }
 
 void LoongArch::ColoringAllocator::Spill(std::unordered_map<std::shared_ptr<ir::ir_reg> ,std::vector<std::shared_ptr<ir::ir_reg>>> &conf_graph) {
+  if(dealing == Rtype::FBOOL) abort(); // 暂未在龙芯文档上查找到如何直接存储fcc寄存器到内存中
   auto it = conf_graph.begin();
-  while(it->first->type == vartype::FBOOL && it != conf_graph.end()) it++;
-  if(it == conf_graph.end()) abort(); // Sysy中不存在bool变量，理论上fcc寄存器是用不完的
   auto del_item = it->first;
   auto vec = it->second;
   mappingToSpill.push_back(del_item);
@@ -77,15 +69,18 @@ void LoongArch::ColoringAllocator::Spill(std::unordered_map<std::shared_ptr<ir::
 
 void LoongArch::ColoringAllocator::BuildConflictGraph() {
   for(auto global : func->current_globl) {
-    allregs.push_back(global.second->obj->addr);
+    if(is_target(global.second->obj->addr))
+      allregs.push_back(global.second->obj->addr);
   }
   for(auto funcf : func->func_args) {
-    allregs.push_back(funcf->addr);
+    if(is_target(funcf->addr))
+      allregs.push_back(funcf->addr);
+  }
+  for(auto alloc : func->alloc_list) {
+    if(is_target(alloc->var->addr))
+      allregs.push_back(alloc->var->addr);
   }
   for(auto block : func->bbs) {
-    for(auto alloc : func->alloc_list) {
-      arrobj.push_back(alloc->var);
-    }
     for(auto ins : block->instructions) {
       // auto is_alloc = std::dynamic_pointer_cast<ir::alloc>(ins);
       // if(is_alloc) {
@@ -102,7 +97,7 @@ void LoongArch::ColoringAllocator::BuildConflictGraph() {
 
       for(auto raw_reg : ins->def_reg()) {
         auto reg = std::dynamic_pointer_cast<ir::ir_reg>(raw_reg);
-        if(reg != nullptr) {
+        if(reg != nullptr && is_target(reg)) {
           allregs.push_back(reg);
         }
       }
@@ -151,44 +146,41 @@ LoongArch::alloc_res LoongArch::ColoringAllocator::getAllocate() {
   SimplifyGraph();
   auto stk = s;
   std::vector<std::shared_ptr<ir::ir_reg>> colored;
-  std::unordered_map<std::shared_ptr<ir::ir_reg>, Reg> *color_map;
-  std::unordered_map<std::shared_ptr<ir::ir_reg>, Reg> i_color_map;
-  std::unordered_map<std::shared_ptr<ir::ir_reg>, Reg> f_color_map;
-  std::unordered_map<std::shared_ptr<ir::ir_reg>, Reg> fb_color_map;
+  std::unordered_map<std::shared_ptr<ir::ir_reg>, Reg> color_map;
+  vector<Reg> using_color = (this->dealing == Rtype::INT ? i_color : (this->dealing == Rtype::FLOAT ? f_color : fb_color));
+  auto conflit_graph = conflictGraph;
+  for(auto spilled : mappingToSpill) {
+    auto vec = conflit_graph[spilled];
+    for(auto tar : vec) {
+      conflit_graph[tar].erase(std::remove(conflit_graph[tar].begin(), conflit_graph[tar].end(), spilled), conflit_graph[tar].end());
+    }
+    conflit_graph.erase(spilled);
+  }
   // std::vector<int> total_color;
   // for(int i = 0; i < color_count; i++) total_color.push_back(i);
   while(stk.size()) {
-    vector<Reg> available_color;
     // auto available_i = i_color;
     // auto available_f = f_color;
     auto reg = stk.back();
-    if(reg->get_type() == vartype::FLOAT/* || reg->get_type() == vartype::FLOATADDR*/) {
-      available_color = f_color;
-      color_map = &f_color_map;
-    }
-    else if(reg->get_type() == vartype::FBOOL || reg->get_type() == vartype::FBOOLADDR) {
-      available_color = fb_color;
-      color_map = &fb_color_map;
-    }
-    else {
-      available_color = i_color;
-      color_map = &i_color_map;
-    }
     stk.pop_back();
-    if(available_color.empty()) {
-      mappingToSpill.push_back(reg);
-      continue;
-    }
-    for(auto [c, color] : *color_map) {
-      auto it = std::find(conflictGraph[reg].begin(), conflictGraph[reg].end(), c);
-      if(it != conflictGraph[reg].end()) {
+    // if(available_color.empty()) {
+    //   mappingToSpill.push_back(reg);
+    //   continue;
+    // }
+    auto available_color = using_color;
+    for(auto [c, color] : color_map) {
+      auto it = std::find(conflit_graph[reg].begin(), conflit_graph[reg].end(), c);
+      if(it != conflit_graph[reg].end()) {
         available_color.erase(std::remove(available_color.begin(), available_color.end(), color), available_color.end());
       }
     }
     if(available_color.size()) {
       // mappingToReg[reg] = available_color[0] + base_reg;
       mappingToReg[reg] = available_color.front();
-      (*color_map)[reg] = available_color.front();
+      color_map[reg] = available_color.front();
+    }
+    else {
+      abort();
     }
   }
 
@@ -456,10 +448,37 @@ LoongArch::ColoringAllocator::ColoringAllocator(std::shared_ptr<ir::ir_userfunc>
     }
   }
 
-  // ir::ir_basicblock a;
-  this->BuildConflictGraph();
 }
 
-LoongArch::alloc_res LoongArch::ColoringAllocator::run() {
+LoongArch::alloc_res LoongArch::ColoringAllocator::run(LoongArch::Rtype target) {
+  switch (target) {
+    case Rtype::INT: {
+      is_target = [](ptr<ir::ir_reg> ireg) {
+        return ireg->type != vartype::FLOAT && ireg->type != vartype::FBOOL;
+      };
+      break;
+    }
+    case Rtype::FLOAT: {
+      is_target = [](ptr<ir::ir_reg> ireg) {
+        return ireg->type == vartype::FLOAT;
+      };
+      break;
+    }
+    case Rtype::FBOOL: {
+      is_target = [](ptr<ir::ir_reg> ireg) {
+        return ireg->type == vartype::FBOOL;
+      };
+      break;
+    }
+  }
+  this->dealing = target;
+  allregs.clear();
+  conflictGraph.clear();
+  non_conf_regs.clear();
+  arrobj.clear();
+  s.clear();
+  mappingToSpill.clear();
+  mappingToReg.clear();
+  this->BuildConflictGraph();
   return this->getAllocate();
 }
