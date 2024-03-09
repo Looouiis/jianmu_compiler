@@ -847,6 +847,7 @@ void ir::IrBuilder::visit(ast::func_f_param_syntax &node) {
     // }
     // else {
         mem = this->cur_func->new_obj(node.name, node.accept_type);
+        mem->addr->is_param = true;
     // }
     if(node.dimension) {
         mem->dim = node.dimension;
@@ -873,6 +874,7 @@ void ir::IrBuilder::visit(ast::exp_stmt_syntax &node) {
 void ir::IrBuilder::visit(ast::while_stmt_syntax &node) {
     auto while_start = this->cur_func->new_block();
     auto out_block = this->cur_func->new_block();
+    auto dealing_status_backup = cur_func->dealing_while;
     cur_func->dealing_while = true;
     auto while_body = this->cur_func->new_block();
     // while_body->mark_while();
@@ -906,7 +908,7 @@ void ir::IrBuilder::visit(ast::while_stmt_syntax &node) {
     cur_block = out_block;
     break_list.pop_back();
     continue_list.pop_back();
-    cur_func->dealing_while = false;
+    cur_func->dealing_while = dealing_status_backup;
 }
 void ir::IrBuilder::visit(ast::empty_stmt_syntax &node) {}
 void ir::IrBuilder::visit(ast::break_stmt_syntax &node) {

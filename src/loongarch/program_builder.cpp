@@ -296,7 +296,7 @@ void LoongArch::ProgramBuilder::visit(ir::ir_userfunc &node) {
     cur_func->stack_size += this->cur_mapping->used_mem;
 
     // if((cur_func->stack_size % 16) != 0) {
-        // cur_func->stack_size += 16 - (cur_func->stack_size % 16);
+        cur_func->stack_size += 16 - (cur_func->stack_size % 16);
     // }
     // cur_func->stack_size += this->cur_mapping->call_mem;
 
@@ -1170,10 +1170,23 @@ void LoongArch::ProgramBuilder::visit(ir::func_call& node) {
         }
         else {
             if(i_pointer < 12) {
-                cur_block->instructions.push_back(std::make_shared<RegRegInst>(RegRegInst::add_d, Reg{i_pointer++}, reg, Reg{0}));
+                if(reg.id >= 5 && reg.id <= 11 && reg.type != FBOOL) {
+                    auto it = std::find(caller_save_regs.begin(), caller_save_regs.end(), reg);
+                    int offset = std::distance(caller_save_regs.begin(), it) * 8 + cur_mapping->call_mem;
+                    cur_block->instructions.push_back(std::make_shared<ld>(Reg{i_pointer++}, Reg{sp}, offset, ld::ld_d));
+                }
+                else
+                    cur_block->instructions.push_back(std::make_shared<RegRegInst>(RegRegInst::add_d, Reg{i_pointer++}, reg, Reg{0}));
             }
             else {
                 // cur_block->instructions.push_back(std::make_shared<stptr>(reg, Reg{sp}, 8 * (i_pointer++) - 12, stptr::st_d));
+                if(reg.id >= 5 && reg.id <= 11 && reg.type != FBOOL) {
+                    auto it = std::find(caller_save_regs.begin(), caller_save_regs.end(), reg);
+                    int offset = std::distance(caller_save_regs.begin(), it) * 8 + cur_mapping->call_mem;
+                    cur_block->instructions.push_back(std::make_shared<ld>(const_reg_r, Reg{sp}, offset, ld::ld_d));
+                    const_reg_r.type = reg.type;
+                    reg = const_reg_r;
+                }
                 auto par_reg = std::dynamic_pointer_cast<ir::ir_reg>(par);
                 if(par_reg && par_reg->is_arr) {
                     cur_block->instructions.push_back(std::make_shared<st>(reg, Reg{sp}, cur_stk, st::st_d));

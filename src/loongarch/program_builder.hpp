@@ -64,7 +64,7 @@ protected:
     int set_cnt = 0;
     
     vector<Reg> caller_save_regs = {
-        Reg{12}, Reg{13}, Reg{14}, Reg{15}, Reg{16}, Reg{17}, Reg{18}, Reg{19}, Reg{20},
+        Reg{5}, Reg{6}, Reg{7}, Reg{8}, Reg{9}, Reg{10}, Reg{11}, Reg{12}, Reg{13}, Reg{14}, Reg{15}, Reg{16}, Reg{17}, Reg{18}, Reg{19}, Reg{20},
         Reg{8, FLOAT}, Reg{9, FLOAT}, Reg{10, FLOAT}, Reg{11, FLOAT}, Reg{12, FLOAT}, Reg{13, FLOAT}, Reg{14, FLOAT}, Reg{15, FLOAT},
         Reg{16, FLOAT}, Reg{17, FLOAT}, Reg{18, FLOAT}, Reg{19, FLOAT}, Reg{20, FLOAT}, Reg{21, FLOAT}, Reg{22, FLOAT}, Reg{23, FLOAT}
     };

@@ -14,13 +14,22 @@ void LoongArch::ColoringAllocator::SimplifyGraph() {
   auto conf_graph = conflictGraph;
   bool try_again = true;
   color_count = (this->dealing == Rtype::INT ? i_color.size() : (this->dealing == Rtype::FLOAT ? f_color.size() : fb_color.size()));
+  int param_num = 0;
+  if(dealing == INT)
+    for(auto reg : i_color) {
+      if(reg.id >= 5 && reg.id <=11) {
+        param_num++;
+      }
+    }
   while(try_again) {
     bool changed = true;
     while(changed) {
       changed = false;
+      // std::clog << "当前冲突图个数：" << conf_graph.size() << std::endl;
       std::vector<std::shared_ptr<ir::ir_reg>> del_list;
       for(auto [reg, vec] : conf_graph) {
-        if(vec.size() < color_count) {
+        int cnt = color_count - (reg->is_param ? param_num : 0);
+        if(vec.size() < cnt) {
           s.push_back(reg);
           changed = true;
           del_list.push_back(reg);
@@ -103,17 +112,22 @@ void LoongArch::ColoringAllocator::BuildConflictGraph() {
       }
     }
   }
-  for(auto reg : allregs) {
-    for(auto examine : allregs) {
+  for(int i = 0; i < allregs.size(); i++) {
+    auto reg = allregs[i];
+    for(int j = i + 1; j < allregs.size(); j++) {
+      auto examine = allregs[j];
       if(examine != reg && conflict(reg, examine)) {
         conflictGraph[reg].push_back(examine);
+        conflictGraph[examine].push_back(reg);
       }
+      // std::clog << "now at " << reg->id << " with " << examine->id << std::endl;
     }
     auto it = conflictGraph.find(reg);
     if(it == conflictGraph.end()) {
       non_conf_regs.push_back(reg);
     }
   }
+  // std::clog << "寄存器冲突图分析完毕" <<std::endl;
 }
 
 bool LoongArch::ColoringAllocator::conflict(std::shared_ptr<ir::ir_reg> r1, std::shared_ptr<ir::ir_reg> r2) {
@@ -143,7 +157,9 @@ bool LoongArch::ColoringAllocator::conflict(std::shared_ptr<ir::ir_reg> r1, std:
 // }
 
 LoongArch::alloc_res LoongArch::ColoringAllocator::getAllocate() {
+  // std::clog << "简化冲突图中" << std::endl;
   SimplifyGraph();
+  // std::clog << "简化冲突图完毕" << std::endl;
   auto stk = s;
   std::vector<std::shared_ptr<ir::ir_reg>> colored;
   std::unordered_map<std::shared_ptr<ir::ir_reg>, Reg> color_map;
@@ -159,6 +175,7 @@ LoongArch::alloc_res LoongArch::ColoringAllocator::getAllocate() {
   // std::vector<int> total_color;
   // for(int i = 0; i < color_count; i++) total_color.push_back(i);
   while(stk.size()) {
+    // std::clog << "正在为寄存器进行染色，剩余" << stk.size() << std::endl;
     // auto available_i = i_color;
     // auto available_f = f_color;
     auto reg = stk.back();
@@ -167,7 +184,17 @@ LoongArch::alloc_res LoongArch::ColoringAllocator::getAllocate() {
     //   mappingToSpill.push_back(reg);
     //   continue;
     // }
-    auto available_color = using_color;
+    vector<Reg> available_color;
+    if(reg->is_param && dealing == INT) {
+      for(auto color : using_color) {
+        if(!(color.id >= 5 && color.id <=11)) {
+          available_color.push_back(color);
+        }
+      }
+    }
+    else {
+      available_color = using_color;
+    }
     for(auto [c, color] : color_map) {
       auto it = std::find(conflit_graph[reg].begin(), conflit_graph[reg].end(), c);
       if(it != conflit_graph[reg].end()) {
@@ -183,7 +210,7 @@ LoongArch::alloc_res LoongArch::ColoringAllocator::getAllocate() {
       abort();
     }
   }
-
+  // std::clog << "寄存器分配完毕" << std::endl;
   return alloc_res(this->mappingToReg, this->mappingToSpill, this->arrobj);
 }
 
@@ -386,20 +413,25 @@ LoongArch::ColoringAllocator::ColoringAllocator(std::shared_ptr<ir::ir_userfunc>
         ins_del_list.clear();
       }
     }
+    ptr_list<ir::ir_reg> judge_list;
     // for(auto instruction : block->instructions) {
     for(auto ins_it = block->instructions.rbegin(); ins_it != block->instructions.rend(); ins_it++) {
       auto instruction = *ins_it;
       auto x = instruction->def_reg();
       auto phi = std::dynamic_pointer_cast<ir::phi>(instruction);
       auto get = std::dynamic_pointer_cast<ir::get_element_ptr>(instruction);
+      auto is_call = std::dynamic_pointer_cast<ir::func_call>(instruction);
       if(get) {
         auto ss = get->base->addr->id;
       }
       if(block->is_while_body) {
         for(auto r : x) {
           auto reg = std::dynamic_pointer_cast<ir::ir_reg>(r);
-          if(reg != nullptr)
+          if(reg != nullptr) {
             mappingToInterval[reg].l = ultimate_block_start;
+            if(is_call)
+              judge_list.push_back(reg);
+          }
         }
       }
       else if(phi != nullptr) {
@@ -419,6 +451,8 @@ LoongArch::ColoringAllocator::ColoringAllocator(std::shared_ptr<ir::ir_userfunc>
             else {
               mappingToInterval[reg].l = cur_line + 1;
             }
+            if(is_call)
+              judge_list.push_back(reg);
           }
         }
       }
@@ -427,7 +461,7 @@ LoongArch::ColoringAllocator::ColoringAllocator(std::shared_ptr<ir::ir_userfunc>
         for(auto r : y) {
           auto reg = std::dynamic_pointer_cast<ir::ir_reg>(r);
           if(reg != nullptr)
-            mappingToInterval[reg].r = ultimate_block_end;
+            mappingToInterval[reg].r = std::max(mappingToInterval[reg].r, ultimate_block_end);
         }
       }
       else if(phi != nullptr) {
@@ -445,6 +479,11 @@ LoongArch::ColoringAllocator::ColoringAllocator(std::shared_ptr<ir::ir_userfunc>
         }
       }
       cur_line--;
+    }
+    for(auto judge_tar : judge_list) {
+      if(mappingToInterval[judge_tar].r == 0) {       // 情况：存在返回值的函数但没有使用该返回值（激进点应该可以直接把它从allregs中删掉了，有待测试）
+        mappingToInterval[judge_tar].r = block_end;
+      }
     }
   }
 

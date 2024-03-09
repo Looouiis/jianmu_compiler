@@ -90,6 +90,7 @@ private:
     bool is_global;
     bool is_const;
     bool is_arr = false;
+    bool is_param = false;
 public:
     ir_reg(int id,vartype type,int size, bool is_global) : id(id) , type(type), size(size), is_global(is_global) {}
     // ir_reg(string global_name, vartype type, int size) : global_name(global_name), type(type), size(size), is_global(true) {}
