@@ -2,9 +2,13 @@
 #include "ir/irbuilder.hpp"
 #include "ir/ir_printer.hpp"
 #include "loongarch/program_builder.hpp"
+#include "passes/pass.hpp"
+#include "passes/pass_manager.hpp"
 #include <fstream>
 #include <iostream>
+#include <memory>
 #include <stdlib.h>
+
 ast::SyntaxTree syntax_tree;
 int main(){
     ast::parse_file(std::cin);
@@ -14,6 +18,10 @@ int main(){
     
     // std::shared_ptr<ir::IrPrinter> irprinter = std::make_shared<ir::IrPrinter>();
     // irbuilder->compunit->accept(*irprinter);
+
+    Passes::PassManager pass_manager(irbuilder->compunit);
+    pass_manager.add_pass(Passes::PassType::MEM2REG);
+    // pass_manager->run();
 
     //下面是后端的部分
     std::shared_ptr<LoongArch::ProgramBuilder> progbuilder= std::make_shared<LoongArch::ProgramBuilder>();
