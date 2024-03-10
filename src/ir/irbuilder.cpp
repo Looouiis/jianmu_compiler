@@ -91,6 +91,18 @@ void ir::IrBuilder::visit(ast::compunit_syntax &node)
     this->functions.push_func("putf", putf);
     this->compunit->add_lib_func("putf", putf);
 
+    vector<vartype> v_starttime = {vartype::INT};
+    ptr<ir_libfunc> starttime = std::make_shared<ir_libfunc>("_sysy_starttime", compunit->global_var_cnt, v_starttime);
+    starttime->set_retype(vartype::VOID);
+    this->functions.push_func("starttime", starttime);
+    this->compunit->add_lib_func("_sysy_starttime", starttime);
+
+    vector<vartype> v_stoptime = {vartype::INT};
+    ptr<ir_libfunc> stoptime = std::make_shared<ir_libfunc>("_sysy_stoptime", compunit->global_var_cnt, v_stoptime);
+    stoptime->set_retype(vartype::VOID);
+    this->functions.push_func("stoptime", stoptime);
+    this->compunit->add_lib_func("_sysy_stoptime", stoptime);
+
     // this->functions.push_func(, );
     /*
         visit children
@@ -1016,7 +1028,7 @@ void ir::IrBuilder::visit(ast::init_syntax &node) {
 void ir::IrBuilder::visit(ast::func_call_syntax &node) {
     ptr_list<ir::ir_value> params;
     auto func = this->functions.find_func(node.func_name);
-    assert(node.params.size() == func->arg_types.size());
+    assert(func->name == "_sysy_starttime" || func->name == "_sysy_stoptime" || node.params.size() == func->arg_types.size());
     for(int i = 0; i < node.params.size(); i++) {
         auto par = node.params[i];
         par->accept(*this);
@@ -1029,7 +1041,12 @@ void ir::IrBuilder::visit(ast::func_call_syntax &node) {
         }
         params.push_back(ret);
     }
-    auto call_ins = std::make_shared<ir::func_call>(node.func_name, params, func->get_rettype());
+    if(func->name == "_sysy_starttime" || func->name == "_sysy_stoptime") {
+        ast::literal_syntax(node.line).accept(*this);
+        auto ret = pass_value;
+        params.push_back(ret);
+    }
+    auto call_ins = std::make_shared<ir::func_call>(func->name, params, func->get_rettype());
     if(func->get_rettype() != vartype::VOID) {
         auto dst = cur_func->new_reg(func->get_rettype());
         call_ins->ret_reg = dst;

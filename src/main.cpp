@@ -21,7 +21,7 @@ int main(){
 
     Passes::PassManager pass_manager(irbuilder->compunit);
     pass_manager.add_pass(Passes::PassType::MEM2REG);
-    // pass_manager->run();
+    pass_manager.run();
 
     //下面是后端的部分
     std::shared_ptr<LoongArch::ProgramBuilder> progbuilder= std::make_shared<LoongArch::ProgramBuilder>();

@@ -25,7 +25,8 @@ void LoongArch::ColoringAllocator::SimplifyGraph() {
     bool changed = true;
     while(changed) {
       changed = false;
-      // std::clog << "当前冲突图个数：" << conf_graph.size() << std::endl;
+      if(log_status)
+        std::clog << "当前冲突图中节点个数：" << conf_graph.size() << std::endl;
       std::vector<std::shared_ptr<ir::ir_reg>> del_list;
       for(auto [reg, vec] : conf_graph) {
         int cnt = color_count - (reg->is_param ? param_num : 0);
@@ -68,6 +69,8 @@ void LoongArch::ColoringAllocator::Spill(std::unordered_map<std::shared_ptr<ir::
   auto del_item = it->first;
   auto vec = it->second;
   mappingToSpill.push_back(del_item);
+  if(log_status)
+    std::clog << del_item->id << "被放置到内存了" << std::endl;
 
   // conf_graph.erase(it);
   for(auto tar : vec) {
@@ -112,6 +115,9 @@ void LoongArch::ColoringAllocator::BuildConflictGraph() {
       }
     }
   }
+  log_status = allregs.size() > log_limit;
+  if(log_status)
+    std::ios_base::sync_with_stdio(false);
   for(int i = 0; i < allregs.size(); i++) {
     auto reg = allregs[i];
     for(int j = i + 1; j < allregs.size(); j++) {
@@ -120,14 +126,16 @@ void LoongArch::ColoringAllocator::BuildConflictGraph() {
         conflictGraph[reg].push_back(examine);
         conflictGraph[examine].push_back(reg);
       }
-      // std::clog << "now at " << reg->id << " with " << examine->id << std::endl;
+      if(log_status)
+        std::clog << "正在为寄存器\t" << reg->id << "\t分析与\t" << examine->id << "\t的冲突情况" << std::endl;
     }
     auto it = conflictGraph.find(reg);
     if(it == conflictGraph.end()) {
       non_conf_regs.push_back(reg);
     }
   }
-  // std::clog << "寄存器冲突图分析完毕" <<std::endl;
+  if(log_status)
+    std::clog << "寄存器冲突图分析完毕" <<std::endl;
 }
 
 bool LoongArch::ColoringAllocator::conflict(std::shared_ptr<ir::ir_reg> r1, std::shared_ptr<ir::ir_reg> r2) {
@@ -157,9 +165,11 @@ bool LoongArch::ColoringAllocator::conflict(std::shared_ptr<ir::ir_reg> r1, std:
 // }
 
 LoongArch::alloc_res LoongArch::ColoringAllocator::getAllocate() {
-  // std::clog << "简化冲突图中" << std::endl;
+  if(log_status)
+    std::clog << "简化冲突图中" << std::endl;
   SimplifyGraph();
-  // std::clog << "简化冲突图完毕" << std::endl;
+  if(log_status)
+    std::clog << "简化冲突图完毕" << std::endl;
   auto stk = s;
   std::vector<std::shared_ptr<ir::ir_reg>> colored;
   std::unordered_map<std::shared_ptr<ir::ir_reg>, Reg> color_map;
@@ -175,7 +185,8 @@ LoongArch::alloc_res LoongArch::ColoringAllocator::getAllocate() {
   // std::vector<int> total_color;
   // for(int i = 0; i < color_count; i++) total_color.push_back(i);
   while(stk.size()) {
-    // std::clog << "正在为寄存器进行染色，剩余" << stk.size() << std::endl;
+    if(log_status)
+      std::clog << "正在为寄存器进行染色，剩余" << stk.size() << std::endl;
     // auto available_i = i_color;
     // auto available_f = f_color;
     auto reg = stk.back();
@@ -210,7 +221,8 @@ LoongArch::alloc_res LoongArch::ColoringAllocator::getAllocate() {
       abort();
     }
   }
-  // std::clog << "寄存器分配完毕" << std::endl;
+  if(log_status)
+    std::clog << "寄存器分配完毕" << std::endl;
   return alloc_res(this->mappingToReg, this->mappingToSpill, this->arrobj);
 }
 

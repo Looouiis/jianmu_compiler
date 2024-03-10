@@ -78,6 +78,9 @@ class ColoringAllocator {
   alloc_res getAllocate();
   std::function<bool(const ptr<ir::ir_reg>)> is_target;
   Rtype dealing;
+
+  int log_limit = 1000;
+  bool log_status = false;
  public:
   ColoringAllocator(std::shared_ptr<ir::ir_userfunc> _func, int base_reg, ptr_list<ir::global_def> global_var);
   // std::pair<std::unordered_map<std::shared_ptr<ir::ir_reg>,int>, std::vector<std::shared_ptr<ir::ir_reg>>> run();

@@ -10,6 +10,8 @@
 #include <vector>
 
 extern ast::SyntaxTree syntax_tree;
+extern int line_number;
+
 void SyntaxAnalyseCompUnit(ast::compunit_syntax * &self, ast::compunit_syntax *compunit, ast::syntax_tree_node *def)
 {
     if(compunit){
@@ -22,6 +24,7 @@ void SyntaxAnalyseCompUnit(ast::compunit_syntax * &self, ast::compunit_syntax *c
         self = new ast::compunit_syntax;
         self->global_defs.emplace_back(def);
     }
+    self->line = line_number + 1;
     syntax_tree.root = self;
 }
 
@@ -32,6 +35,7 @@ void SyntaxAnalyseFuncDef(ast::func_def_syntax * &self, vartype var_type, char *
     self->rettype = var_type;
     
     self->body = ptr<ast::block_syntax>(block);
+    self->line = line_number + 1;
 }
 
 void SyntaxAnalyseFuncFDef(ast::func_f_param_syntax *&self, vartype var_type, char* ident, ast::var_dimension_syntax* dimension, bool has_dim) {
@@ -46,6 +50,7 @@ void SyntaxAnalyseFuncFDef(ast::func_f_param_syntax *&self, vartype var_type, ch
         syntax->dimension->has_first_dim = false;
     }
     self = syntax;
+    self->line = line_number + 1;
 }
 
 void SyntaxAnalyseFuncFDecl(ast::func_def_syntax* &self, ast::func_f_param_syntax *var_def, ast::func_def_syntax *var_def_group) {
@@ -58,6 +63,7 @@ void SyntaxAnalyseFuncFDecl(ast::func_def_syntax* &self, ast::func_f_param_synta
     std::unordered_map<vartype, vartype> toaddr = {{vartype::INT, vartype::INTADDR}, {vartype::FLOAT, vartype::FLOATADDR}};
     self->arg_types.insert(self->arg_types.begin(), var_def->dimension ? toaddr[var_def->accept_type] : var_def->accept_type);
     // self = syntax;
+    self->line = line_number + 1;
 }
 
 void SyntaxAnalyseFuncFDeclGroup(ast::func_def_syntax* &self, ast::func_f_param_syntax *var_def, ast::func_def_syntax *var_def_group) {
@@ -70,6 +76,7 @@ void SyntaxAnalyseFuncFDeclGroup(ast::func_def_syntax* &self, ast::func_f_param_
     std::unordered_map<vartype, vartype> toaddr = {{vartype::INT, vartype::INTADDR}, {vartype::FLOAT, vartype::FLOATADDR}};
     syntax->arg_types.insert(syntax->arg_types.begin(), var_def->dimension ? toaddr[var_def->accept_type] : var_def->accept_type);
     self = syntax;
+    self->line = line_number + 1;
 }
 
 void SynataxAnalyseFuncType(vartype &self, char* type)
@@ -85,11 +92,13 @@ void SynataxAnalyseBlock(ast::block_syntax *&self, ast::block_syntax *block_item
             self->body.emplace_back(i);
         }
     }
+    self->line = line_number + 1;
 }    
 
 void SynataxAnalyseBlockItems(ast::block_syntax *&self, ast::block_syntax *block_items, ast::stmt_syntax *stmt)
 {
     self = new ast::block_syntax;
+    self->line = line_number + 1;
     if(block_items && stmt){
         for(auto  i : block_items->body){
             self->body.emplace_back(i);
@@ -108,6 +117,7 @@ void SynataxAnalyseStmtReturn(ast::stmt_syntax *&self, ast::expr_syntax *exp)
     if(exp)
         syntax->exp = ptr<ast::expr_syntax>(exp);
     self = static_cast<ast::stmt_syntax*>(syntax);
+    self->line = line_number + 1;
 }
 
 void SynataxAnalysePrimaryExpIntConst(ast::expr_syntax *&self, char *current_symbol)
@@ -126,6 +136,7 @@ void SynataxAnalysePrimaryExpIntConst(ast::expr_syntax *&self, char *current_sym
     }
     syntax->restype = vartype::INT;
     self = static_cast<ast::expr_syntax*>(syntax);
+    self->line = line_number + 1;
 }
 
 void SynataxAnalysePrimaryExpFloatConst(ast::expr_syntax *&self, char *current_symbol)
@@ -134,12 +145,14 @@ void SynataxAnalysePrimaryExpFloatConst(ast::expr_syntax *&self, char *current_s
     syntax->floatConst= std::stof(current_symbol);
     syntax->restype = vartype::FLOAT;
     self = static_cast<ast::expr_syntax*>(syntax);
+    self->line = line_number + 1;
 }
 //a-难度
 void SynataxAnalyseStmtBlock(ast::stmt_syntax *&self, ast::block_syntax *block)
 {
     auto syntax = static_cast<ast::stmt_syntax*>(block);
     self = syntax;
+    self->line = line_number + 1;
 }
 
 void SynataxAnalysePrimaryExpVar(ast::expr_syntax* &self, char* current_symbol)
@@ -148,6 +161,7 @@ void SynataxAnalysePrimaryExpVar(ast::expr_syntax* &self, char* current_symbol)
     syntax->name = current_symbol;
     syntax->restype = vartype::INT;
     self = static_cast<ast::expr_syntax*>(syntax);
+    self->line = line_number + 1;
 }
 
 void SynataxAnalyseVarType(vartype &self, char* type) {
@@ -174,6 +188,7 @@ void SynataxAnalyseVarDecl(ast::stmt_syntax *&self,vartype var_type, ast::var_de
         }
     }
     self = static_cast<ast::stmt_syntax*>(syntax);
+    self->line = line_number + 1;
 }
 
 void SynataxAnalyseVarDefGroup(ast::var_decl_stmt_syntax *&self, ast::var_def_stmt_syntax *var_def, ast::var_decl_stmt_syntax *var_def_group)
@@ -184,6 +199,7 @@ void SynataxAnalyseVarDefGroup(ast::var_decl_stmt_syntax *&self, ast::var_def_st
     }
     syntax->var_def_list.insert(syntax->var_def_list.begin(), ptr<ast::var_def_stmt_syntax>(var_def));
     self = syntax;
+    self->line = line_number + 1;
 }
 
 // ptr<ast::init_syntax> origin;
@@ -438,6 +454,7 @@ void SynataxAnalyseVarDef(ast::var_def_stmt_syntax *&self, char *ident, ast::var
     syntax->name = ident;
     // syntax->restype = var_type;
     self = syntax;
+    self->line = line_number + 1;
 }
 
 void SynataxAnalyseAddExp(ast::expr_syntax *&self, ast::expr_syntax *exp1, char *op, ast::expr_syntax *exp2)
@@ -453,6 +470,7 @@ void SynataxAnalyseAddExp(ast::expr_syntax *&self, ast::expr_syntax *exp1, char 
     syntax->rhs = ptr<ast::expr_syntax>(exp2);
     syntax->restype = vartype::INT;
     self = static_cast<ast::expr_syntax*>(syntax);
+    self->line = line_number + 1;
 }
 //a难度
 void SynataxAnalyseMulExp(ast::expr_syntax *&self, ast::expr_syntax *exp1, char *op, ast::expr_syntax *exp2)
@@ -471,6 +489,7 @@ void SynataxAnalyseMulExp(ast::expr_syntax *&self, ast::expr_syntax *exp1, char 
     syntax->rhs = ptr<ast::expr_syntax>(exp2);
     syntax->restype = vartype::INT;
     self = static_cast<ast::expr_syntax*>(syntax);
+    self->line = line_number + 1;
 }
 
 void SynataxAnalyseStmtAssign(ast::stmt_syntax *&self, ast::lval_syntax *target, ast::expr_syntax *value)
@@ -479,6 +498,7 @@ void SynataxAnalyseStmtAssign(ast::stmt_syntax *&self, ast::lval_syntax *target,
     syntax->value = ptr<ast::expr_syntax>(value);
     syntax->target = ptr<ast::lval_syntax>(target);
     self = static_cast<ast::stmt_syntax*>(syntax);
+    self->line = line_number + 1;
 }
 
 void SynataxAnalyseLval(ast::lval_syntax *&self, char *ident, ast::var_dimension_syntax* current_dim)
@@ -491,6 +511,7 @@ void SynataxAnalyseLval(ast::lval_syntax *&self, char *ident, ast::var_dimension
     }
     syntax->restype = vartype::INT;
     self = syntax;
+    self->line = line_number + 1;
 }
 //a+难度
 void SynataxAnalyseStmtIf(ast::stmt_syntax *&self, ast::expr_syntax *cond, ast::stmt_syntax *then_body, ast::stmt_syntax *else_body)
@@ -500,6 +521,7 @@ void SynataxAnalyseStmtIf(ast::stmt_syntax *&self, ast::expr_syntax *cond, ast::
     syntax->then_body = ptr<ast::stmt_syntax>(then_body);
     syntax->else_body = ptr<ast::stmt_syntax>(else_body);
     self = syntax;
+    self->line = line_number + 1;
 }
 
 void SynataxAnalyseLOrExp(ast::expr_syntax *&self, ast::expr_syntax *cond1, ast::expr_syntax *cond2)
@@ -509,6 +531,7 @@ void SynataxAnalyseLOrExp(ast::expr_syntax *&self, ast::expr_syntax *cond1, ast:
     syntax->op = relop::op_or;
     syntax->rhs = ptr<ast::expr_syntax>(cond2);
     self = syntax;
+    self->line = line_number + 1;
 }
 
 void SynataxAnalyseLAndExp(ast::expr_syntax *&self, ast::expr_syntax *cond1, ast::expr_syntax *cond2)
@@ -518,6 +541,7 @@ void SynataxAnalyseLAndExp(ast::expr_syntax *&self, ast::expr_syntax *cond1, ast
     syntax->op = relop::op_and;
     syntax->rhs = ptr<ast::expr_syntax>(cond2);
     self = syntax;
+    self->line = line_number + 1;
 }
 
 void SynataxAnalyseEqExp(ast::expr_syntax *&self, ast::expr_syntax *cond1, char *op, ast::expr_syntax *cond2)
@@ -532,6 +556,7 @@ void SynataxAnalyseEqExp(ast::expr_syntax *&self, ast::expr_syntax *cond1, char 
     }
     syntax->rhs = ptr<ast::expr_syntax>(cond2);
     self = syntax;
+    self->line = line_number + 1;
 }
 
 
@@ -563,6 +588,7 @@ void SynataxAnalyseRelExp(ast::expr_syntax *&self, ast::expr_syntax *cond1, char
     }
     syntax->rhs = ptr<ast::expr_syntax>(exp);
     self = syntax;
+    self->line = line_number + 1;
 }
 
 void SynataxAnalyseUnaryExp(ast::expr_syntax *&self, char *op, ast::expr_syntax *exp)
@@ -580,6 +606,7 @@ void SynataxAnalyseUnaryExp(ast::expr_syntax *&self, char *op, ast::expr_syntax 
     syntax->rhs = ptr<ast::expr_syntax>(exp);
     syntax->restype = vartype::INT;
     self = syntax;
+    self->line = line_number + 1;
 }
 
 void SyntaxAnalyseVarDimension(ast::var_dimension_syntax* &self, ast::expr_syntax* new_dimension, ast::var_dimension_syntax* current_dim) {
@@ -589,12 +616,14 @@ void SyntaxAnalyseVarDimension(ast::var_dimension_syntax* &self, ast::expr_synta
     }
     syntax->dimensions.insert(syntax->dimensions.begin(), ptr<ast::expr_syntax>(new_dimension));
     self = syntax;
+    self->line = line_number + 1;
 }
 
 void SynataxAnalyseStmtExp(ast::stmt_syntax* &self, ast::expr_syntax *exp) {
     auto syntax = new ast::exp_stmt_syntax;
     syntax->exp = ptr<ast::expr_syntax>(exp);
     self = syntax;
+    self->line = line_number + 1;
 }
 
 // void SynataxAnalyseStmtEmpty(ast::stmt_syntax* &self) {
@@ -607,6 +636,7 @@ void SynataxAnalyseStmtWhile(ast::stmt_syntax* &self, ast::expr_syntax* cond, as
     syntax->cond = ptr<ast::expr_syntax>(cond);
     syntax->while_body = ptr<ast::stmt_syntax>(while_body);
     self = syntax;
+    self->line = line_number + 1;
 }
 
 void SynataxAnalyseInitVal(ast::init_syntax* &self, ast::expr_syntax* exp, ast::init_syntax* new_init, ast::init_syntax* init_group) {
@@ -633,6 +663,7 @@ void SynataxAnalyseInitVal(ast::init_syntax* &self, ast::expr_syntax* exp, ast::
         // syntax->initializer.push_back(ptr_list<ast::init_syntax>());
     }
     self = syntax;
+    self->line = line_number + 1;
 }
 
 void SynataxAnalyseInitValGroup(ast::init_syntax* &self, ast::init_syntax* new_init, ast::init_syntax* init_group) {
@@ -649,6 +680,7 @@ void SynataxAnalyseInitValGroup(ast::init_syntax* &self, ast::init_syntax* new_i
     //     // syntax->initializer.push_back(ptr_list<ast::init_syntax>());
     // }
     self = syntax;
+    self->line = line_number + 1;
 }
 
 void SyntaxAnalyseFuncCall(ast::expr_syntax* &self, char* func_name, ast::expr_syntax* param, ast::func_call_syntax* param_group) {
@@ -661,6 +693,7 @@ void SyntaxAnalyseFuncCall(ast::expr_syntax* &self, char* func_name, ast::expr_s
     }
     syntax->func_name = func_name;
     self = syntax;
+    self->line = line_number + 1;
 }
 
 void SyntaxAnalyseFuncCallGroup(ast::func_call_syntax* &self, ast::expr_syntax* param, ast::func_call_syntax* param_group) {
@@ -670,4 +703,5 @@ void SyntaxAnalyseFuncCallGroup(ast::func_call_syntax* &self, ast::expr_syntax* 
     }
     syntax->params.insert(syntax->params.begin(), ptr<ast::expr_syntax>(param));
     self = syntax;
+    self->line = line_number + 1;
 }
