@@ -284,7 +284,7 @@ std::vector<ptr<ir::ir_value>> ir::jump::def_reg() {
   return {};
 }
 
-std::shared_ptr<ir::ir_basicblock> ir::jump::getTarget() {
+std::shared_ptr<ir::ir_basicblock> ir::jump::get_target() {
   return this->target;
 }
 

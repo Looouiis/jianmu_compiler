@@ -9,6 +9,7 @@ enum PassType {
 };
 
 class Pass {
+protected:
     ptr<ir::ir_module> compunit;
 public:
     Pass(ptr<ir::ir_module> compunit) : compunit(compunit) {}
