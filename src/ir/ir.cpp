@@ -1,7 +1,9 @@
 #include "ir/ir.hpp"
+#include <algorithm>
 #include <bitset>
 #include <cstdlib>
 #include <iomanip>
+#include <iterator>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -218,6 +220,44 @@ void ir::ir_userfunc::reg_allocate(LoongArch::ColoringAllocator allocator) {
 
 void ir::ir_userfunc::save_current_globl(std::list<std::pair<std::string, ptr<ir::global_def>>> current_globl) {
     this->current_globl = current_globl;
+}
+
+ptr_list<ir::ir_basicblock> ir::ir_userfunc::check_successor(ptr<ir::ir_basicblock> tar) {
+    // auto it = this->successor.find(tar);
+    // if(it == this->successor.end()) {
+    //     it = this->s_back_trace.find(tar);
+    // }
+    // return it->second;
+    auto suc = this->successor[tar];
+    auto bak = this->s_back_trace[tar];
+    std::sort(suc.begin(), suc.end());
+    std::sort(bak.begin(), bak.end());
+    ptr_list<ir_basicblock> ret;
+    std::set_union(
+        suc.begin(), suc.end(),
+        bak.begin(), bak.end(),
+        std::back_inserter(ret)
+    );
+    return ret;
+}
+
+ptr_list<ir::ir_basicblock> ir::ir_userfunc::check_nxt(ptr<ir::ir_basicblock> tar) {
+    // auto it = this->nxt.find(tar);
+    // if(it == this->nxt.end()) {
+    //     it = this->n_back_trace.find(tar);
+    // }
+    // return it->second;
+    auto nxt = this->nxt[tar];
+    auto bak = this->n_back_trace[tar];
+    std::sort(nxt.begin(), nxt.end());
+    std::sort(bak.begin(), bak.end());
+    ptr_list<ir_basicblock> ret;
+    std::set_union(
+        nxt.begin(), nxt.end(),
+        bak.begin(), bak.end(),
+        std::back_inserter(ret)
+    );
+    return ret;
 }
 
 bool ir::ir_func::set_retype(vartype rettype)

@@ -135,6 +135,7 @@ void ir::IrBuilder::visit(ast::func_def_syntax &node){
     */
     cur_func->entry = cur_func->new_block();
     cur_block = cur_func->entry;
+    cur_block->mark_entry();
     if(name == "main"){
         this->found_main = true;
         if(compunit->init_block) {

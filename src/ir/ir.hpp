@@ -176,6 +176,7 @@ class ir_basicblock : public printable {
     int id;
     std::list<std::shared_ptr<ir_instr>> instructions;
     bool is_while_body = false;
+    bool is_entry = false;
 public:
     ir_basicblock(int id) : id(id) { name = "bb"+std::to_string(id); };
     void push_back(ptr<ir_instr> inst);
@@ -189,6 +190,8 @@ public:
     void for_each(std::function<void(std::shared_ptr<ir::ir_instr> inst)> f,bool isReverse);
     void mark_while() {this->is_while_body = true;}
     std::list<std::shared_ptr<ir_instr>> get_instructions() {return instructions;}
+    void mark_entry() {is_entry = true;}
+    bool check_is_entry() {return is_entry;}
 };
 
 
@@ -270,7 +273,9 @@ private:
     ptr_list<ir::alloc> alloc_list;
     bool dealing_while = false;
     std::unordered_map<ptr<ir::ir_basicblock>, ptr_list<ir::ir_basicblock>> successor;
+    std::unordered_map<ptr<ir::ir_basicblock>, ptr_list<ir::ir_basicblock>> s_back_trace;
     std::unordered_map<ptr<ir::ir_basicblock>, ptr_list<ir::ir_basicblock>> nxt;
+    std::unordered_map<ptr<ir::ir_basicblock>, ptr_list<ir::ir_basicblock>> n_back_trace;
 public:
     ir_userfunc(std::string name, int reg_cnt, std::vector<vartype> arg_tpyes); 
     ptr<ir_memobj> new_obj(std::string name, vartype var_type);
@@ -283,8 +288,13 @@ public:
     virtual void reg_allocate(LoongArch::ColoringAllocator allocator);
     void save_current_globl(std::list<std::pair<std::string, ptr<ir::global_def>>> current_globl);
     std::list<std::shared_ptr<ir_basicblock>> get_bbs() {return bbs;}
-    void set_successor(std::unordered_map<ptr<ir::ir_basicblock>, ptr_list<ir::ir_basicblock>> successor) {this->successor = successor;}
-    void set_nxt(std::unordered_map<ptr<ir::ir_basicblock>, ptr_list<ir::ir_basicblock>> nxt) {this->nxt = nxt;}
+    std::list<std::shared_ptr<ir_basicblock>>& get_bbs_ref() {return bbs;}
+    void set_successor(std::unordered_map<ptr<ir::ir_basicblock>, ptr_list<ir::ir_basicblock>> successor, std::unordered_map<ptr<ir::ir_basicblock>, ptr_list<ir::ir_basicblock>> s_back_trace) {this->successor = successor; this->s_back_trace = s_back_trace;}
+    void set_nxt(std::unordered_map<ptr<ir::ir_basicblock>, ptr_list<ir::ir_basicblock>> nxt, std::unordered_map<ptr<ir::ir_basicblock>, ptr_list<ir::ir_basicblock>> n_back_trace) {this->nxt = nxt; this->n_back_trace = n_back_trace;}
+    ptr_list<ir::ir_basicblock> check_successor(ptr<ir::ir_basicblock> tar);
+    ptr_list<ir::ir_basicblock> check_nxt(ptr<ir::ir_basicblock> tar);
+    std::unordered_map<ptr<ir::ir_basicblock>, ptr_list<ir::ir_basicblock>>& get_successor_ref() {return successor;}
+    std::unordered_map<ptr<ir::ir_basicblock>, ptr_list<ir::ir_basicblock>>& get_nxt_ref() {return nxt;}
 };
 
 //below is instruction
@@ -513,6 +523,7 @@ public:
     virtual std::vector<ptr<ir::ir_value>> use_reg() override final;
     virtual std::vector<ptr<ir::ir_value>> def_reg() override final;
     ptr<ir_basicblock> get_out_block() {return out_block;}
+    ptr<ir_basicblock> get_cond_from() {return cond_from;}
 };
 
 class break_or_continue : public control_ins {
