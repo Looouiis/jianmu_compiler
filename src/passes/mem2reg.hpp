@@ -10,8 +10,11 @@ namespace Passes {
 class Mem2Reg : public Pass {
     std::list<std::pair<std::string, ptr<ir::ir_userfunc>>> func_lst;
     std::unordered_map<ptr<ir::ir_userfunc>, std::unordered_map<ptr<ir::ir_basicblock>, std::set<ptr<ir::ir_basicblock>>>> dom;
+    std::unordered_map<ptr<ir::ir_userfunc>, std::unordered_map<ptr<ir::ir_basicblock>, ptr<ir::ir_basicblock>>> idom;
+    std::unordered_map<ptr<ir::ir_userfunc>, ptr_list<ir::ir_basicblock>> postorders;
     void remove_empty_block(ptr<ir::ir_userfunc> fun);
     void analyse_cfg_flow(ptr<ir::ir_userfunc> fun);
+    void calc_postorder(ptr<ir::ir_basicblock> node, ptr<ir::ir_userfunc> fun, ptr_list<ir::ir_basicblock> &rp, std::unordered_map<ptr<ir::ir_basicblock>, bool> &visited);
     void analyse_dom_relation(ptr<ir::ir_userfunc> fun);
 public:
     Mem2Reg(ptr<ir::ir_module> compunit) : Pass(compunit) {}

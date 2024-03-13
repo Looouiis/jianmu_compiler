@@ -780,17 +780,21 @@ void ir::IrBuilder::visit(ast::if_stmt_syntax &node)
     }
     auto bb_bak = cur_block;
     auto bb_nxt = cur_func->new_block();
-    auto then_bb = cur_func->new_block();
-    auto else_bb = cur_func->new_block();
+    ptr<ir_basicblock> then_bb;
+    ptr<ir_basicblock> else_bb;
     if(node.else_body != nullptr && node.then_body != nullptr) {
+        then_bb = cur_func->new_block();
+        else_bb = cur_func->new_block();
         cur_block->push_back(std::make_shared<ir::br>(judge_ret, then_bb, else_bb));
         this->cur_block = this->cur_func->new_block();
     }
     else if(node.then_body != nullptr) {
+        then_bb = cur_func->new_block();
         // cur_block->push_back(std::make_shared<ir::jump>(then_bb));
         cur_block->push_back(std::make_shared<ir::br>(judge_ret, then_bb, bb_nxt));
     }
     else if(node.else_body != nullptr) {
+        else_bb = cur_func->new_block();
         // cur_block->push_back(std::make_shared<ir::jump>(else_bb));
         cur_block->push_back(std::make_shared<ir::br>(judge_ret, bb_nxt, else_bb));
     }
@@ -836,8 +840,10 @@ void ir::IrBuilder::visit(ast::return_stmt_syntax &node)
         auto jmp_inst = std::make_shared<ir::jump>(return_bb);
         cur_block->push_back(jmp_inst);
     }
-    //对BB进行划分，这个BB用于防止return后面的部分（这部分永远不会被执行到）
-    this->cur_block = this->cur_func->new_block();
+    //对BB进行划分，这个BB用于放置return后面的部分（这部分永远不会被执行到）
+    auto after_return = this->cur_func->new_block();
+    cur_block->push_back(std::make_shared<ir::jump>(after_return));     // 保证cfg的跳转关系完整（避免支配分析出错）
+    this->cur_block = after_return;
 }
 
 void ir::IrBuilder::visit(ast::var_decl_stmt_syntax &node)

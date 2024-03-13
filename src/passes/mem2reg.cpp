@@ -1,31 +1,61 @@
 #include "mem2reg.hpp"
 #include "ir/ir.hpp"
 #include <algorithm>
+#include <cassert>
 #include <iterator>
 
 void Passes::Mem2Reg::run() {
     func_lst = compunit->usrfuncs;
     for(auto [name, fun] : func_lst) {
         analyse_cfg_flow(fun);
-        remove_empty_block(fun);
+        // remove_empty_block(fun);
         analyse_dom_relation(fun);
+
     }
+}
+
+ptr<ir::ir_basicblock> intersect(ptr<ir::ir_basicblock> b1, ptr<ir::ir_basicblock> b2, ptr_list<ir::ir_basicblock> order, std::unordered_map<ptr<ir::ir_basicblock>, ptr<ir::ir_basicblock>> doms) {
+    auto finger1 = b1;
+    auto finger2 = b2;
+    int distance1 = std::distance(order.begin(), std::find(order.begin(), order.end(), finger1));
+    int distance2 = std::distance(order.begin(), std::find(order.begin(), order.end(), finger2));
+    while(distance1 != distance2) {
+        while(distance1 < distance2) {
+            finger1 = doms[finger1];
+            distance1 = std::distance(order.begin(), std::find(order.begin(), order.end(), finger1));
+        }
+        while(distance1 > distance2) {
+            finger2 = doms[finger2];
+            distance2 = std::distance(order.begin(), std::find(order.begin(), order.end(), finger2));
+        }
+    }
+    return finger1;
 }
 
 void Passes::Mem2Reg::analyse_dom_relation(ptr<ir::ir_userfunc> fun) {
     auto blocks = fun->get_bbs();
     auto &out = dom[fun];
+    auto &doms = idom[fun];
     std::unordered_map<ptr<ir::ir_basicblock>, std::set<ptr<ir::ir_basicblock>>> in;
     ptr_list<ir::ir_basicblock> not_entry_block;
+    int idx = 0;
+    std::unordered_map<ptr<ir::ir_basicblock>, bool> visited;
+    ptr<ir::ir_basicblock> head = nullptr;
     for(auto block : blocks) {
         if(block->check_is_entry()) {
+            head = block;
             out[block] = {block};
+            doms[block] = block;
         }
         else {
             out[block] = {blocks.begin(), blocks.end()};
             not_entry_block.push_back(block);
+            doms[block] = nullptr;
         }
+        visited[block] = false;
     }
+
+    // 计算dom
     bool changed = true;
     while(changed) {
         changed = false;
@@ -54,9 +84,54 @@ void Passes::Mem2Reg::analyse_dom_relation(ptr<ir::ir_userfunc> fun) {
             }
         }
     }
+
+    // 获取逆后序
+    auto &postorder = postorders[fun];
+    assert(head);
+    calc_postorder(head, fun, postorder, visited);
+
+    // 计算idom
+    changed = true;
+    while(changed) {
+        changed = false;
+        for(auto it = postorder.rbegin(); it != postorder.rend(); it++) {
+            auto &block = *it;
+            if(block->check_is_entry()) continue;
+            auto successor = fun->check_successor(block);
+            ptr_list<ir::ir_basicblock> processed;
+            for(auto judge : successor) {
+                if(doms[judge]) {
+                    processed.push_back(judge);
+                }
+            }
+            auto new_idom = processed.front();
+            for(auto processed_it = processed.begin() + 1; processed_it != processed.end(); processed_it++) {
+                auto p = *processed_it;
+                new_idom = intersect(p, new_idom, postorder, doms);
+            }
+            if(doms[block] != new_idom) {
+                doms[block] = new_idom;
+                changed = true;
+            }
+        }
+    }
+
     for(auto [bb, dom] : out) {
         auto s = bb;
+        auto idom = doms[bb];
+        auto pause = s;
     }
+}
+
+void Passes::Mem2Reg::calc_postorder(ptr<ir::ir_basicblock> node, ptr<ir::ir_userfunc> fun, ptr_list<ir::ir_basicblock> &postorder, std::unordered_map<ptr<ir::ir_basicblock>, bool> &visited) {
+    visited[node] = true;
+    auto children = fun->check_nxt(node);
+    for(auto child : children) {
+        if(!visited[child]) {
+            calc_postorder(child, fun, postorder, visited);
+        }
+    }
+    postorder.push_back(node);
 }
 
 void Passes::Mem2Reg::analyse_cfg_flow(ptr<ir::ir_userfunc> fun) {
