@@ -257,20 +257,20 @@ LoongArch::ColoringAllocator::ColoringAllocator(std::shared_ptr<ir::ir_userfunc>
       auto while_ins = std::dynamic_pointer_cast<ir::while_loop>(instruction);
       if(jump_ins != nullptr) {
         auto tar = jump_ins->target;
-        successor[tar].push_back(block);
+        predecessor[tar].push_back(block);
         nxt[block].push_back(tar);
       }
       if(br_ins != nullptr) {
         auto tar = br_ins->get_target_true();
-        successor[tar].push_back(block);
+        predecessor[tar].push_back(block);
         nxt[block].push_back(tar);
         tar = br_ins->get_target_false();
-        successor[tar].push_back(block);
+        predecessor[tar].push_back(block);
         nxt[block].push_back(tar);
       }
       if(while_ins != nullptr) {                                          // TODO: 检查分析逻辑
         auto tar = while_ins->out_block;
-        successor[tar].push_back(while_ins->cond_from);
+        predecessor[tar].push_back(while_ins->cond_from);
         nxt[while_ins->cond_from].push_back(tar);
       }
     }
@@ -326,7 +326,7 @@ LoongArch::ColoringAllocator::ColoringAllocator(std::shared_ptr<ir::ir_userfunc>
 
   // 计算基本块的伪线性序
   auto tmp_b = blocks;
-  auto tmp_s = successor;
+  auto tmp_s = predecessor;
   auto tmp_n = nxt;
   std::vector<std::shared_ptr<ir::ir_basicblock>> lines;
 
@@ -392,7 +392,7 @@ LoongArch::ColoringAllocator::ColoringAllocator(std::shared_ptr<ir::ir_userfunc>
       std::unordered_map<ptr<ir::ir_basicblock>, bool> visit;
       while(!block_set.empty()) {
         for(auto s_block : block_set) {
-          for(auto check_block : successor[s_block]) {
+          for(auto check_block : predecessor[s_block]) {
             if(check_block->is_while_body) {
               ultimate_block_start = std::min(ultimate_block_start, block_line_start[check_block]);
               ultimate_block_end = std::max(ultimate_block_end, block_line_end[check_block]);

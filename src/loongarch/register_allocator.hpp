@@ -28,7 +28,7 @@ class ColoringAllocator {
   std::unordered_map<std::shared_ptr<ir::ir_basicblock>, std::vector<std::shared_ptr<ir::ir_value>>> out;
   std::unordered_map<std::shared_ptr<ir::ir_basicblock>, std::vector<std::shared_ptr<ir::ir_value>>> live_use;
   std::unordered_map<std::shared_ptr<ir::ir_basicblock>, std::vector<std::shared_ptr<ir::ir_value>>> live_def;
-  std::unordered_map<std::shared_ptr<ir::ir_basicblock>, std::vector<std::shared_ptr<ir::ir_basicblock>>> successor;
+  std::unordered_map<std::shared_ptr<ir::ir_basicblock>, std::vector<std::shared_ptr<ir::ir_basicblock>>> predecessor;
   std::unordered_map<std::shared_ptr<ir::ir_basicblock>, std::vector<std::shared_ptr<ir::ir_basicblock>>> nxt;
   std::unordered_map<std::shared_ptr<ir::ir_basicblock>, int> block_line_start;
   std::unordered_map<std::shared_ptr<ir::ir_basicblock>, int> block_line_end;

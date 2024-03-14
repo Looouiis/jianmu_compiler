@@ -3,14 +3,106 @@
 #include <algorithm>
 #include <cassert>
 #include <iterator>
+#include <memory>
 
 void Passes::Mem2Reg::run() {
     func_lst = compunit->usrfuncs;
     for(auto [name, fun] : func_lst) {
-        analyse_cfg_flow(fun);
+        analyse_cfg_flow_and_defs(fun);
         // remove_empty_block(fun);
         analyse_dom_relation(fun);
+        analyse_df(fun);
+        auto phi_v_m = insert_phi_ins(fun);
+        
+    }
+}
 
+// phi_v_m：待完善的phi中目标寄存器和变量的映射
+// var_mem：变量和它的地址的逆映射
+void rename(ptr<ir::ir_basicblock> block, std::unordered_map<ptr<ir::ir_memobj>, ptr_list<ir::ir_value>> &stack, std::unordered_map<ptr<ir::ir_reg>, ptr<ir::ir_memobj>> phi_v_m, std::unordered_map<ptr<ir::ir_reg>, ptr<ir::ir_memobj>> var_mem) {
+    for(auto ins : block->get_instructions()) {
+        auto is_phi = std::dynamic_pointer_cast<ir::phi>(ins);
+        auto is_store = std::dynamic_pointer_cast<ir::store>(ins);
+        if(is_phi) {
+            auto it = phi_v_m.find(is_phi->dst);
+            if(it != phi_v_m.end()) {
+                stack[it->second].push_back(it->first);
+            }
+        }
+        if(is_store) {
+            auto it = var_mem.find(is_store->get_addr());
+            if(it != var_mem.end()) {
+                stack[it->second].push_back(is_store->get_value());
+            }
+        }
+    }
+}
+
+void Passes::Mem2Reg::rename_variables(ptr<ir::ir_userfunc> fun, std::unordered_map<ptr<ir::ir_reg>, ptr<ir::ir_memobj>> phi_v_m) {
+    auto alloc = fun->get_var_list();
+    std::unordered_map<ptr<ir::ir_memobj>, ptr_list<ir::ir_value>> stack;
+    std::unordered_map<ptr<ir::ir_reg>, ptr<ir::ir_memobj>> var_mem;
+    for(auto def : alloc) {
+        stack[def->get_var()] = {};
+        var_mem[def->get_var()->get_addr()] = def->get_var();
+    }
+    rename(fun->get_entry(), stack, phi_v_m, var_mem);
+}
+
+std::unordered_map<ptr<ir::ir_reg>, ptr<ir::ir_memobj>> Passes::Mem2Reg::insert_phi_ins(ptr<ir::ir_userfunc> fun) {
+    std::set<ptr<ir::ir_basicblock>> f, w;
+    auto defs = this->defs[fun];
+    auto df = this->df[fun];
+    std::unordered_map<ptr<ir::ir_reg>, ptr<ir::ir_memobj>> phi_var_2_mem;
+    for(auto alloc : fun->get_var_list()) {
+        auto v = alloc->get_var();
+        f.clear();
+        w.clear();
+        for(auto d : defs[v]) {
+            w.insert(d);
+        }
+
+        while(!w.empty()) {
+            auto x = *w.begin();
+            w.erase(w.begin());
+            for(auto y : df[x]) {
+                if(f.find(y) == f.end()) {
+                    auto reg = fun->new_reg(v->get_addr()->get_type());
+                    auto phi = std::make_shared<ir::phi>(reg);
+                    phi_var_2_mem[reg] = v;
+                    y->push_front(phi);
+                    f.insert(y);
+                    bool find = false;
+                    for(auto d : defs[v]) {
+                        if(d == y) {
+                            find = true;
+                            break;
+                        }
+                    }
+                    if(!find) {
+                        w.insert(y);
+                    }
+                }
+            }
+        }
+    }
+    return phi_var_2_mem;
+}
+
+void Passes::Mem2Reg::analyse_df(ptr<ir::ir_userfunc> fun) {
+    auto df = this->df[fun];
+    auto dom = this->dom[fun];
+    auto idom = this->idom[fun];
+    auto blocks = fun->get_bbs();
+    for(auto a : blocks) {
+        auto successor = fun->check_nxt(a);
+        for(auto b : successor) {
+            auto x = a;
+            while(x != b && (std::find(dom[b].begin(), dom[b].end(), x) == dom[b].end())) {
+                df[x].insert(b);
+                x = idom[x];
+            }
+        }
     }
 }
 
@@ -60,10 +152,10 @@ void Passes::Mem2Reg::analyse_dom_relation(ptr<ir::ir_userfunc> fun) {
     while(changed) {
         changed = false;
         for(auto b : not_entry_block) {
-            auto cur_successor = fun->check_successor(b);
-            for(auto it = cur_successor.begin(); it != cur_successor.end(); it++) {
+            auto cur_predecessor = fun->check_predecessor(b);
+            for(auto it = cur_predecessor.begin(); it != cur_predecessor.end(); it++) {
                 auto &p = *it;
-                if(it == cur_successor.begin()) {
+                if(it == cur_predecessor.begin()) {
                     in[b] = out[p];
                 }
                 else {
@@ -97,9 +189,9 @@ void Passes::Mem2Reg::analyse_dom_relation(ptr<ir::ir_userfunc> fun) {
         for(auto it = postorder.rbegin(); it != postorder.rend(); it++) {
             auto &block = *it;
             if(block->check_is_entry()) continue;
-            auto successor = fun->check_successor(block);
+            auto predecessor = fun->check_predecessor(block);
             ptr_list<ir::ir_basicblock> processed;
-            for(auto judge : successor) {
+            for(auto judge : predecessor) {
                 if(doms[judge]) {
                     processed.push_back(judge);
                 }
@@ -134,47 +226,58 @@ void Passes::Mem2Reg::calc_postorder(ptr<ir::ir_basicblock> node, ptr<ir::ir_use
     postorder.push_back(node);
 }
 
-void Passes::Mem2Reg::analyse_cfg_flow(ptr<ir::ir_userfunc> fun) {
+void Passes::Mem2Reg::analyse_cfg_flow_and_defs(ptr<ir::ir_userfunc> fun) {
     auto blocks = fun->get_bbs();
-    std::unordered_map<ptr<ir::ir_basicblock>, ptr_list<ir::ir_basicblock>> successor;
+    std::unordered_map<ptr<ir::ir_basicblock>, ptr_list<ir::ir_basicblock>> predecessor;
     std::unordered_map<ptr<ir::ir_basicblock>, ptr_list<ir::ir_basicblock>> s_back_trace;           // 回边
     std::unordered_map<ptr<ir::ir_basicblock>, ptr_list<ir::ir_basicblock>> nxt;                    // cfg中的逆映射
     std::unordered_map<ptr<ir::ir_basicblock>, ptr_list<ir::ir_basicblock>> n_back_trace;
+    auto &defs = this->defs[fun];
     for(auto block : blocks) {
         for(auto instruction : block->get_instructions()) {
             auto jump_ins = std::dynamic_pointer_cast<ir::jump>(instruction);
             auto br_ins = std::dynamic_pointer_cast<ir::br>(instruction);
             auto while_ins = std::dynamic_pointer_cast<ir::while_loop>(instruction);
-            if(jump_ins != nullptr) {
+            auto store_ins = std::dynamic_pointer_cast<ir::store>(instruction);
+            if(jump_ins) {
                 auto tar = jump_ins->get_target();
-                successor[tar].push_back(block);
+                predecessor[tar].push_back(block);
                 nxt[block].push_back(tar);
             }
-            if(br_ins != nullptr) {
+            if(br_ins) {
                 auto tar = br_ins->get_target_true();
-                successor[tar].push_back(block);
+                predecessor[tar].push_back(block);
                 nxt[block].push_back(tar);
                 tar = br_ins->get_target_false();
-                successor[tar].push_back(block);
+                predecessor[tar].push_back(block);
                 nxt[block].push_back(tar);
             }
-            if(while_ins != nullptr) {
+            if(while_ins) {
                 auto cond_from = while_ins->get_cond_from();
                 auto tar = while_ins->get_out_block();
-                successor[tar].push_back(cond_from);
+                predecessor[tar].push_back(cond_from);
                 nxt[cond_from].push_back(tar);
                 s_back_trace[cond_from].push_back(block);
                 n_back_trace[block].push_back(cond_from);
             }
+            if(store_ins) {
+                auto addr = store_ins->get_addr();
+                for(auto alloc : fun->get_var_list()) {
+                    if(alloc->get_var()->get_addr() == addr) {
+                        defs[alloc->get_var()].push_back(block);
+                        break;
+                    }
+                }
+            }
         }
     }
-    fun->set_successor(successor, s_back_trace);                          // 由于cfg要在寄存器分配中使用，所以可以将逻辑提取到这里，但是需要保存到fun中
+    fun->set_predecessor(predecessor, s_back_trace);                          // 由于cfg要在寄存器分配中使用，所以可以将逻辑提取到这里，但是需要保存到fun中
     fun->set_nxt(nxt, n_back_trace);
 }
 
 void Passes::Mem2Reg::remove_empty_block(ptr<ir::ir_userfunc> fun) {
     std::list<std::shared_ptr<ir::ir_basicblock>>& tmp_b = fun->get_bbs_ref();
-    std::unordered_map<ptr<ir::ir_basicblock>, ptr_list<ir::ir_basicblock>>& tmp_s = fun->get_successor_ref();
+    std::unordered_map<ptr<ir::ir_basicblock>, ptr_list<ir::ir_basicblock>>& tmp_s = fun->get_predecessor_ref();
     std::unordered_map<ptr<ir::ir_basicblock>, ptr_list<ir::ir_basicblock>>& tmp_n = fun->get_nxt_ref();
 
     // 保证只从bb0起始，且去除了空块

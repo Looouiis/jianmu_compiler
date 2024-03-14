@@ -12,10 +12,15 @@ class Mem2Reg : public Pass {
     std::unordered_map<ptr<ir::ir_userfunc>, std::unordered_map<ptr<ir::ir_basicblock>, std::set<ptr<ir::ir_basicblock>>>> dom;
     std::unordered_map<ptr<ir::ir_userfunc>, std::unordered_map<ptr<ir::ir_basicblock>, ptr<ir::ir_basicblock>>> idom;
     std::unordered_map<ptr<ir::ir_userfunc>, ptr_list<ir::ir_basicblock>> postorders;
+    std::unordered_map<ptr<ir::ir_userfunc>, std::unordered_map<ptr<ir::ir_basicblock>, std::set<ptr<ir::ir_basicblock>>>> df;
+    std::unordered_map<ptr<ir::ir_userfunc>, std::unordered_map<ptr<ir::ir_memobj>, ptr_list<ir::ir_basicblock>>> defs;
     void remove_empty_block(ptr<ir::ir_userfunc> fun);
-    void analyse_cfg_flow(ptr<ir::ir_userfunc> fun);
+    void analyse_cfg_flow_and_defs(ptr<ir::ir_userfunc> fun);
     void calc_postorder(ptr<ir::ir_basicblock> node, ptr<ir::ir_userfunc> fun, ptr_list<ir::ir_basicblock> &rp, std::unordered_map<ptr<ir::ir_basicblock>, bool> &visited);
     void analyse_dom_relation(ptr<ir::ir_userfunc> fun);
+    void analyse_df(ptr<ir::ir_userfunc> fun);
+    std::unordered_map<ptr<ir::ir_reg>, ptr<ir::ir_memobj>> insert_phi_ins(ptr<ir::ir_userfunc> fun);
+    void rename_variables(ptr<ir::ir_userfunc> fun, std::unordered_map<ptr<ir::ir_reg>, ptr<ir::ir_memobj>> phi_v_m);
 public:
     Mem2Reg(ptr<ir::ir_module> compunit) : Pass(compunit) {}
     virtual void run() override final;

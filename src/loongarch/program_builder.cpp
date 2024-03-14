@@ -516,6 +516,7 @@ void LoongArch::ProgramBuilder::visit(ir::ir_userfunc &node) {
                             }
                         }
                         else {
+                            is_dst = false;
                             pass_reg = cur_mapping->transfer_reg(*use_reg);
                             pass_reg.ir_id = use_reg->id;
                         }
@@ -523,8 +524,47 @@ void LoongArch::ProgramBuilder::visit(ir::ir_userfunc &node) {
 
                         // Reg temp = cur_mapping->transfer_reg(*use_reg.get());
                         // Reg mid = cur_mapping->new_reg();
-                        auto mid = const_reg_l;
-                        mid.type = temp.type;
+                        // auto mid = const_reg_l;
+                        // mid.type = temp.type;
+
+                        is_dst = true;
+                        it = std::find(cur_mapping->spill_vec.begin(), cur_mapping->spill_vec.end(), cur->dst->id);
+                        if(it != cur_mapping->spill_vec.end()) {
+                            Reg tar;
+                            if(cur->dst->get_type() == vartype::FLOAT/* || cur->dst->get_type() == vartype::FLOATADDR*/) {
+                                tar.type = FLOAT;
+                            }
+                            else {
+                                tar.type = INT;
+                            }
+                            tar.ir_id = cur->dst->id;
+                            tar.is_arr = cur->dst->is_arr;
+                            if(is_dst) {
+                                is_dst = false;
+                                tar.id = spill_dst.id;
+                                pass_reg = tar;
+                            }
+                            else {
+                                if(flag) {
+                                    tar.id = spill_use_1.id;
+                                }
+                                else {
+                                    tar.id = spill_use_2.id;
+                                }
+                                flag = !flag;
+                                // int idx = std::distance(cur_mapping->spill_vec.begin(), it);
+                                // int offset = cur_func->stack_size - (4 * idx);
+                                int offset = cur_func->stack_size/* - cur_mapping->call_mem*/ - cur_mapping->spill_offset.find(use_reg->id)->second;
+                                b->insert_before_jump(std::make_shared<LoongArch::ld>(tar, Reg{fp}, -offset, tar.is_float() ? ld::fld_f : ld::ld_w));
+                                pass_reg = tar;
+                            }
+                        }
+                        else {
+                            is_dst = false;
+                            pass_reg = cur_mapping->transfer_reg(*cur->dst);
+                            pass_reg.ir_id = cur->dst->id;
+                        }
+                        auto mid = pass_reg;
                         if(temp.is_float()) {
                             b->insert_before_jump(std::make_shared<LoongArch::mov>(mid, temp, mov::ftf_f));
                         }
@@ -534,6 +574,17 @@ void LoongArch::ProgramBuilder::visit(ir::ir_userfunc &node) {
                             );
                         }
                         Pending_moves.push_back({b,cur->dst,mid});
+
+    it = std::find(cur_mapping->spill_vec.begin(), cur_mapping->spill_vec.end(), mid.ir_id);
+    if(it != cur_mapping->spill_vec.end()) {
+        int offset = cur_func->stack_size/* - cur_mapping->call_mem*/ - cur_mapping->spill_offset.find(mid.ir_id)->second;
+        if(mid.is_arr) {
+            cur_block->instructions.push_back(std::make_shared<LoongArch::st>(mid, Reg{fp}, -offset, mid.is_float() ? st::fst_f : st::st_d));
+        }
+        else {
+            cur_block->instructions.push_back(std::make_shared<LoongArch::st>(mid, Reg{fp}, -offset, mid.is_float() ? st::fst_f : st::st_w));
+        }
+    }
 
                         // spill_idx = spill_base;
                         // for(auto reg :regs) {
@@ -583,7 +634,47 @@ void LoongArch::ProgramBuilder::visit(ir::ir_userfunc &node) {
                         pass_reg = using_reg;
                         auto value = pass_reg;
                         // auto mid = cur_mapping->new_reg();
-                        auto mid = const_reg_l;
+                        // auto mid = const_reg_l;
+
+                        is_dst = true;
+                        auto it = std::find(cur_mapping->spill_vec.begin(), cur_mapping->spill_vec.end(), cur->dst->id);
+                        if(it != cur_mapping->spill_vec.end()) {
+                            Reg tar;
+                            if(cur->dst->get_type() == vartype::FLOAT/* || cur->dst->get_type() == vartype::FLOATADDR*/) {
+                                tar.type = FLOAT;
+                            }
+                            else {
+                                tar.type = INT;
+                            }
+                            tar.ir_id = cur->dst->id;
+                            tar.is_arr = cur->dst->is_arr;
+                            if(is_dst) {
+                                is_dst = false;
+                                tar.id = spill_dst.id;
+                                pass_reg = tar;
+                            }
+                            else {
+                                if(flag) {
+                                    tar.id = spill_use_1.id;
+                                }
+                                else {
+                                    tar.id = spill_use_2.id;
+                                }
+                                flag = !flag;
+                                // int idx = std::distance(cur_mapping->spill_vec.begin(), it);
+                                // int offset = cur_func->stack_size - (4 * idx);
+                                int offset = cur_func->stack_size/* - cur_mapping->call_mem*/ - cur_mapping->spill_offset.find(use_reg->id)->second;
+                                b->insert_before_jump(std::make_shared<LoongArch::ld>(tar, Reg{fp}, -offset, tar.is_float() ? ld::fld_f : ld::ld_w));
+                                pass_reg = tar;
+                            }
+                        }
+                        else {
+                            is_dst = false;
+                            pass_reg = cur_mapping->transfer_reg(*cur->dst);
+                            pass_reg.ir_id = cur->dst->id;
+                        }
+                        auto mid = pass_reg;
+
                         mid.type = value.type;
                         // if(std::holds_alternative<int>(value)){
                         //     int value_num = std::get<int>(value);
@@ -613,6 +704,19 @@ void LoongArch::ProgramBuilder::visit(ir::ir_userfunc &node) {
                         // }
 
                         Pending_moves.push_back({b,cur->dst,mid});
+
+
+    it = std::find(cur_mapping->spill_vec.begin(), cur_mapping->spill_vec.end(), mid.ir_id);
+    if(it != cur_mapping->spill_vec.end()) {
+        int offset = cur_func->stack_size/* - cur_mapping->call_mem*/ - cur_mapping->spill_offset.find(mid.ir_id)->second;
+        if(mid.is_arr) {
+            cur_block->instructions.push_back(std::make_shared<LoongArch::st>(mid, Reg{fp}, -offset, mid.is_float() ? st::fst_f : st::st_d));
+        }
+        else {
+            cur_block->instructions.push_back(std::make_shared<LoongArch::st>(mid, Reg{fp}, -offset, mid.is_float() ? st::fst_f : st::st_w));
+        }
+    }
+
 
                         // spill_idx = spill_base;
                         // for(auto reg :regs) {

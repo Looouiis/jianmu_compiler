@@ -180,6 +180,7 @@ class ir_basicblock : public printable {
 public:
     ir_basicblock(int id) : id(id) { name = "bb"+std::to_string(id); };
     void push_back(ptr<ir_instr> inst);
+    void push_front(ptr<ir_instr> inst);
     ptr<ir_instr> pop_back();
     virtual void accept(ir_visitor& visitor) override final;
     virtual void print(std::ostream & out = std::cout) override final;
@@ -272,7 +273,7 @@ private:
     std::list<std::pair<std::string, ptr<ir::global_def>>> current_globl;
     ptr_list<ir::alloc> alloc_list;
     bool dealing_while = false;
-    std::unordered_map<ptr<ir::ir_basicblock>, ptr_list<ir::ir_basicblock>> successor;
+    std::unordered_map<ptr<ir::ir_basicblock>, ptr_list<ir::ir_basicblock>> predecessor;
     std::unordered_map<ptr<ir::ir_basicblock>, ptr_list<ir::ir_basicblock>> s_back_trace;
     std::unordered_map<ptr<ir::ir_basicblock>, ptr_list<ir::ir_basicblock>> nxt;
     std::unordered_map<ptr<ir::ir_basicblock>, ptr_list<ir::ir_basicblock>> n_back_trace;
@@ -289,12 +290,14 @@ public:
     void save_current_globl(std::list<std::pair<std::string, ptr<ir::global_def>>> current_globl);
     std::list<std::shared_ptr<ir_basicblock>> get_bbs() {return bbs;}
     std::list<std::shared_ptr<ir_basicblock>>& get_bbs_ref() {return bbs;}
-    void set_successor(std::unordered_map<ptr<ir::ir_basicblock>, ptr_list<ir::ir_basicblock>> successor, std::unordered_map<ptr<ir::ir_basicblock>, ptr_list<ir::ir_basicblock>> s_back_trace) {this->successor = successor; this->s_back_trace = s_back_trace;}
+    void set_predecessor(std::unordered_map<ptr<ir::ir_basicblock>, ptr_list<ir::ir_basicblock>> successor, std::unordered_map<ptr<ir::ir_basicblock>, ptr_list<ir::ir_basicblock>> s_back_trace) {this->predecessor = successor; this->s_back_trace = s_back_trace;}
     void set_nxt(std::unordered_map<ptr<ir::ir_basicblock>, ptr_list<ir::ir_basicblock>> nxt, std::unordered_map<ptr<ir::ir_basicblock>, ptr_list<ir::ir_basicblock>> n_back_trace) {this->nxt = nxt; this->n_back_trace = n_back_trace;}
-    ptr_list<ir::ir_basicblock> check_successor(ptr<ir::ir_basicblock> tar);
+    ptr_list<ir::ir_basicblock> check_predecessor(ptr<ir::ir_basicblock> tar);
     ptr_list<ir::ir_basicblock> check_nxt(ptr<ir::ir_basicblock> tar);
-    std::unordered_map<ptr<ir::ir_basicblock>, ptr_list<ir::ir_basicblock>>& get_successor_ref() {return successor;}
+    std::unordered_map<ptr<ir::ir_basicblock>, ptr_list<ir::ir_basicblock>>& get_predecessor_ref() {return predecessor;}
     std::unordered_map<ptr<ir::ir_basicblock>, ptr_list<ir::ir_basicblock>>& get_nxt_ref() {return nxt;}
+    ptr_list<ir::alloc> get_var_list() {return alloc_list;}
+    ptr<ir::ir_basicblock> get_entry() {return entry;}
 };
 
 //below is instruction
@@ -324,6 +327,8 @@ public:
     virtual void print(std::ostream & out = std::cout) override final;
     virtual std::vector<ptr<ir::ir_value>> use_reg() override final;
     virtual std::vector<ptr<ir::ir_value>> def_reg() override final;
+    ptr<ir_reg> get_addr() {return addr;}
+    ptr<ir_value> get_value() {return value;}
 };
 
 class jump : public control_ins {

@@ -51,6 +51,11 @@ void ir::ir_basicblock::push_back(ptr<ir_instr> inst)
 {
     this->instructions.push_back(inst);
 }
+
+void ir::ir_basicblock::push_front(ptr<ir_instr> inst) {
+    this->instructions.push_front(inst);
+}
+
 ptr<ir::ir_instr> ir::ir_basicblock::pop_back() {
     auto back = this->instructions.back();
     this->instructions.pop_back();
@@ -222,13 +227,13 @@ void ir::ir_userfunc::save_current_globl(std::list<std::pair<std::string, ptr<ir
     this->current_globl = current_globl;
 }
 
-ptr_list<ir::ir_basicblock> ir::ir_userfunc::check_successor(ptr<ir::ir_basicblock> tar) {
+ptr_list<ir::ir_basicblock> ir::ir_userfunc::check_predecessor(ptr<ir::ir_basicblock> tar) {
     // auto it = this->successor.find(tar);
     // if(it == this->successor.end()) {
     //     it = this->s_back_trace.find(tar);
     // }
     // return it->second;
-    auto suc = this->successor[tar];
+    auto suc = this->predecessor[tar];
     auto bak = this->s_back_trace[tar];
     std::sort(suc.begin(), suc.end());
     std::sort(bak.begin(), bak.end());
