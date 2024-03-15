@@ -13,27 +13,48 @@ void Passes::Mem2Reg::run() {
         analyse_dom_relation(fun);
         analyse_df(fun);
         auto phi_v_m = insert_phi_ins(fun);
-        
+        rename_variables(fun, phi_v_m);
     }
 }
 
 // phi_v_m：待完善的phi中目标寄存器和变量的映射
 // var_mem：变量和它的地址的逆映射
-void rename(ptr<ir::ir_basicblock> block, std::unordered_map<ptr<ir::ir_memobj>, ptr_list<ir::ir_value>> &stack, std::unordered_map<ptr<ir::ir_reg>, ptr<ir::ir_memobj>> phi_v_m, std::unordered_map<ptr<ir::ir_reg>, ptr<ir::ir_memobj>> var_mem) {
+void rename(ptr<ir::ir_userfunc> fun, ptr<ir::ir_basicblock> block, std::unordered_map<ptr<ir::ir_memobj>, ptr_list<ir::ir_value>> &stack, std::unordered_map<ptr<ir::ir_reg>, ptr<ir::ir_memobj>> phi_v_m, std::unordered_map<ptr<ir::ir_reg>, ptr<ir::ir_memobj>> var_mem, std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) {
+    std::unordered_map<ptr<ir::ir_memobj>, int> pop_cnt;
     for(auto ins : block->get_instructions()) {
         auto is_phi = std::dynamic_pointer_cast<ir::phi>(ins);
         auto is_store = std::dynamic_pointer_cast<ir::store>(ins);
+        auto is_load = std::dynamic_pointer_cast<ir::load>(ins);
         if(is_phi) {
             auto it = phi_v_m.find(is_phi->dst);
             if(it != phi_v_m.end()) {
                 stack[it->second].push_back(it->first);
+                pop_cnt[it->second]++;
             }
         }
-        if(is_store) {
+        else if(is_store) {
             auto it = var_mem.find(is_store->get_addr());
             if(it != var_mem.end()) {
                 stack[it->second].push_back(is_store->get_value());
+                pop_cnt[it->second]++;
             }
+        }
+        else if(is_load) {
+            auto it = var_mem.find(is_load->get_addr());
+            if(it != var_mem.end()) {
+                replace_map[is_load->get_dst()] = stack[it->second].back();
+            }
+        }
+        else {
+            ins->replace_reg(replace_map);
+        }
+    }
+    for(auto successor : fun->check_nxt(block)) {
+        rename(fun, successor, stack, phi_v_m, var_mem, replace_map);
+    }
+    for(auto [mem, cnt] : pop_cnt) {
+        for(int i = 0; i < cnt; i++) {
+            stack[mem].pop_back();
         }
     }
 }
@@ -46,7 +67,8 @@ void Passes::Mem2Reg::rename_variables(ptr<ir::ir_userfunc> fun, std::unordered_
         stack[def->get_var()] = {};
         var_mem[def->get_var()->get_addr()] = def->get_var();
     }
-    rename(fun->get_entry(), stack, phi_v_m, var_mem);
+    std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map;
+    rename(fun, fun->get_entry(), stack, phi_v_m, var_mem, replace_map);
 }
 
 std::unordered_map<ptr<ir::ir_reg>, ptr<ir::ir_memobj>> Passes::Mem2Reg::insert_phi_ins(ptr<ir::ir_userfunc> fun) {
@@ -237,9 +259,10 @@ void Passes::Mem2Reg::analyse_cfg_flow_and_defs(ptr<ir::ir_userfunc> fun) {
         for(auto instruction : block->get_instructions()) {
             auto jump_ins = std::dynamic_pointer_cast<ir::jump>(instruction);
             auto br_ins = std::dynamic_pointer_cast<ir::br>(instruction);
+            auto bc_ins = std::dynamic_pointer_cast<ir::break_or_continue>(instruction);
             auto while_ins = std::dynamic_pointer_cast<ir::while_loop>(instruction);
             auto store_ins = std::dynamic_pointer_cast<ir::store>(instruction);
-            if(jump_ins) {
+            if(jump_ins || bc_ins) {
                 auto tar = jump_ins->get_target();
                 predecessor[tar].push_back(block);
                 nxt[block].push_back(tar);

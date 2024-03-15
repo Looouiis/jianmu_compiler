@@ -300,6 +300,10 @@ std::vector<ptr<ir::ir_value>> ir::store::def_reg() {
     return {};
 }
 
+void ir::store::replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) {
+
+}
+
 void ir::jump::accept(ir_visitor &visitor)
 {
     visitor.visit(*this);
@@ -333,6 +337,10 @@ std::shared_ptr<ir::ir_basicblock> ir::jump::get_target() {
   return this->target;
 }
 
+void ir::jump::replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) {
+
+}
+
 void ir::br::accept(ir_visitor &visitor)
 {
     visitor.visit(*this);
@@ -360,6 +368,10 @@ std::vector<ptr<ir::ir_value>> ir::br::use_reg() {
 
 std::vector<ptr<ir::ir_value>> ir::br::def_reg() { return std::vector<ptr<ir::ir_value>>(); }
 
+void ir::br::replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) {        // sysy没有bool，br使用的都是icmp比较出来的条件，所以不用换？
+
+}
+
 void ir::ret::accept(ir_visitor &visitor)
 {
     visitor.visit(*this);
@@ -384,6 +396,13 @@ void ir::ret::print(std::ostream & out)
 std::vector<ptr<ir::ir_value>> ir::ret::use_reg() { return {this->value};}
 
 std::vector<ptr<ir::ir_value>> ir::ret::def_reg() { return std::vector<ptr<ir::ir_value>>(); }
+
+void ir::ret::replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) {
+    auto it = replace_map.find(this->value);
+    if(it != replace_map.end()) {
+        this->value = it->second;
+    }
+}
 
 void ir::load::accept(ir_visitor &visitor)
 {
@@ -414,6 +433,10 @@ std::vector<ptr<ir::ir_value>> ir::load::def_reg() {
     return {dst};
 }
 
+void ir::load::replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) {
+
+}
+
 void ir::alloc::accept(ir_visitor &visitor)
 {
     visitor.visit(*this);
@@ -441,6 +464,10 @@ std::vector<ptr<ir::ir_value>> ir::alloc::use_reg() {
 
 std::vector<ptr<ir::ir_value>> ir::alloc::def_reg() {
   return {var->get_addr()};
+}
+
+void ir::alloc::replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) {
+
 }
 
 void ir::phi::accept(ir_visitor &visitor)
@@ -482,6 +509,10 @@ std::vector<ptr<ir::ir_value>> ir::phi::def_reg() {
     return {this->dst}; 
 }
 
+void ir::phi::replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) {
+
+}
+
 void ir::unary_op_ins::accept(ir_visitor &visitor)
 {
     visitor.visit(*this);
@@ -499,6 +530,13 @@ std::vector<ptr<ir::ir_value>> ir::unary_op_ins::use_reg() {
 std::vector<ptr<ir::ir_value>> ir::unary_op_ins::def_reg() {
     return {this->dst};
 };
+
+void ir::unary_op_ins::replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) {
+    auto it = replace_map.find(this->src);
+    if(it != replace_map.end()) {
+        this->src = it->second;
+    }
+}
 
 void ir::binary_op_ins::accept(ir_visitor &visitor)
 {
@@ -525,6 +563,18 @@ std::vector<ptr<ir::ir_value>> ir::binary_op_ins::use_reg() {
 std::vector<ptr<ir::ir_value>> ir::binary_op_ins::def_reg() {
   return {this->dst};
 }
+
+void ir::binary_op_ins::replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) {
+    auto it = replace_map.find(this->src1);
+    if(it != replace_map.end()) {
+        this->src1 = it->second;
+    }
+    it = replace_map.find(this->src2);
+    if(it != replace_map.end()) {
+        this->src2 = it->second;
+    }
+}
+
 void ir::ir_constant::accept(ir_visitor &visitor) {
      visitor.visit(*this);
 }
@@ -581,6 +631,17 @@ std::vector<ptr<ir::ir_value>> ir::cmp_ins::def_reg() {
   return {this->dst};
 }
 
+void ir::cmp_ins::replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) {
+    auto it = replace_map.find(this->src1);
+    if(it != replace_map.end()) {
+        this->src1 = it->second;
+    }
+    it = replace_map.find(this->src2);
+    if(it != replace_map.end()) {
+        this->src2 = it->second;
+    }
+}
+
 void ir::logic_ins::accept(ir_visitor &visitor)
 {
     visitor.visit(*this);
@@ -598,6 +659,17 @@ std::vector<ptr<ir::ir_value>> ir::logic_ins::def_reg() {
   return {this->dst};
 }
 
+void ir::logic_ins::replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) {
+    auto it = replace_map.find(this->src1);
+    if(it != replace_map.end()) {
+        this->src1 = it->second;
+    }
+    it = replace_map.find(this->src2);
+    if(it != replace_map.end()) {
+        this->src2 = it->second;
+    }
+}
+
 std::vector<ptr<ir::ir_value>> ir::reg_write_ins::use_reg() {
   return std::vector<ptr<ir::ir_value>>();
 }
@@ -606,6 +678,8 @@ std::vector<ptr<ir::ir_value>> ir::reg_write_ins::def_reg() {
   return std::vector<ptr<ir::ir_value>>();
 }
 
+void ir::reg_write_ins::replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) {}    // 抽象类，不用换
+
 std::vector<ptr<ir::ir_value>> ir::control_ins::use_reg() {
   return std::vector<ptr<ir::ir_value>>();
 }
@@ -613,6 +687,8 @@ std::vector<ptr<ir::ir_value>> ir::control_ins::use_reg() {
 std::vector<ptr<ir::ir_value>> ir::control_ins::def_reg() {
   return std::vector<ptr<ir::ir_value>>();
 }
+
+void ir::control_ins::replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) {}      // 抽象类，不用换
 
 void ir::get_element_ptr::accept(ir_visitor &visitor)
 {
@@ -633,6 +709,8 @@ std::vector<ptr<ir::ir_value>> ir::get_element_ptr::def_reg() {
   return {this->dst};
 }
 
+void ir::get_element_ptr::replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) {}      // 数组，mem2reg中不可换
+
 void ir::while_loop::accept(ir_visitor &visitor)
 {
     visitor.visit(*this);
@@ -649,6 +727,8 @@ std::vector<ptr<ir::ir_value>> ir::while_loop::use_reg() {
 std::vector<ptr<ir::ir_value>> ir::while_loop::def_reg() {
   return {};
 }
+
+void ir::while_loop::replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) {}       // while回边，不用换
 
 void ir::break_or_continue::accept(ir_visitor &visitor)
 {
@@ -667,6 +747,8 @@ std::vector<ptr<ir::ir_value>> ir::break_or_continue::def_reg() {
   return {};
 }
 
+void ir::break_or_continue::replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) {}    // while中的返回，不用换
+
 void ir::func_call::accept(ir_visitor &visitor)
 {
     visitor.visit(*this);
@@ -683,6 +765,15 @@ std::vector<ptr<ir::ir_value>> ir::func_call::use_reg() {
 
 std::vector<ptr<ir::ir_value>> ir::func_call::def_reg() {
   return {this->ret_reg};
+}
+
+void ir::func_call::replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) {
+    for(auto it = params.begin(); it != params.end(); it++) {
+        auto map_it = replace_map.find(*it);
+        if(map_it != replace_map.end()) {
+            *it = map_it->second;                   // TODO: 测试！
+        }
+    }
 }
 
 void ir::global_def::accept(ir_visitor &visitor)
@@ -706,6 +797,8 @@ ptr<ir::ir_memobj> ir::global_def::get_obj() {
     return obj;
 }
 
+void ir::global_def::replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) {}       // mem2reg不处理全局变量，不用换？
+
 void ir::trans::accept(ir_visitor &visitor)
 {
     visitor.visit(*this);
@@ -721,6 +814,13 @@ std::vector<ptr<ir::ir_value>> ir::trans::use_reg() {
 
 std::vector<ptr<ir::ir_value>> ir::trans::def_reg() {
   return {dst};
+}
+
+void ir::trans::replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) {
+    auto it = replace_map.find(this->src);
+    if(it != replace_map.end()) {
+        this->src = it->second;
+    }
 }
 
 void ir::memset::accept(ir_visitor &visitor)
@@ -739,3 +839,5 @@ std::vector<ptr<ir::ir_value>> ir::memset::use_reg() {
 std::vector<ptr<ir::ir_value>> ir::memset::def_reg() {
   return {};
 }
+
+void ir::memset::replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) {}       // memset不用换

@@ -166,6 +166,7 @@ public:
     virtual void print(std::ostream & out = std::cout) = 0;
     virtual std::vector<ptr<ir::ir_value>> use_reg() = 0;
     virtual std::vector<ptr<ir::ir_value>> def_reg() = 0;     
+    virtual void replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) = 0;
 };
 
 class ir_basicblock : public printable {
@@ -307,6 +308,7 @@ class reg_write_ins : public ir_instr {
     virtual void print(std::ostream & out = std::cout) = 0;
     virtual std::vector<ptr<ir::ir_value>> use_reg() override;
     virtual std::vector<ptr<ir::ir_value>> def_reg() override;
+    void replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) override;
 };
 
 class control_ins : public ir_instr {
@@ -314,6 +316,7 @@ class control_ins : public ir_instr {
     virtual void print(std::ostream & out = std::cout) = 0;
     virtual std::vector<ptr<ir::ir_value>> use_reg() override;
     virtual std::vector<ptr<ir::ir_value>> def_reg() override;
+    void replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) override;
 };
 
 class store : public ir_instr {
@@ -329,6 +332,7 @@ public:
     virtual std::vector<ptr<ir::ir_value>> def_reg() override final;
     ptr<ir_reg> get_addr() {return addr;}
     ptr<ir_value> get_value() {return value;}
+    void replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) override;
 };
 
 class jump : public control_ins {
@@ -343,6 +347,7 @@ public:
     virtual std::vector<ptr<ir::ir_value>> use_reg() override final;
     virtual std::vector<ptr<ir::ir_value>> def_reg() override final;
     ptr<ir::ir_basicblock> get_target();
+    void replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) override;
 };
 
 class br : public control_ins {
@@ -360,6 +365,7 @@ public:
     virtual void print(std::ostream & out = std::cout) override final;
     virtual std::vector<ptr<ir::ir_value>> use_reg() override final;
     virtual std::vector<ptr<ir::ir_value>> def_reg() override final;
+    void replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) override;
 };
 
 class ret : public control_ins {
@@ -373,6 +379,7 @@ public:
     virtual void print(std::ostream & out = std::cout) override final;
     virtual std::vector<ptr<ir::ir_value>> use_reg() override final;
     virtual std::vector<ptr<ir::ir_value>> def_reg() override final;
+    void replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) override;
 };
 
 class load : public reg_write_ins {
@@ -386,6 +393,9 @@ public:
     virtual void print(std::ostream & out = std::cout) override final;
     virtual std::vector<ptr<ir::ir_value>> use_reg() override final;
     virtual std::vector<ptr<ir::ir_value>> def_reg() override final;
+    ptr<ir_reg> get_addr() {return addr;}
+    ptr<ir_reg> get_dst() {return dst;}
+    void replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) override;
 };
 
 class alloc : public reg_write_ins {
@@ -400,6 +410,7 @@ public:
     virtual void print(std::ostream & out = std::cout) override final;
     virtual std::vector<ptr<ir::ir_value>> use_reg() override final;
     virtual std::vector<ptr<ir::ir_value>> def_reg() override final;
+    void replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) override;
 };
 
 class phi : public reg_write_ins {
@@ -414,6 +425,7 @@ public:
     virtual void print(std::ostream & out = std::cout) override final;
     virtual std::vector<ptr<ir::ir_value>> use_reg() override final;
     virtual std::vector<ptr<ir::ir_value>> def_reg() override final;
+    void replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) override;
 };
 
 class unary_op_ins : public reg_write_ins {
@@ -427,6 +439,7 @@ public:
     virtual void print(std::ostream & out = std::cout) override final;
     virtual std::vector<ptr<ir::ir_value>> use_reg() override final;
     virtual std::vector<ptr<ir::ir_value>> def_reg() override final;
+    void replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) override;
 };
 
 class binary_op_ins : public reg_write_ins {
@@ -440,6 +453,7 @@ public:
     virtual void print(std::ostream & out = std::cout) override final;
     virtual std::vector<ptr<ir::ir_value>> use_reg() override final;
     virtual std::vector<ptr<ir::ir_value>> def_reg() override final;
+    void replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) override;
 };
 
 class cmp_ins : public reg_write_ins {
@@ -454,6 +468,7 @@ public:
     virtual void print(std::ostream & out = std::cout) override final;
     virtual std::vector<ptr<ir::ir_value>> use_reg() override final;
     virtual std::vector<ptr<ir::ir_value>> def_reg() override final;
+    void replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) override;
 };
 
 class logic_ins : public reg_write_ins {
@@ -467,6 +482,7 @@ public:
     virtual void print(std::ostream & out = std::cout) override final;
     virtual std::vector<ptr<ir::ir_value>> use_reg() override final;
     virtual std::vector<ptr<ir::ir_value>> def_reg() override final;
+    void replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) override;
 };
 
 class ir_visitor {
@@ -511,6 +527,7 @@ public:
     virtual void print(std::ostream & out = std::cout) override final;
     virtual std::vector<ptr<ir::ir_value>> use_reg() override final;
     virtual std::vector<ptr<ir::ir_value>> def_reg() override final;
+    void replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) override;
 };
 
 class while_loop : public ir_instr {
@@ -529,6 +546,7 @@ public:
     virtual std::vector<ptr<ir::ir_value>> def_reg() override final;
     ptr<ir_basicblock> get_out_block() {return out_block;}
     ptr<ir_basicblock> get_cond_from() {return cond_from;}
+    void replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) override;
 };
 
 class break_or_continue : public control_ins {
@@ -543,6 +561,7 @@ public:
     virtual std::vector<ptr<ir::ir_value>> use_reg() override final;
     virtual std::vector<ptr<ir::ir_value>> def_reg() override final;
     std::shared_ptr<ir::ir_basicblock> getTarget();
+    void replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) override;
 };
 
 class func_call : public control_ins {
@@ -561,6 +580,7 @@ public:
     virtual void print(std::ostream & out = std::cout) override final;
     virtual std::vector<ptr<ir::ir_value>> use_reg() override final;
     virtual std::vector<ptr<ir::ir_value>> def_reg() override final;
+    void replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) override;
 };
 
 class global_def : public ir_instr {
@@ -579,6 +599,7 @@ public:
     virtual std::vector<ptr<ir::ir_value>> use_reg() override final;
     virtual std::vector<ptr<ir::ir_value>> def_reg() override final;
     ptr<ir_memobj> get_obj();
+    void replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) override;
 };
 
 class trans : public ir_instr {
@@ -595,6 +616,7 @@ public:
     virtual void print(std::ostream & out = std::cout) override final;
     virtual std::vector<ptr<ir::ir_value>> use_reg() override final;
     virtual std::vector<ptr<ir::ir_value>> def_reg() override final;
+    void replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) override;
 };
 
 class memset : public ir_instr {
@@ -612,6 +634,7 @@ public:
     virtual void print(std::ostream & out = std::cout) override final;
     virtual std::vector<ptr<ir::ir_value>> use_reg() override final;
     virtual std::vector<ptr<ir::ir_value>> def_reg() override final;
+    void replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) override;
 };
 
 } // namespace ir

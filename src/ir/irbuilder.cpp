@@ -935,12 +935,18 @@ void ir::IrBuilder::visit(ast::break_stmt_syntax &node) {
         abort();
     }
     cur_block->push_back(std::make_shared<ir::break_or_continue>(break_list.back()));
+    auto nxt_block = cur_func->new_block();
+    cur_block->push_back(std::make_shared<ir::jump>(nxt_block));
+    cur_block = nxt_block;
 }
 void ir::IrBuilder::visit(ast::continue_stmt_syntax &node) {
     if(break_list.empty()) {
         abort();
     }
     cur_block->push_back(std::make_shared<ir::break_or_continue>(continue_list.back()));
+    auto nxt_block = cur_func->new_block();
+    cur_block->push_back(std::make_shared<ir::jump>(nxt_block));
+    cur_block = nxt_block;
 }
 void ir::IrBuilder::visit(ast::init_syntax &node) {
     std::unordered_map<vartype, vartype> trans = {{vartype::INTADDR, vartype::INT}, {vartype::INT, vartype::INT}, {vartype::FLOATADDR, vartype::FLOAT}, {vartype::FLOAT, vartype::FLOAT}};
