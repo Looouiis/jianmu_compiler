@@ -94,6 +94,12 @@ void ir::ir_basicblock::for_each(std::function<void(std::shared_ptr<ir::ir_instr
     }
 }
 
+void ir::ir_basicblock::del_ins_by_vec(ptr_list<ir::ir_instr> del_ins) {
+    for(auto del_item : del_ins) {
+        this->instructions.remove(del_item);
+    }
+}
+
 ptr<ir::ir_userfunc> ir::ir_module::new_func(std::string name, std::vector<vartype> arg_types) {
   auto pfunc = std::make_shared<ir_userfunc>(name, this->global_var_cnt, arg_types);
   usrfuncs.push_back({name, pfunc});
@@ -263,6 +269,15 @@ ptr_list<ir::ir_basicblock> ir::ir_userfunc::check_nxt(ptr<ir::ir_basicblock> ta
         std::back_inserter(ret)
     );
     return ret;
+}
+
+void ir::ir_userfunc::del_alloc(ptr_list<ir::alloc> del_items) {
+    for(auto del_item : del_items) {
+        auto it = std::find(this->alloc_list.begin(), this->alloc_list.end(), del_item);
+        if(it != this->alloc_list.end()) {
+            this->alloc_list.erase(it);
+        }
+    }
 }
 
 bool ir::ir_func::set_retype(vartype rettype)
@@ -510,7 +525,12 @@ std::vector<ptr<ir::ir_value>> ir::phi::def_reg() {
 }
 
 void ir::phi::replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) {
-
+    for(auto &use : this->uses) {
+        auto it = replace_map.find(use.first);
+        if(it != replace_map.end()) {
+            use.first = it->second;
+        }
+    }
 }
 
 void ir::unary_op_ins::accept(ir_visitor &visitor)
@@ -745,6 +765,10 @@ std::vector<ptr<ir::ir_value>> ir::break_or_continue::use_reg() {
 
 std::vector<ptr<ir::ir_value>> ir::break_or_continue::def_reg() {
   return {};
+}
+
+ptr<ir::ir_basicblock> ir::break_or_continue::get_target() {
+    return this->target;
 }
 
 void ir::break_or_continue::replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) {}    // while中的返回，不用换

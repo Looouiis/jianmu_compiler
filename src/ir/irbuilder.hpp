@@ -39,6 +39,7 @@ class IrBuilder : public ast::syntax_tree_visitor {
     ptr<ir::ir_memobj> ir_value;
     bool found_main;//是否找到了主函数
     Mode mode;
+    bool cut = false;
 //访问者模式
  public:
     

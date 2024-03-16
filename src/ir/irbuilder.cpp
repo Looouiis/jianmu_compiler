@@ -163,6 +163,7 @@ void ir::IrBuilder::visit(ast::func_def_syntax &node){
     {
     case vartype::VOID:
         {
+            cut = false;
             cur_block->push_back(std::make_shared<ir::jump>(return_bb));
             auto ret_value = std::make_shared<ir::ir_constant>(0);
             return_bb->push_back(std::make_shared<ir::ret>(ret_value,false));
@@ -171,18 +172,23 @@ void ir::IrBuilder::visit(ast::func_def_syntax &node){
         break;
     default:
         {
-            float fz = 0.0f;
-            int z = 0;
-            ptr<ir::ir_constant> ret_val;
-            if(rettype == vartype::FLOAT) {
-                ret_val = std::make_shared<ir::ir_constant>(fz);
+            if(!cut) {
+                float fz = 0.0f;
+                int z = 0;
+                ptr<ir::ir_constant> ret_val;
+                if(rettype == vartype::FLOAT) {
+                    ret_val = std::make_shared<ir::ir_constant>(fz);
+                }
+                else {
+                    ret_val = std::make_shared<ir::ir_constant>(z);
+                }
+                ret_val->type = rettype;
+                return_value.emplace_back(ret_val,cur_block);
+                cur_block->push_back(std::make_shared<ir::jump>(return_bb));
             }
             else {
-                ret_val = std::make_shared<ir::ir_constant>(z);
+                cut = false;
             }
-            ret_val->type = rettype;
-            return_value.emplace_back(ret_val,cur_block);
-            cur_block->push_back(std::make_shared<ir::jump>(return_bb));
             /*
                 set a default value to last block
             */
@@ -631,6 +637,7 @@ void ir::IrBuilder::visit(ast::var_def_stmt_syntax &node)       // self5
         int total_cnt = 1;
         if(node.dimension) {
             obj->dim = node.dimension;
+            obj->addr->is_arr = true;
             for(auto dim : node.dimension->dimensions) {
                 total_cnt *= dim->calc_res();
             }
@@ -678,6 +685,7 @@ void ir::IrBuilder::visit(ast::var_def_stmt_syntax &node)       // self5
         auto obj = def->get_obj();
         if(node.dimension) {
             obj->dim = node.dimension;
+            obj->addr->is_arr = true;
         }
         // if(node.initializer) {
         //     pass_obj = obj;
@@ -753,6 +761,7 @@ void ir::IrBuilder::visit(ast::block_syntax &node)
     for(auto i :node.body)
     {
         i->accept(*this);
+        if(this->cut) break;
     }
     this->scope.exit();
 }
@@ -779,14 +788,14 @@ void ir::IrBuilder::visit(ast::if_stmt_syntax &node)
         judge_ret = transed;
     }
     auto bb_bak = cur_block;
-    auto bb_nxt = cur_func->new_block();
+    ptr<ir::ir_basicblock> bb_nxt = nullptr;
     ptr<ir_basicblock> then_bb;
     ptr<ir_basicblock> else_bb;
     if(node.else_body != nullptr && node.then_body != nullptr) {
         then_bb = cur_func->new_block();
         else_bb = cur_func->new_block();
         cur_block->push_back(std::make_shared<ir::br>(judge_ret, then_bb, else_bb));
-        this->cur_block = this->cur_func->new_block();
+        // this->cur_block = this->cur_func->new_block();
     }
     else if(node.then_body != nullptr) {
         then_bb = cur_func->new_block();
@@ -801,14 +810,31 @@ void ir::IrBuilder::visit(ast::if_stmt_syntax &node)
     if(node.then_body != nullptr){
         cur_block = then_bb;
         node.then_body->accept(*this);
-        cur_block->push_back(std::make_shared<ir::jump>(bb_nxt));
+        if(!cut) {
+            bb_nxt = (bb_nxt == nullptr ? cur_func->new_block() : bb_nxt);
+            cur_block->push_back(std::make_shared<ir::jump>(bb_nxt));
+        }
+        else {
+            cut = false;
+        }
     }
     if(node.else_body != nullptr) {
         cur_block = else_bb;
         node.else_body->accept(*this);
-        cur_block->push_back(std::make_shared<ir::jump>(bb_nxt));
+        if(!cut) {
+            bb_nxt = (bb_nxt == nullptr ? cur_func->new_block() : bb_nxt);
+            cur_block->push_back(std::make_shared<ir::jump>(bb_nxt));
+        }
+        else {
+            cut = false;
+        }
     }
-    cur_block = bb_nxt;
+    if(bb_nxt) {                // 说明then或else中至少有一个不是直接返回
+        cur_block = bb_nxt;
+    }
+    else {                      // 说明then或else中都进行了返回，此时应将cut上移
+        cut = true;
+    }
     // auto then_bb = cur_func->new_block();
     // cur_block->push_back(std::make_shared<ir::jump>(then_bb));
     // node.then_body->accept(*this);
@@ -840,10 +866,11 @@ void ir::IrBuilder::visit(ast::return_stmt_syntax &node)
         auto jmp_inst = std::make_shared<ir::jump>(return_bb);
         cur_block->push_back(jmp_inst);
     }
-    //对BB进行划分，这个BB用于放置return后面的部分（这部分永远不会被执行到）
-    auto after_return = this->cur_func->new_block();
-    cur_block->push_back(std::make_shared<ir::jump>(after_return));     // 保证cfg的跳转关系完整（避免支配分析出错）
-    this->cur_block = after_return;
+    this->cut = true;
+    // //对BB进行划分，这个BB用于放置return后面的部分（这部分永远不会被执行到）
+    // auto after_return = this->cur_func->new_block();
+    // cur_block->push_back(std::make_shared<ir::jump>(after_return));     // 保证cfg的跳转关系完整（避免支配分析出错）
+    // this->cur_block = after_return;
 }
 
 void ir::IrBuilder::visit(ast::var_decl_stmt_syntax &node)
@@ -923,7 +950,12 @@ void ir::IrBuilder::visit(ast::while_stmt_syntax &node) {
     cur_block->push_back(std::make_shared<ir::br>(judge_ret, while_body, out_block));
     cur_block = while_body;
     node.while_body->accept(*this);
-    cur_block->push_back(std::make_shared<ir::while_loop>(while_start, while_body, out_block));
+    if(!cut) {
+        cur_block->push_back(std::make_shared<ir::while_loop>(while_start, while_body, out_block));
+    }
+    else {
+        cut = false;
+    }
     cur_block = out_block;
     break_list.pop_back();
     continue_list.pop_back();
@@ -935,18 +967,20 @@ void ir::IrBuilder::visit(ast::break_stmt_syntax &node) {
         abort();
     }
     cur_block->push_back(std::make_shared<ir::break_or_continue>(break_list.back()));
-    auto nxt_block = cur_func->new_block();
-    cur_block->push_back(std::make_shared<ir::jump>(nxt_block));
-    cur_block = nxt_block;
+    cut = true;
+    // auto nxt_block = cur_func->new_block();
+    // cur_block->push_back(std::make_shared<ir::jump>(nxt_block));
+    // cur_block = nxt_block;
 }
 void ir::IrBuilder::visit(ast::continue_stmt_syntax &node) {
     if(break_list.empty()) {
         abort();
     }
     cur_block->push_back(std::make_shared<ir::break_or_continue>(continue_list.back()));
-    auto nxt_block = cur_func->new_block();
-    cur_block->push_back(std::make_shared<ir::jump>(nxt_block));
-    cur_block = nxt_block;
+    cut = true;
+    // auto nxt_block = cur_func->new_block();
+    // cur_block->push_back(std::make_shared<ir::jump>(nxt_block));
+    // cur_block = nxt_block;
 }
 void ir::IrBuilder::visit(ast::init_syntax &node) {
     std::unordered_map<vartype, vartype> trans = {{vartype::INTADDR, vartype::INT}, {vartype::INT, vartype::INT}, {vartype::FLOATADDR, vartype::FLOAT}, {vartype::FLOAT, vartype::FLOAT}};

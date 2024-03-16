@@ -4,45 +4,51 @@
 #include <cassert>
 #include <iterator>
 #include <memory>
+#include <unordered_map>
 
 void Passes::Mem2Reg::run() {
     func_lst = compunit->usrfuncs;
     for(auto [name, fun] : func_lst) {
         analyse_cfg_flow_and_defs(fun);
-        // remove_empty_block(fun);
-        analyse_dom_relation(fun);
-        analyse_df(fun);
-        auto phi_v_m = insert_phi_ins(fun);
-        rename_variables(fun, phi_v_m);
+        remove_empty_block(fun);
+        // analyse_dom_relation(fun);
+        // analyse_df(fun);
+        // auto phi_r_m = insert_phi_ins(fun);
+        // rename_variables(fun, phi_r_m);
     }
 }
 
-// phi_v_m：待完善的phi中目标寄存器和变量的映射
-// var_mem：变量和它的地址的逆映射
-void rename(ptr<ir::ir_userfunc> fun, ptr<ir::ir_basicblock> block, std::unordered_map<ptr<ir::ir_memobj>, ptr_list<ir::ir_value>> &stack, std::unordered_map<ptr<ir::ir_reg>, ptr<ir::ir_memobj>> phi_v_m, std::unordered_map<ptr<ir::ir_reg>, ptr<ir::ir_memobj>> var_mem, std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) {
+// phi_r_m：待完善的phi中目标寄存器和变量的映射
+// reg_mem：变量和它的地址的逆映射
+void Passes::Mem2Reg::rename(ptr<ir::ir_userfunc> fun, ptr<ir::ir_basicblock> block, std::unordered_map<ptr<ir::ir_memobj>, ptr_list<ir::ir_value>> &stack, std::unordered_map<ptr<ir::ir_reg>, ptr<ir::ir_memobj>> phi_r_m, std::unordered_map<ptr<ir::ir_reg>, ptr<ir::ir_memobj>> reg_mem, std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map, std::unordered_map<ptr<ir::ir_basicblock>, bool> &visited) {
     std::unordered_map<ptr<ir::ir_memobj>, int> pop_cnt;
+    ptr_list<ir::ir_instr> del_ins;
+    visited[block] = true;
     for(auto ins : block->get_instructions()) {
         auto is_phi = std::dynamic_pointer_cast<ir::phi>(ins);
         auto is_store = std::dynamic_pointer_cast<ir::store>(ins);
         auto is_load = std::dynamic_pointer_cast<ir::load>(ins);
         if(is_phi) {
-            auto it = phi_v_m.find(is_phi->dst);
-            if(it != phi_v_m.end()) {
+            auto it = phi_r_m.find(is_phi->dst);
+            if(it != phi_r_m.end()) {
                 stack[it->second].push_back(it->first);
                 pop_cnt[it->second]++;
             }
+            // ins->replace_reg(replace_map);
         }
         else if(is_store) {
-            auto it = var_mem.find(is_store->get_addr());
-            if(it != var_mem.end()) {
+            auto it = reg_mem.find(is_store->get_addr());
+            if(it != reg_mem.end()) {
                 stack[it->second].push_back(is_store->get_value());
                 pop_cnt[it->second]++;
+                del_ins.push_back(ins);
             }
         }
         else if(is_load) {
-            auto it = var_mem.find(is_load->get_addr());
-            if(it != var_mem.end()) {
+            auto it = reg_mem.find(is_load->get_addr());
+            if(it != reg_mem.end()) {
                 replace_map[is_load->get_dst()] = stack[it->second].back();
+                del_ins.push_back(ins);
             }
         }
         else {
@@ -50,25 +56,46 @@ void rename(ptr<ir::ir_userfunc> fun, ptr<ir::ir_basicblock> block, std::unorder
         }
     }
     for(auto successor : fun->check_nxt(block)) {
-        rename(fun, successor, stack, phi_v_m, var_mem, replace_map);
+        for(auto ins : successor->get_instructions()) {
+            auto is_phi = std::dynamic_pointer_cast<ir::phi>(ins);
+            if(is_phi) {
+                auto it = phi_r_m.find(is_phi->dst);
+                if(it != phi_r_m.end()) {
+                    is_phi->uses.push_back({stack[it->second].back(), block});
+                }
+                is_phi->replace_reg(replace_map);
+            }
+        }
+    }
+    for(auto dom : fun->check_nxt(block)) {
+        if(!visited[dom])
+            rename(fun, dom, stack, phi_r_m, reg_mem, replace_map, visited);
     }
     for(auto [mem, cnt] : pop_cnt) {
         for(int i = 0; i < cnt; i++) {
             stack[mem].pop_back();
         }
     }
+    block->del_ins_by_vec(del_ins);
 }
 
-void Passes::Mem2Reg::rename_variables(ptr<ir::ir_userfunc> fun, std::unordered_map<ptr<ir::ir_reg>, ptr<ir::ir_memobj>> phi_v_m) {
+void Passes::Mem2Reg::rename_variables(ptr<ir::ir_userfunc> fun, std::unordered_map<ptr<ir::ir_reg>, ptr<ir::ir_memobj>> phi_r_m) {
     auto alloc = fun->get_var_list();
+    ptr_list<ir::alloc> del_items;
     std::unordered_map<ptr<ir::ir_memobj>, ptr_list<ir::ir_value>> stack;
-    std::unordered_map<ptr<ir::ir_reg>, ptr<ir::ir_memobj>> var_mem;
+    std::unordered_map<ptr<ir::ir_reg>, ptr<ir::ir_memobj>> reg_mem;
+    auto dom_tree = dominator_tree[fun];
     for(auto def : alloc) {
-        stack[def->get_var()] = {};
-        var_mem[def->get_var()->get_addr()] = def->get_var();
+        if(!def->is_arr()) {
+            stack[def->get_var()] = {};
+            reg_mem[def->get_var()->get_addr()] = def->get_var();
+            del_items.push_back(def);
+        }
     }
     std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map;
-    rename(fun, fun->get_entry(), stack, phi_v_m, var_mem, replace_map);
+    std::unordered_map<ptr<ir::ir_basicblock>, bool> visited;
+    rename(fun, fun->get_entry(), stack, phi_r_m, reg_mem, replace_map, visited);
+    fun->del_alloc(del_items);
 }
 
 std::unordered_map<ptr<ir::ir_reg>, ptr<ir::ir_memobj>> Passes::Mem2Reg::insert_phi_ins(ptr<ir::ir_userfunc> fun) {
@@ -112,7 +139,7 @@ std::unordered_map<ptr<ir::ir_reg>, ptr<ir::ir_memobj>> Passes::Mem2Reg::insert_
 }
 
 void Passes::Mem2Reg::analyse_df(ptr<ir::ir_userfunc> fun) {
-    auto df = this->df[fun];
+    auto &df = this->df[fun];
     auto dom = this->dom[fun];
     auto idom = this->idom[fun];
     auto blocks = fun->get_bbs();
@@ -150,6 +177,7 @@ void Passes::Mem2Reg::analyse_dom_relation(ptr<ir::ir_userfunc> fun) {
     auto blocks = fun->get_bbs();
     auto &out = dom[fun];
     auto &doms = idom[fun];
+    auto &dom_tree = dominator_tree[fun];
     std::unordered_map<ptr<ir::ir_basicblock>, std::set<ptr<ir::ir_basicblock>>> in;
     ptr_list<ir::ir_basicblock> not_entry_block;
     int idx = 0;
@@ -230,10 +258,16 @@ void Passes::Mem2Reg::analyse_dom_relation(ptr<ir::ir_userfunc> fun) {
         }
     }
 
-    for(auto [bb, dom] : out) {
-        auto s = bb;
-        auto idom = doms[bb];
-        auto pause = s;
+    // for(auto [bb, dom] : out) {
+    //     auto s = bb;
+    //     auto idom = doms[bb];
+    //     auto pause = s;
+    // }
+    for(auto [block, dom] : out) {
+        for(auto src : dom) {
+            if(block != src)
+                dom_tree[src].push_back(block);
+        }
     }
 }
 
@@ -262,8 +296,13 @@ void Passes::Mem2Reg::analyse_cfg_flow_and_defs(ptr<ir::ir_userfunc> fun) {
             auto bc_ins = std::dynamic_pointer_cast<ir::break_or_continue>(instruction);
             auto while_ins = std::dynamic_pointer_cast<ir::while_loop>(instruction);
             auto store_ins = std::dynamic_pointer_cast<ir::store>(instruction);
-            if(jump_ins || bc_ins) {
+            if(jump_ins) {
                 auto tar = jump_ins->get_target();
+                predecessor[tar].push_back(block);
+                nxt[block].push_back(tar);
+            }
+            if(bc_ins) {
+                auto tar = bc_ins->get_target();
                 predecessor[tar].push_back(block);
                 nxt[block].push_back(tar);
             }
@@ -310,6 +349,7 @@ void Passes::Mem2Reg::remove_empty_block(ptr<ir::ir_userfunc> fun) {
         vector<std::shared_ptr<ir::ir_basicblock>> rm_vec;
         for(auto block : tmp_b) {
             if(!block->check_is_entry() && tmp_s[block].size() == 0) {
+                abort();
                 rm_vec.push_back(block);
                 changed = true;
             }

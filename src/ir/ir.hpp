@@ -145,6 +145,7 @@ public:
     ir_memobj(std::string name , ptr<ir_reg> addr, int size) : name(name) , addr(addr) , size(size) {}
     virtual void accept(ir_visitor& visitor) override final;
     virtual void print(std::ostream & out = std::cout) override final;
+    bool is_arr() {return this->dim != nullptr;}
 };
 
 class ir_func_arg : public ir_memobj {
@@ -174,11 +175,11 @@ class ir_basicblock : public printable {
     friend LoongArch::ProgramBuilder; 
     friend LoongArch::ColoringAllocator;
     std::string name;
-    int id;
     std::list<std::shared_ptr<ir_instr>> instructions;
     bool is_while_body = false;
     bool is_entry = false;
 public:
+    int id;
     ir_basicblock(int id) : id(id) { name = "bb"+std::to_string(id); };
     void push_back(ptr<ir_instr> inst);
     void push_front(ptr<ir_instr> inst);
@@ -194,6 +195,7 @@ public:
     std::list<std::shared_ptr<ir_instr>> get_instructions() {return instructions;}
     void mark_entry() {is_entry = true;}
     bool check_is_entry() {return is_entry;}
+    void del_ins_by_vec(ptr_list<ir::ir_instr> del_ins);
 };
 
 
@@ -299,6 +301,7 @@ public:
     std::unordered_map<ptr<ir::ir_basicblock>, ptr_list<ir::ir_basicblock>>& get_nxt_ref() {return nxt;}
     ptr_list<ir::alloc> get_var_list() {return alloc_list;}
     ptr<ir::ir_basicblock> get_entry() {return entry;}
+    void del_alloc(ptr_list<ir::alloc> del_items);
 };
 
 //below is instruction
@@ -411,6 +414,7 @@ public:
     virtual std::vector<ptr<ir::ir_value>> use_reg() override final;
     virtual std::vector<ptr<ir::ir_value>> def_reg() override final;
     void replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) override;
+    bool is_arr() {return this->var->is_arr();}
 };
 
 class phi : public reg_write_ins {
@@ -560,7 +564,7 @@ public:
     virtual void print(std::ostream & out = std::cout) override final;
     virtual std::vector<ptr<ir::ir_value>> use_reg() override final;
     virtual std::vector<ptr<ir::ir_value>> def_reg() override final;
-    std::shared_ptr<ir::ir_basicblock> getTarget();
+    ptr<ir::ir_basicblock> get_target();
     void replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) override;
 };
 
