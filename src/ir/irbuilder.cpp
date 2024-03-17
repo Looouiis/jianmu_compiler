@@ -768,6 +768,8 @@ void ir::IrBuilder::visit(ast::block_syntax &node)
 
 void ir::IrBuilder::visit(ast::if_stmt_syntax &node)
 {
+    bool then_cut = false;
+    bool else_cut = false;
     node.pred->accept(*this);
     auto judge_ret = pass_value;
     if(judge_ret->get_type() != vartype::BOOL && judge_ret->get_type() != vartype::FBOOL) {
@@ -789,52 +791,78 @@ void ir::IrBuilder::visit(ast::if_stmt_syntax &node)
     }
     auto bb_bak = cur_block;
     ptr<ir::ir_basicblock> bb_nxt = nullptr;
+    ptr<ir_basicblock> then_bb_entry;
     ptr<ir_basicblock> then_bb;
+    ptr<ir_basicblock> else_bb_entry;
     ptr<ir_basicblock> else_bb;
+    if(node.then_body != nullptr){
+        then_bb_entry = cur_func->new_block();
+        cur_block = then_bb_entry;
+        node.then_body->accept(*this);
+        then_cut = cut;
+        cut = false;
+        if(cur_block)
+            then_bb = cur_block;                // 嵌套if可能产生bb_nxt
+        else
+            then_bb = then_bb_entry;
+        // if(!cut) {
+        //     // bb_nxt = (bb_nxt == nullptr ? cur_func->new_block() : bb_nxt);
+        //     cur_block->push_back(std::make_shared<ir::jump>(bb_nxt));
+        // }
+        // else {
+        //     cut = false;
+        // }
+    }
+    if(node.else_body != nullptr) {
+        else_bb_entry = cur_func->new_block();
+        cur_block = else_bb_entry;
+        node.else_body->accept(*this);
+        else_cut = cut;
+        cut = false;
+        if(cur_block)
+            else_bb = cur_block;
+        else
+            else_bb = else_bb_entry;
+        // if(!cut) {
+        //     // bb_nxt = (bb_nxt == nullptr ? cur_func->new_block() : bb_nxt);
+        //     cur_block->push_back(std::make_shared<ir::jump>(bb_nxt));
+        // }
+        // else {
+        //     cut = false;
+        // }
+    }
+    if(then_cut && else_cut && node.else_body != nullptr && node.then_body != nullptr) {      // 说明then或else中都进行了返回，此时应将cut上移
+        cut = true;
+    }
+    else {                          // 说明then或else中至少有一个不是直接返回
+        bb_nxt = cur_func->new_block();
+    }
+    cur_block = bb_bak;
     if(node.else_body != nullptr && node.then_body != nullptr) {
-        then_bb = cur_func->new_block();
-        else_bb = cur_func->new_block();
-        cur_block->push_back(std::make_shared<ir::br>(judge_ret, then_bb, else_bb));
+        // then_bb = cur_func->new_block();
+        // else_bb = cur_func->new_block();
+        cur_block->push_back(std::make_shared<ir::br>(judge_ret, then_bb_entry, else_bb_entry));
         // this->cur_block = this->cur_func->new_block();
     }
     else if(node.then_body != nullptr) {
-        then_bb = cur_func->new_block();
+        // then_bb = cur_func->new_block();
         // cur_block->push_back(std::make_shared<ir::jump>(then_bb));
-        cur_block->push_back(std::make_shared<ir::br>(judge_ret, then_bb, bb_nxt));
+        cur_block->push_back(std::make_shared<ir::br>(judge_ret, then_bb_entry, bb_nxt));
     }
     else if(node.else_body != nullptr) {
-        else_bb = cur_func->new_block();
+        // else_bb = cur_func->new_block();
         // cur_block->push_back(std::make_shared<ir::jump>(else_bb));
-        cur_block->push_back(std::make_shared<ir::br>(judge_ret, bb_nxt, else_bb));
+        cur_block->push_back(std::make_shared<ir::br>(judge_ret, bb_nxt, else_bb_entry));
     }
-    if(node.then_body != nullptr){
-        cur_block = then_bb;
-        node.then_body->accept(*this);
-        if(!cut) {
-            bb_nxt = (bb_nxt == nullptr ? cur_func->new_block() : bb_nxt);
-            cur_block->push_back(std::make_shared<ir::jump>(bb_nxt));
-        }
-        else {
-            cut = false;
-        }
+    if(node.then_body != nullptr && !then_cut) {
+        then_bb->push_back(std::make_shared<ir::jump>(bb_nxt));
     }
-    if(node.else_body != nullptr) {
-        cur_block = else_bb;
-        node.else_body->accept(*this);
-        if(!cut) {
-            bb_nxt = (bb_nxt == nullptr ? cur_func->new_block() : bb_nxt);
-            cur_block->push_back(std::make_shared<ir::jump>(bb_nxt));
-        }
-        else {
-            cut = false;
-        }
+    if(node.else_body != nullptr && !else_cut) {
+        else_bb->push_back(std::make_shared<ir::jump>(bb_nxt));
     }
-    if(bb_nxt) {                // 说明then或else中至少有一个不是直接返回
+    // if(bb_nxt) {
         cur_block = bb_nxt;
-    }
-    else {                      // 说明then或else中都进行了返回，此时应将cut上移
-        cut = true;
-    }
+    // }
     // auto then_bb = cur_func->new_block();
     // cur_block->push_back(std::make_shared<ir::jump>(then_bb));
     // node.then_body->accept(*this);

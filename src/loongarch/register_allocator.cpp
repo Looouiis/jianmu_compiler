@@ -270,8 +270,8 @@ LoongArch::ColoringAllocator::ColoringAllocator(std::shared_ptr<ir::ir_userfunc>
       }
       if(while_ins != nullptr) {                                          // TODO: 检查分析逻辑
         auto tar = while_ins->out_block;
-        predecessor[tar].push_back(while_ins->cond_from);
-        nxt[while_ins->cond_from].push_back(tar);
+        predecessor[tar].push_back(block);
+        nxt[block].push_back(tar);
       }
     }
   }
