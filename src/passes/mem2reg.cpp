@@ -1,5 +1,6 @@
 #include "mem2reg.hpp"
 #include "ir/ir.hpp"
+#include "parser/SyntaxTree.hpp"
 #include <algorithm>
 #include <cassert>
 #include <iterator>
@@ -11,10 +12,10 @@ void Passes::Mem2Reg::run() {
     for(auto [name, fun] : func_lst) {
         analyse_cfg_flow_and_defs(fun);
         remove_empty_block(fun);
-        // analyse_dom_relation(fun);
-        // analyse_df(fun);
-        // auto phi_r_m = insert_phi_ins(fun);
-        // rename_variables(fun, phi_r_m);
+        analyse_dom_relation(fun);
+        analyse_df(fun);
+        auto phi_r_m = insert_phi_ins(fun);
+        rename_variables(fun, phi_r_m);
     }
 }
 
@@ -37,6 +38,7 @@ void Passes::Mem2Reg::rename(ptr<ir::ir_userfunc> fun, ptr<ir::ir_basicblock> bl
             // ins->replace_reg(replace_map);
         }
         else if(is_store) {
+            ins->replace_reg(replace_map);
             auto it = reg_mem.find(is_store->get_addr());
             if(it != reg_mem.end()) {
                 stack[it->second].push_back(is_store->get_value());
@@ -47,6 +49,7 @@ void Passes::Mem2Reg::rename(ptr<ir::ir_userfunc> fun, ptr<ir::ir_basicblock> bl
         else if(is_load) {
             auto it = reg_mem.find(is_load->get_addr());
             if(it != reg_mem.end()) {
+                auto dst = is_load->get_dst();
                 replace_map[is_load->get_dst()] = stack[it->second].back();
                 del_ins.push_back(ins);
             }
@@ -61,7 +64,20 @@ void Passes::Mem2Reg::rename(ptr<ir::ir_userfunc> fun, ptr<ir::ir_basicblock> bl
             if(is_phi) {
                 auto it = phi_r_m.find(is_phi->dst);
                 if(it != phi_r_m.end()) {
-                    is_phi->uses.push_back({stack[it->second].back(), block});
+                    if(!stack[it->second].empty()) {
+                        is_phi->uses.push_back({stack[it->second].back(), block});
+                    }
+                    else {
+                        ptr<ir::ir_constant> zero;
+                        if(it->first->get_type() == vartype::FLOAT) {
+                            zero = std::make_shared<ir::ir_constant>(0.0f);
+                            zero->set_type(vartype::FLOAT);
+                        }
+                        else {
+                            zero = std::make_shared<ir::ir_constant>(0);
+                        }
+                        is_phi->uses.push_back({zero, block});
+                    }
                 }
                 is_phi->replace_reg(replace_map);
             }
@@ -102,7 +118,14 @@ std::unordered_map<ptr<ir::ir_reg>, ptr<ir::ir_memobj>> Passes::Mem2Reg::insert_
     std::set<ptr<ir::ir_basicblock>> f, w;
     auto defs = this->defs[fun];
     auto df = this->df[fun];
-    std::unordered_map<ptr<ir::ir_reg>, ptr<ir::ir_memobj>> phi_var_2_mem;
+    std::unordered_map<ptr<ir::ir_reg>, ptr<ir::ir_memobj>> phi_reg_2_mem;
+   std::unordered_map<vartype, vartype> base_type = {
+    //    {vartype::FLOATADDR, "float"},
+       {vartype::FLOATADDR, vartype::FLOAT},
+       {vartype::INTADDR, vartype::INT},
+       {vartype::BOOLADDR, vartype::BOOL},
+       {vartype::FBOOLADDR, vartype::FBOOL}
+   };
     for(auto alloc : fun->get_var_list()) {
         auto v = alloc->get_var();
         f.clear();
@@ -115,10 +138,11 @@ std::unordered_map<ptr<ir::ir_reg>, ptr<ir::ir_memobj>> Passes::Mem2Reg::insert_
             auto x = *w.begin();
             w.erase(w.begin());
             for(auto y : df[x]) {
+                if(y->is_ret()) continue;
                 if(f.find(y) == f.end()) {
-                    auto reg = fun->new_reg(v->get_addr()->get_type());
+                    auto reg = fun->new_reg(base_type[v->get_addr()->get_type()]);
                     auto phi = std::make_shared<ir::phi>(reg);
-                    phi_var_2_mem[reg] = v;
+                    phi_reg_2_mem[reg] = v;
                     y->push_front(phi);
                     f.insert(y);
                     bool find = false;
@@ -135,7 +159,7 @@ std::unordered_map<ptr<ir::ir_reg>, ptr<ir::ir_memobj>> Passes::Mem2Reg::insert_
             }
         }
     }
-    return phi_var_2_mem;
+    return phi_reg_2_mem;
 }
 
 void Passes::Mem2Reg::analyse_df(ptr<ir::ir_userfunc> fun) {
@@ -147,11 +171,21 @@ void Passes::Mem2Reg::analyse_df(ptr<ir::ir_userfunc> fun) {
         auto successor = fun->check_nxt(a);
         for(auto b : successor) {
             auto x = a;
-            while(x != b && (std::find(dom[b].begin(), dom[b].end(), x) == dom[b].end())) {
+            while(!(x != b && (std::find(dom[b].begin(), dom[b].end(), x) != dom[b].end()))) {
                 df[x].insert(b);
                 x = idom[x];
             }
         }
+        // auto predecessor = fun->check_predecessor(a);
+        // if(predecessor.size() > 1) {
+        //     for(auto p : predecessor) {
+        //         auto runner = p;
+        //         while(runner != idom[a]) {
+        //             df[runner].insert(a);
+        //             runner = idom[runner];
+        //         }
+        //     }
+        // }
     }
 }
 
@@ -258,11 +292,11 @@ void Passes::Mem2Reg::analyse_dom_relation(ptr<ir::ir_userfunc> fun) {
         }
     }
 
-    // for(auto [bb, dom] : out) {
-    //     auto s = bb;
-    //     auto idom = doms[bb];
-    //     auto pause = s;
-    // }
+    for(auto [bb, dom] : out) {
+        auto s = bb;
+        auto idom = doms[bb];
+        auto pause = s;
+    }
     for(auto [block, dom] : out) {
         for(auto src : dom) {
             if(block != src)

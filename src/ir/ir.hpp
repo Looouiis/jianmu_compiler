@@ -102,6 +102,7 @@ public:
     virtual vartype get_type() override final;
     virtual string get_val() override final;
     string get_name();
+    bool check_is_param() {return this->is_param;}
 };
 class ir_constant : public ir_value {
     friend IrBuilder;
@@ -116,6 +117,7 @@ public:
     virtual void print(std::ostream & out = std::cout) override final;
     virtual vartype get_type() override final;
     virtual string get_val() override final;
+    void set_type(vartype type) {this->type = type;}
 };
 
 class jumpList : public ir_value {
@@ -178,6 +180,7 @@ class ir_basicblock : public printable {
     std::list<std::shared_ptr<ir_instr>> instructions;
     bool is_while_body = false;
     bool is_entry = false;
+    bool is_return_bb = false;
 public:
     int id;
     ir_basicblock(int id) : id(id) { name = "bb"+std::to_string(id); };
@@ -196,6 +199,8 @@ public:
     void mark_entry() {is_entry = true;}
     bool check_is_entry() {return is_entry;}
     void del_ins_by_vec(ptr_list<ir::ir_instr> del_ins);
+    void mark_ret() {is_return_bb = true;}
+    bool is_ret() {return is_return_bb;}
 };
 
 

@@ -316,7 +316,10 @@ std::vector<ptr<ir::ir_value>> ir::store::def_reg() {
 }
 
 void ir::store::replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) {
-
+    auto it = replace_map.find(this->value);
+    if(it != replace_map.end()) {
+        this->value = it->second;
+    }
 }
 
 void ir::jump::accept(ir_visitor &visitor)
@@ -384,7 +387,10 @@ std::vector<ptr<ir::ir_value>> ir::br::use_reg() {
 std::vector<ptr<ir::ir_value>> ir::br::def_reg() { return std::vector<ptr<ir::ir_value>>(); }
 
 void ir::br::replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) {        // sysy没有bool，br使用的都是icmp比较出来的条件，所以不用换？
-
+    auto it = replace_map.find(this->cond);
+    if(it != replace_map.end()) {
+        this->cond = it->second;
+    }
 }
 
 void ir::ret::accept(ir_visitor &visitor)
@@ -449,7 +455,12 @@ std::vector<ptr<ir::ir_value>> ir::load::def_reg() {
 }
 
 void ir::load::replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) {
-
+    // auto it = replace_map.find(this->dst);
+    // if(it != replace_map.end()) {
+    //     auto is_reg = std::dynamic_pointer_cast<ir::ir_reg>(it->second);
+    //     if(is_reg)
+    //         this->dst = is_reg;
+    // }
 }
 
 void ir::alloc::accept(ir_visitor &visitor)
@@ -729,7 +740,14 @@ std::vector<ptr<ir::ir_value>> ir::get_element_ptr::def_reg() {
   return {this->dst};
 }
 
-void ir::get_element_ptr::replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) {}      // 数组，mem2reg中不可换
+void ir::get_element_ptr::replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) {
+    for(auto &offset : this->obj_offset) {
+        auto it = replace_map.find(offset);
+        if(it != replace_map.end()) {
+            offset = it->second;
+        }
+    }
+}
 
 void ir::while_loop::accept(ir_visitor &visitor)
 {
@@ -795,7 +813,7 @@ void ir::func_call::replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir
     for(auto it = params.begin(); it != params.end(); it++) {
         auto map_it = replace_map.find(*it);
         if(map_it != replace_map.end()) {
-            *it = map_it->second;                   // TODO: 测试！
+            *it = map_it->second;
         }
     }
 }

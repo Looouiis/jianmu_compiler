@@ -144,6 +144,7 @@ void ir::IrBuilder::visit(ast::func_def_syntax &node){
         }
     }
     return_bb = cur_func->new_block();
+    return_bb->mark_ret();
 
 
     this->scope.enter();
@@ -935,6 +936,7 @@ void ir::IrBuilder::visit(ast::func_f_param_syntax &node) {
         auto changeable = this->cur_func->new_obj(node.name, node.accept_type);
         // cur_block->push_back(std::make_shared<ir::alloc>(changeable));
         cur_func->alloc_list.push_back(std::make_shared<ir::alloc>(changeable));
+        changeable->addr->is_param = true;
         cur_block->push_back(std::make_shared<ir::store>(changeable->get_addr(), mem->get_addr()));
         this->scope.push_var(node.name, changeable);
     }

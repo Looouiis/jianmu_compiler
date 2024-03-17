@@ -25,7 +25,7 @@ int main(){
 
     // std::cout << "----------------------------------------------------------" << std::endl;
 
-    // // std::shared_ptr<ir::IrPrinter> irprinter = std::make_shared<ir::IrPrinter>();
+    // std::shared_ptr<ir::IrPrinter> irprinter = std::make_shared<ir::IrPrinter>();
     // irbuilder->compunit->accept(*irprinter);
 
     //下面是后端的部分
