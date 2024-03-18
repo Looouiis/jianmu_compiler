@@ -115,7 +115,7 @@ void LoongArch::ColoringAllocator::BuildConflictGraph() {
       }
     }
   }
-  log_status = allregs.size() > log_limit;
+  // log_status = allregs.size() > log_limit;
   if(log_status)
     std::ios_base::sync_with_stdio(false);
   for(int i = 0; i < allregs.size(); i++) {
@@ -441,8 +441,9 @@ LoongArch::ColoringAllocator::ColoringAllocator(std::shared_ptr<ir::ir_userfunc>
           auto reg = std::dynamic_pointer_cast<ir::ir_reg>(r);
           if(reg != nullptr) {
             mappingToInterval[reg].l = ultimate_block_start;
-            if(is_call)
-              judge_list.push_back(reg);
+            mappingToInterval[reg].r = std::max(mappingToInterval[reg].r, ultimate_block_end);
+            // if(is_call)
+            //   judge_list.push_back(reg);
           }
         }
       }
@@ -476,7 +477,7 @@ LoongArch::ColoringAllocator::ColoringAllocator(std::shared_ptr<ir::ir_userfunc>
             mappingToInterval[reg].r = std::max(mappingToInterval[reg].r, ultimate_block_end);
         }
       }
-      else if(phi != nullptr) {
+      if(phi != nullptr) {
         for(auto r : y) {
           auto reg = std::dynamic_pointer_cast<ir::ir_reg>(r);
           if(reg != nullptr)

@@ -948,10 +948,10 @@ void ir::IrBuilder::visit(ast::exp_stmt_syntax &node) {
     node.exp->accept(*this);
 }
 void ir::IrBuilder::visit(ast::while_stmt_syntax &node) {
-    auto while_start = this->cur_func->new_block();
     auto out_block = this->cur_func->new_block();
     auto dealing_status_backup = cur_func->dealing_while;
     cur_func->dealing_while = true;
+    auto while_start = this->cur_func->new_block();
     auto while_body = this->cur_func->new_block();
     // while_body->mark_while();
     break_list.push_back(out_block);
