@@ -5,7 +5,8 @@
 namespace Passes {
 
 enum PassType {
-    MEM2REG
+    MEM2REG,
+    DEAD_CODE_ELIMINATION
 };
 
 class Pass {
