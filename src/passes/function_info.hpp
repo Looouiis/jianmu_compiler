@@ -3,13 +3,17 @@
 
 #include "ir/ir.hpp"
 #include "passes/pass.hpp"
+#include <queue>
 namespace Passes {
 
-class FunctionInfo : Pass {
-    std::list<std::pair<std::string,std::shared_ptr<ir::ir_userfunc>>> func_lst;
+class FunctionInfo : public Pass {
+    std::list<std::pair<std::string,std::shared_ptr<ir::ir_func>>> func_lst;
+    std::queue<ptr<ir::ir_func>> work_lst;
 public:
     FunctionInfo(ptr<ir::ir_module> compunit) : Pass(compunit) {}
     virtual void run() override final;
+    void judge_pure(string name, ptr<ir::ir_userfunc> fun);
+    void judge_caller(ptr<ir::ir_func> fun);
 };
 
 };

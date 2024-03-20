@@ -140,7 +140,7 @@ void ir::IrBuilder::visit(ast::func_def_syntax &node){
         this->found_main = true;
         if(compunit->init_block) {
             ptr_list<ir::ir_value> param = {};
-            cur_block->push_back(std::make_shared<ir::func_call>(compunit->global_init_func->name, param, vartype::VOID));
+            cur_block->push_back(std::make_shared<ir::func_call>(compunit->global_init_func->name, param, vartype::VOID, compunit->global_init_func));
         }
     }
     return_bb = cur_func->new_block();
@@ -699,6 +699,7 @@ void ir::IrBuilder::visit(ast::var_def_stmt_syntax &node)       // self5
             auto backup_block = this->cur_block;
             this->cur_func = compunit->global_init_func;
             if(!compunit->init_block) {
+                compunit->global_init_func->mark_fun(compunit->global_init_func);
                 compunit->init_block = compunit->global_init_func->new_block();
                 compunit->global_init_func->max_reg = compunit->global_var_cnt;
                 compunit->global_init_func->set_retype(vartype::VOID);
@@ -1123,7 +1124,8 @@ void ir::IrBuilder::visit(ast::func_call_syntax &node) {
         auto ret = pass_value;
         params.push_back(ret);
     }
-    auto call_ins = std::make_shared<ir::func_call>(func->name, params, func->get_rettype());
+    func->add_caller(this->cur_func);
+    auto call_ins = std::make_shared<ir::func_call>(func->name, params, func->get_rettype(), func);
     if(func->get_rettype() != vartype::VOID) {
         auto dst = cur_func->new_reg(func->get_rettype());
         call_ins->ret_reg = dst;

@@ -1,6 +1,7 @@
 #include "ir/ir.hpp"
 #include <algorithm>
 #include <bitset>
+#include <cassert>
 #include <cstdlib>
 #include <iomanip>
 #include <iterator>
@@ -49,10 +50,28 @@ void ir::ir_scope::print(std::ostream & out )
 }
 void ir::ir_basicblock::push_back(ptr<ir_instr> inst)
 {
+    auto def_val = inst->def_reg();
+    for(auto def : def_val) {
+        if(def)
+            def->mark_def_loc(inst);
+    }
+    assert(this->get_block());
+    assert(this->get_fun());
+    inst->mark_block(this->get_block());
+    inst->mark_fun(this->get_fun());
     this->instructions.push_back(inst);
 }
 
 void ir::ir_basicblock::push_front(ptr<ir_instr> inst) {
+    auto def_val = inst->def_reg();
+    for(auto def : def_val) {
+        if(def)
+            def->mark_def_loc(inst);
+    }
+    assert(this->get_block());
+    assert(this->get_fun());
+    inst->mark_block(this->get_block());
+    inst->mark_fun(this->get_fun());
     this->instructions.push_front(inst);
 }
 
@@ -94,6 +113,10 @@ void ir::ir_basicblock::for_each(std::function<void(std::shared_ptr<ir::ir_instr
     }
 }
 
+void ir::ir_basicblock::del_ins(ptr<ir::ir_instr> ins) {
+    this->instructions.remove(ins);
+}
+
 void ir::ir_basicblock::del_ins_by_vec(ptr_list<ir::ir_instr> del_ins) {
     for(auto del_item : del_ins) {
         this->instructions.remove(del_item);
@@ -102,6 +125,7 @@ void ir::ir_basicblock::del_ins_by_vec(ptr_list<ir::ir_instr> del_ins) {
 
 ptr<ir::ir_userfunc> ir::ir_module::new_func(std::string name, std::vector<vartype> arg_types) {
   auto pfunc = std::make_shared<ir_userfunc>(name, this->global_var_cnt, arg_types);
+  pfunc->mark_fun(pfunc);
   usrfuncs.push_back({name, pfunc});
   return pfunc;
 }
@@ -149,6 +173,7 @@ ir::ir_userfunc::ir_userfunc(std::string name, int reg_cnt, std::vector<vartype>
 ptr<ir::ir_memobj> ir::ir_userfunc::new_obj(std::string name, vartype var_type) {
     std::unordered_map<vartype, vartype> var_reg_trans = {{vartype::INT, vartype::INTADDR}, {vartype::FLOAT, vartype::FLOATADDR}, {vartype::BOOL, vartype::BOOLADDR}, {vartype::FBOOL, vartype::FBOOLADDR}};
   auto addr = this->new_reg(var_reg_trans[var_type]);
+  addr->mark_local();
   auto obj = std::make_shared<ir_memobj>(name, addr, i32_size);
   this->scope->ir_objs.push_back(obj);
   return obj;
@@ -166,6 +191,9 @@ ptr<ir::ir_basicblock> ir::ir_userfunc::new_block()
     if(dealing_while) {
         bb->mark_while();
     }
+    bb->mark_block(bb);
+    assert(this->get_fun());
+    bb->mark_fun(this->get_fun());
     this->bbs.push_back(bb);
     return bb;
 }

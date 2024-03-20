@@ -3,7 +3,9 @@
 
 #include "loongarch/arch.hpp"
 #include "parser/SyntaxTree.hpp"
+#include "passes/pass_type.hpp"
 #include <memory>
+#include <set>
 #include <variant>
 #include <list>
 #include <optional>
@@ -43,6 +45,7 @@ class ir_constant;
 class ir_basicblock;
 class ir_memobj;
 
+class ir_instr;
 class alloc;
 class binary_op_ins;
 class br;
@@ -74,6 +77,8 @@ public:
     virtual void print(std::ostream & out = std::cout) = 0;
     virtual vartype get_type() = 0;
     virtual string get_val() = 0;
+    virtual void mark_def_loc(ptr<ir::ir_instr> loc) = 0;
+    virtual ptr<ir::ir_instr> get_def_loc() = 0;
 };
 
 class ir_reg : public ir_value {
@@ -91,6 +96,8 @@ private:
     bool is_const;
     bool is_arr = false;
     bool is_param = false;
+    bool is_local = false;
+    ptr<ir::ir_instr> def_at;
 public:
     ir_reg(int id,vartype type,int size, bool is_global) : id(id) , type(type), size(size), is_global(is_global) {}
     // ir_reg(string global_name, vartype type, int size) : global_name(global_name), type(type), size(size), is_global(true) {}
@@ -103,6 +110,10 @@ public:
     virtual string get_val() override final;
     string get_name();
     bool check_is_param() {return this->is_param;}
+    void mark_local() {is_local = true;}
+    bool check_local() {return is_local;}
+    virtual void mark_def_loc(ptr<ir::ir_instr> loc) override final {def_at = loc;}
+    virtual ptr<ir::ir_instr> get_def_loc() override final {return def_at;}
 };
 class ir_constant : public ir_value {
     friend IrBuilder;
@@ -118,6 +129,8 @@ public:
     virtual vartype get_type() override final;
     virtual string get_val() override final;
     void set_type(vartype type) {this->type = type;}
+    virtual void mark_def_loc(ptr<ir::ir_instr> loc) override final {}
+    virtual ptr<ir::ir_instr> get_def_loc() override final  {return nullptr;}
 };
 
 class jumpList : public ir_value {
@@ -164,7 +177,14 @@ public:
 };
 
 class ir_instr : public printable {
+private:
+    ptr<ir::ir_userfunc> map_to_fun;
+    ptr<ir::ir_basicblock> map_to_block;
 public:
+    void mark_fun(ptr<ir::ir_userfunc> fun) {map_to_fun = fun;}
+    ptr<ir::ir_userfunc> get_fun() {return map_to_fun;}
+    void mark_block(ptr<ir::ir_basicblock> block) {map_to_block = block;}
+    ptr<ir::ir_basicblock> get_block() {return map_to_block;}
     virtual void accept(ir_visitor& visitor) = 0;
     virtual void print(std::ostream & out = std::cout) = 0;
     virtual std::vector<ptr<ir::ir_value>> use_reg() = 0;
@@ -181,6 +201,8 @@ class ir_basicblock : public printable {
     bool is_while_body = false;
     bool is_entry = false;
     bool is_return_bb = false;
+    ptr<ir::ir_userfunc> cur_func;
+    ptr<ir::ir_basicblock> cur_block_ptr;
 public:
     int id;
     ir_basicblock(int id) : id(id) { name = "bb"+std::to_string(id); };
@@ -198,9 +220,14 @@ public:
     std::list<std::shared_ptr<ir_instr>> get_instructions() {return instructions;}
     void mark_entry() {is_entry = true;}
     bool check_is_entry() {return is_entry;}
+    void del_ins(ptr<ir::ir_instr> ins);
     void del_ins_by_vec(ptr_list<ir::ir_instr> del_ins);
     void mark_ret() {is_return_bb = true;}
     bool is_ret() {return is_return_bb;}
+    void mark_fun(ptr<ir::ir_userfunc> fun) {cur_func = fun;}
+    ptr<ir::ir_userfunc> get_fun() {return cur_func;}
+    void mark_block(ptr<ir::ir_basicblock> block) {cur_block_ptr = block;}
+    ptr<ir::ir_basicblock> get_block() {return cur_block_ptr;}
 };
 
 
@@ -211,16 +238,25 @@ protected:
     vartype rettype;
     std::unordered_map<int,ir_func_arg> args;                   // TODO: 我没有采用这个args
     std::vector<vartype> arg_types;
+    std::set<ptr<ir::ir_userfunc>> caller;
+    bool is_pure = false;
 public:
     ir_func(std::string name, vector<vartype> arg_types) : name(name), arg_types(arg_types) {}
     bool set_retype(vartype rettype);
     vartype get_rettype() {return rettype;}
     virtual void accept(ir_visitor& visitor) = 0;
     virtual void print(std::ostream & out = std::cout) = 0;
+    void add_caller(ptr<ir::ir_userfunc> fun) {this->caller.insert(fun);}
+    void mark_pure() {this->is_pure = true;}
+    void clear_pure() {this->is_pure = false;}
+    bool check_pure() {return this->is_pure;}
+    std::set<ptr<ir::ir_userfunc>> get_caller() {return caller;}
 };
 
 class ir_module : public printable {
     friend IrPrinter;
+private:
+    std::set<Passes::PassType> processed_passes;
 protected:
     std::unique_ptr<ir_scope> scope;
 
@@ -243,6 +279,8 @@ public:
     virtual void accept(ir_visitor& visitor) override final;
     virtual void print(std::ostream & out = std::cout) override final;
     virtual void reg_allocate(int base_reg, ptr_list<global_def> global_var);
+    void mark_passes_completed(Passes::PassType tar) {processed_passes.insert(tar);};
+    bool check_passes_completed(Passes::PassType tar) {return processed_passes.find(tar) != processed_passes.end();}
 };
 
 //below is func
@@ -285,6 +323,8 @@ private:
     std::unordered_map<ptr<ir::ir_basicblock>, ptr_list<ir::ir_basicblock>> s_back_trace;
     std::unordered_map<ptr<ir::ir_basicblock>, ptr_list<ir::ir_basicblock>> nxt;
     std::unordered_map<ptr<ir::ir_basicblock>, ptr_list<ir::ir_basicblock>> n_back_trace;
+
+    ptr<ir::ir_userfunc> cur_fun_ptr;
 public:
     ir_userfunc(std::string name, int reg_cnt, std::vector<vartype> arg_tpyes); 
     ptr<ir_memobj> new_obj(std::string name, vartype var_type);
@@ -307,6 +347,10 @@ public:
     ptr_list<ir::alloc> get_var_list() {return alloc_list;}
     ptr<ir::ir_basicblock> get_entry() {return entry;}
     void del_alloc(ptr_list<ir::alloc> del_items);
+    std::vector<ptr<ir::ir_memobj>> get_params() {return func_args;}
+    // std::set<ptr<ir::ir_userfunc>> get_caller() {return caller;}
+    void mark_fun(ptr<ir::ir_userfunc> fun) {cur_fun_ptr = fun;}
+    ptr<ir::ir_userfunc> get_fun() {return cur_fun_ptr;}
 };
 
 //below is instruction
@@ -583,13 +627,15 @@ class func_call : public control_ins {
     ptr<ir_reg> ret_reg;
     vartype ret_type;
     bool is_lib = false;
+    ptr<ir::ir_func> callee;
 public:
-    func_call(string func_name, ptr_list<ir_value> params, vartype ret_type) : func_name(func_name), params(params), ret_type(ret_type) {}
+    func_call(string func_name, ptr_list<ir_value> params, vartype ret_type, ptr<ir::ir_func> callee) : func_name(func_name), params(params), ret_type(ret_type), callee(callee) {}
     virtual void accept(ir_visitor& visitor) override final;
     virtual void print(std::ostream & out = std::cout) override final;
     virtual std::vector<ptr<ir::ir_value>> use_reg() override final;
     virtual std::vector<ptr<ir::ir_value>> def_reg() override final;
     void replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) override;
+    ptr<ir::ir_func> get_callee() {return callee;}
 };
 
 class global_def : public ir_instr {

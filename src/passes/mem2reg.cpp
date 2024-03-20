@@ -1,6 +1,7 @@
 #include "mem2reg.hpp"
 #include "ir/ir.hpp"
 #include "parser/SyntaxTree.hpp"
+#include "passes/pass_type.hpp"
 #include <algorithm>
 #include <cassert>
 #include <iterator>
@@ -17,6 +18,7 @@ void Passes::Mem2Reg::run() {
         auto phi_r_m = insert_phi_ins(fun);
         rename_variables(fun, phi_r_m);
     }
+    compunit->mark_passes_completed(MEM2REG);
 }
 
 // phi_r_m：待完善的phi中目标寄存器和变量的映射

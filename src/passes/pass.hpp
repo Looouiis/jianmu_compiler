@@ -4,11 +4,6 @@
 #include "ir/ir.hpp"
 namespace Passes {
 
-enum PassType {
-    MEM2REG,
-    DEAD_CODE_ELIMINATION
-};
-
 class Pass {
 protected:
     ptr<ir::ir_module> compunit;
