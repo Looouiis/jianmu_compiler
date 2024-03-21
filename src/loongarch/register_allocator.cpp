@@ -10,7 +10,7 @@
 #include <unordered_map>
 #include <vector>
 
-void LoongArch::ColoringAllocator::SimplifyGraph() {
+void LoongArch::RookieAllocator::SimplifyGraph() {
   auto conf_graph = conflictGraph;
   bool try_again = true;
   color_count = (this->dealing == Rtype::INT ? i_color.size() : (this->dealing == Rtype::FLOAT ? f_color.size() : fb_color.size()));
@@ -63,7 +63,7 @@ void LoongArch::ColoringAllocator::SimplifyGraph() {
   }
 }
 
-void LoongArch::ColoringAllocator::Spill(std::unordered_map<std::shared_ptr<ir::ir_reg> ,std::vector<std::shared_ptr<ir::ir_reg>>> &conf_graph) {
+void LoongArch::RookieAllocator::Spill(std::unordered_map<std::shared_ptr<ir::ir_reg> ,std::vector<std::shared_ptr<ir::ir_reg>>> &conf_graph) {
   if(dealing == Rtype::FBOOL) abort(); // 暂未在龙芯文档上查找到如何直接存储fcc寄存器到内存中
   auto it = conf_graph.begin();
   auto del_item = it->first;
@@ -79,7 +79,7 @@ void LoongArch::ColoringAllocator::Spill(std::unordered_map<std::shared_ptr<ir::
   conf_graph.erase(it);
 }
 
-void LoongArch::ColoringAllocator::BuildConflictGraph() {
+void LoongArch::RookieAllocator::BuildConflictGraph() {
   for(auto global : func->current_globl) {
     if(is_target(global.second->obj->addr))
       allregs.push_back(global.second->obj->addr);
@@ -138,7 +138,7 @@ void LoongArch::ColoringAllocator::BuildConflictGraph() {
     std::clog << "寄存器冲突图分析完毕" <<std::endl;
 }
 
-bool LoongArch::ColoringAllocator::conflict(std::shared_ptr<ir::ir_reg> r1, std::shared_ptr<ir::ir_reg> r2) {
+bool LoongArch::RookieAllocator::conflict(std::shared_ptr<ir::ir_reg> r1, std::shared_ptr<ir::ir_reg> r2) {
   Pass::LiveInterval r1_i;
   Pass::LiveInterval r2_i;
   if(mappingToInterval[r1].l <= mappingToInterval[r2].l) {
@@ -164,7 +164,7 @@ bool LoongArch::ColoringAllocator::conflict(std::shared_ptr<ir::ir_reg> r1, std:
 //   }
 // }
 
-LoongArch::alloc_res LoongArch::ColoringAllocator::getAllocate() {
+LoongArch::alloc_res LoongArch::RookieAllocator::getAllocate() {
   if(log_status)
     std::clog << "简化冲突图中" << std::endl;
   SimplifyGraph();
@@ -227,7 +227,7 @@ LoongArch::alloc_res LoongArch::ColoringAllocator::getAllocate() {
 }
 
 
-LoongArch::ColoringAllocator::ColoringAllocator(std::shared_ptr<ir::ir_userfunc> _func, int _base, ptr_list<ir::global_def> global_var) : func(_func), base_reg(_base), global_var(global_var)
+LoongArch::RookieAllocator::RookieAllocator(std::shared_ptr<ir::ir_userfunc> _func, int _base, ptr_list<ir::global_def> global_var) : func(_func), base_reg(_base), global_var(global_var)
 {
   auto blocks = func->bbs;
   // for(auto block : blocks) {
@@ -502,7 +502,7 @@ LoongArch::ColoringAllocator::ColoringAllocator(std::shared_ptr<ir::ir_userfunc>
 
 }
 
-LoongArch::alloc_res LoongArch::ColoringAllocator::run(LoongArch::Rtype target) {
+LoongArch::alloc_res LoongArch::RookieAllocator::run(LoongArch::Rtype target) {
   switch (target) {
     case Rtype::INT: {
       is_target = [](ptr<ir::ir_reg> ireg) {

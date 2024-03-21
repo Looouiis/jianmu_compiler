@@ -16,7 +16,7 @@
 
 
 namespace LoongArch {
-class ColoringAllocator;
+class RookieAllocator;
 inline std::ostream &operator<<(std::ostream &os, const Reg &reg) {
   if(reg.is_float()) {
     os << "$f" << reg.id << " ";

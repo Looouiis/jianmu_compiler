@@ -17,7 +17,7 @@ struct Function;
 struct alloc_res;
 
 // no coalescing
-class ColoringAllocator {
+class RookieAllocator {
   std::shared_ptr<ir::ir_userfunc> func;
   std::unordered_map<std::shared_ptr<ir::ir_reg> ,std::vector<std::shared_ptr<ir::ir_reg>>> conflictGraph;
   std::unordered_map<std::shared_ptr<ir::ir_reg>,Pass::LiveInterval> mappingToInterval;                         // interval:寄存器的活跃区间
@@ -82,7 +82,7 @@ class ColoringAllocator {
   int log_limit = 1000;
   bool log_status = false;
  public:
-  ColoringAllocator(std::shared_ptr<ir::ir_userfunc> _func, int base_reg, ptr_list<ir::global_def> global_var);
+  RookieAllocator(std::shared_ptr<ir::ir_userfunc> _func, int base_reg, ptr_list<ir::global_def> global_var);
   // std::pair<std::unordered_map<std::shared_ptr<ir::ir_reg>,int>, std::vector<std::shared_ptr<ir::ir_reg>>> run();
   alloc_res run(Rtype target);
 };

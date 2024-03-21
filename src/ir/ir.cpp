@@ -11,6 +11,7 @@
 #include <set>
 #include "ir.hpp"
 #include "loongarch/arch.hpp"
+#include "loongarch/coloring_allocator.hpp"
 #include "loongarch/register_allocator.hpp"
 #include "parser/SyntaxTree.hpp"
 #include <functional>
@@ -155,14 +156,18 @@ void ir::ir_module::print(std::ostream & out)
 
 void ir::ir_module::reg_allocate(int base_reg, ptr_list<global_def> global_var) {
     if(this->init_block) {
-        LoongArch::ColoringAllocator allocator(this->global_init_func, base_reg, global_var);
+        LoongArch::RookieAllocator allocator(this->global_init_func, base_reg, global_var);
         // auto ret = allocator.run();
         this->global_init_func->reg_allocate(allocator);
+
+        LoongArch::ColoringAllocator all(this->global_init_func, base_reg, global_var);
     }
     for(auto & [name, func] : this->usrfuncs){
-        LoongArch::ColoringAllocator allocator(func, base_reg, global_var);     // 我修改了allocator的构造函数
+        LoongArch::RookieAllocator allocator(func, base_reg, global_var);     // 我修改了allocator的构造函数
         // auto ret = allocator.run();                                 // 我也修改了run方法的返回值
         func->reg_allocate(allocator);
+
+        LoongArch::ColoringAllocator all(func, base_reg, global_var);
     }
 }
 
@@ -226,7 +231,7 @@ std::vector<ptr<ir::ir_basicblock>> ir::ir_userfunc::GetLinerSequence()
    
 }
 
-void ir::ir_userfunc::reg_allocate(LoongArch::ColoringAllocator allocator) {
+void ir::ir_userfunc::reg_allocate(LoongArch::RookieAllocator allocator) {
 
     auto ret_int = allocator.run(LoongArch::Rtype::INT);
     for(auto res : ret_int.mapping_to_reg) {
@@ -267,17 +272,18 @@ ptr_list<ir::ir_basicblock> ir::ir_userfunc::check_predecessor(ptr<ir::ir_basicb
     //     it = this->s_back_trace.find(tar);
     // }
     // return it->second;
-    auto suc = this->predecessor[tar];
-    auto bak = this->s_back_trace[tar];
-    std::sort(suc.begin(), suc.end());
-    std::sort(bak.begin(), bak.end());
-    ptr_list<ir_basicblock> ret;
-    std::set_union(
-        suc.begin(), suc.end(),
-        bak.begin(), bak.end(),
-        std::back_inserter(ret)
-    );
-    return ret;
+    // auto suc = this->predecessor[tar];
+    // auto bak = this->s_back_trace[tar];
+    // std::sort(suc.begin(), suc.end());
+    // std::sort(bak.begin(), bak.end());
+    // ptr_list<ir_basicblock> ret;
+    // std::set_union(
+    //     suc.begin(), suc.end(),
+    //     bak.begin(), bak.end(),
+    //     std::back_inserter(ret)
+    // );
+    // return ret;
+    return this->predecessor[tar];
 }
 
 ptr_list<ir::ir_basicblock> ir::ir_userfunc::check_nxt(ptr<ir::ir_basicblock> tar) {
@@ -286,17 +292,18 @@ ptr_list<ir::ir_basicblock> ir::ir_userfunc::check_nxt(ptr<ir::ir_basicblock> ta
     //     it = this->n_back_trace.find(tar);
     // }
     // return it->second;
-    auto nxt = this->nxt[tar];
-    auto bak = this->n_back_trace[tar];
-    std::sort(nxt.begin(), nxt.end());
-    std::sort(bak.begin(), bak.end());
-    ptr_list<ir_basicblock> ret;
-    std::set_union(
-        nxt.begin(), nxt.end(),
-        bak.begin(), bak.end(),
-        std::back_inserter(ret)
-    );
-    return ret;
+    // auto nxt = this->nxt[tar];
+    // auto bak = this->n_back_trace[tar];
+    // std::sort(nxt.begin(), nxt.end());
+    // std::sort(bak.begin(), bak.end());
+    // ptr_list<ir_basicblock> ret;
+    // std::set_union(
+    //     nxt.begin(), nxt.end(),
+    //     bak.begin(), bak.end(),
+    //     std::back_inserter(ret)
+    // );
+    // return ret;
+    return this->nxt[tar];
 }
 
 void ir::ir_userfunc::del_alloc(ptr_list<ir::alloc> del_items) {

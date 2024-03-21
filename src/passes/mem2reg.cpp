@@ -321,9 +321,9 @@ void Passes::Mem2Reg::calc_postorder(ptr<ir::ir_basicblock> node, ptr<ir::ir_use
 void Passes::Mem2Reg::analyse_cfg_flow_and_defs(ptr<ir::ir_userfunc> fun) {
     auto blocks = fun->get_bbs();
     std::unordered_map<ptr<ir::ir_basicblock>, ptr_list<ir::ir_basicblock>> predecessor;
-    std::unordered_map<ptr<ir::ir_basicblock>, ptr_list<ir::ir_basicblock>> s_back_trace;           // 回边
+    // std::unordered_map<ptr<ir::ir_basicblock>, ptr_list<ir::ir_basicblock>> s_back_trace;           // 回边
     std::unordered_map<ptr<ir::ir_basicblock>, ptr_list<ir::ir_basicblock>> nxt;                    // cfg中的逆映射
-    std::unordered_map<ptr<ir::ir_basicblock>, ptr_list<ir::ir_basicblock>> n_back_trace;
+    // std::unordered_map<ptr<ir::ir_basicblock>, ptr_list<ir::ir_basicblock>> n_back_trace;
     auto &defs = this->defs[fun];
     for(auto block : blocks) {
         for(auto instruction : block->get_instructions()) {
@@ -355,8 +355,10 @@ void Passes::Mem2Reg::analyse_cfg_flow_and_defs(ptr<ir::ir_userfunc> fun) {
                 auto tar = while_ins->get_out_block();
                 predecessor[tar].push_back(cond_from);
                 nxt[cond_from].push_back(tar);
-                s_back_trace[cond_from].push_back(block);
-                n_back_trace[block].push_back(cond_from);
+                // s_back_trace[cond_from].push_back(block);
+                predecessor[cond_from].push_back(block);
+                // n_back_trace[block].push_back(cond_from);
+                nxt[block].push_back(cond_from);
             }
             if(store_ins) {
                 auto addr = store_ins->get_addr();
@@ -369,8 +371,11 @@ void Passes::Mem2Reg::analyse_cfg_flow_and_defs(ptr<ir::ir_userfunc> fun) {
             }
         }
     }
-    fun->set_predecessor(predecessor, s_back_trace);                          // 由于cfg要在寄存器分配中使用，所以可以将逻辑提取到这里，但是需要保存到fun中
-    fun->set_nxt(nxt, n_back_trace);
+    // fun->set_predecessor(predecessor, s_back_trace);                          // 由于cfg要在寄存器分配中使用，所以可以将逻辑提取到这里，但是需要保存到fun中
+    fun->set_predecessor(predecessor);                          // 由于cfg要在寄存器分配中使用，所以可以将逻辑提取到这里，但是需要保存到fun中
+    // fun->set_nxt(nxt, n_back_trace);
+    fun->set_nxt(nxt);
+    fun->mark_analysed();
 }
 
 void Passes::Mem2Reg::remove_empty_block(ptr<ir::ir_userfunc> fun) {

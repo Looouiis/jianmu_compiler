@@ -19,7 +19,7 @@ const int i32_size = 4;
 namespace LoongArch{
     class ProgramBuilder;
     class IrMapping;
-    class ColoringAllocator;
+    class RookieAllocator;
     class Program;
     // class what;
 }
@@ -86,7 +86,7 @@ class ir_reg : public ir_value {
     friend IrPrinter;
     friend LoongArch::IrMapping;
     friend LoongArch::ProgramBuilder;
-    friend LoongArch::ColoringAllocator;
+    friend LoongArch::RookieAllocator;
 private:
     int id;                                                     //virtual register id
     vartype type;                                               //int or float (extension)
@@ -147,7 +147,7 @@ class ir_memobj : public printable {
     friend IrBuilder;
     friend IrPrinter;
     friend LoongArch::ProgramBuilder;
-    friend LoongArch::ColoringAllocator;
+    friend LoongArch::RookieAllocator;
 protected:
     std::string name;
     int size;
@@ -195,7 +195,7 @@ public:
 class ir_basicblock : public printable {
     friend IrPrinter;   
     friend LoongArch::ProgramBuilder; 
-    friend LoongArch::ColoringAllocator;
+    friend LoongArch::RookieAllocator;
     std::string name;
     std::list<std::shared_ptr<ir_instr>> instructions;
     bool is_while_body = false;
@@ -289,7 +289,7 @@ public:
     friend IrPrinter;
     friend IrBuilder;
     friend LoongArch::ProgramBuilder;
-    friend LoongArch::ColoringAllocator;
+    friend LoongArch::RookieAllocator;
 private:
     std::vector<ptr<ir::ir_memobj>> func_args;
 public:
@@ -303,7 +303,7 @@ public:
     friend IrPrinter;
     friend IrBuilder;
     friend LoongArch::ProgramBuilder;
-    friend LoongArch::ColoringAllocator;
+    friend LoongArch::RookieAllocator;
 private:
     std::unique_ptr<ir_scope> scope;
     std::list<std::shared_ptr<ir_basicblock>> bbs;
@@ -320,11 +320,12 @@ private:
     ptr_list<ir::alloc> alloc_list;
     bool dealing_while = false;
     std::unordered_map<ptr<ir::ir_basicblock>, ptr_list<ir::ir_basicblock>> predecessor;
-    std::unordered_map<ptr<ir::ir_basicblock>, ptr_list<ir::ir_basicblock>> s_back_trace;
+    // std::unordered_map<ptr<ir::ir_basicblock>, ptr_list<ir::ir_basicblock>> s_back_trace;
     std::unordered_map<ptr<ir::ir_basicblock>, ptr_list<ir::ir_basicblock>> nxt;
-    std::unordered_map<ptr<ir::ir_basicblock>, ptr_list<ir::ir_basicblock>> n_back_trace;
+    // std::unordered_map<ptr<ir::ir_basicblock>, ptr_list<ir::ir_basicblock>> n_back_trace;
 
     ptr<ir::ir_userfunc> cur_fun_ptr;
+    bool analysed_cfg = false;
 public:
     ir_userfunc(std::string name, int reg_cnt, std::vector<vartype> arg_tpyes); 
     ptr<ir_memobj> new_obj(std::string name, vartype var_type);
@@ -334,12 +335,14 @@ public:
     virtual void print(std::ostream & out = std::cout) override;
     std::unordered_map<ptr<ir::ir_value>,Pass::LiveInterval> GetLiveInterval();
     std::vector<std::shared_ptr<ir_basicblock>> GetLinerSequence();
-    virtual void reg_allocate(LoongArch::ColoringAllocator allocator);
+    virtual void reg_allocate(LoongArch::RookieAllocator allocator);
     void save_current_globl(std::list<std::pair<std::string, ptr<ir::global_def>>> current_globl);
     std::list<std::shared_ptr<ir_basicblock>> get_bbs() {return bbs;}
     std::list<std::shared_ptr<ir_basicblock>>& get_bbs_ref() {return bbs;}
-    void set_predecessor(std::unordered_map<ptr<ir::ir_basicblock>, ptr_list<ir::ir_basicblock>> successor, std::unordered_map<ptr<ir::ir_basicblock>, ptr_list<ir::ir_basicblock>> s_back_trace) {this->predecessor = successor; this->s_back_trace = s_back_trace;}
-    void set_nxt(std::unordered_map<ptr<ir::ir_basicblock>, ptr_list<ir::ir_basicblock>> nxt, std::unordered_map<ptr<ir::ir_basicblock>, ptr_list<ir::ir_basicblock>> n_back_trace) {this->nxt = nxt; this->n_back_trace = n_back_trace;}
+    // void set_predecessor(std::unordered_map<ptr<ir::ir_basicblock>, ptr_list<ir::ir_basicblock>> predecessor, std::unordered_map<ptr<ir::ir_basicblock>, ptr_list<ir::ir_basicblock>> s_back_trace) {this->predecessor = predecessor; this->s_back_trace = s_back_trace;}
+    void set_predecessor(std::unordered_map<ptr<ir::ir_basicblock>, ptr_list<ir::ir_basicblock>> predecessor) {this->predecessor = predecessor;}
+    // void set_nxt(std::unordered_map<ptr<ir::ir_basicblock>, ptr_list<ir::ir_basicblock>> nxt, std::unordered_map<ptr<ir::ir_basicblock>, ptr_list<ir::ir_basicblock>> n_back_trace) {this->nxt = nxt; this->n_back_trace = n_back_trace;}
+    void set_nxt(std::unordered_map<ptr<ir::ir_basicblock>, ptr_list<ir::ir_basicblock>> nxt) {this->nxt = nxt;}
     ptr_list<ir::ir_basicblock> check_predecessor(ptr<ir::ir_basicblock> tar);
     ptr_list<ir::ir_basicblock> check_nxt(ptr<ir::ir_basicblock> tar);
     std::unordered_map<ptr<ir::ir_basicblock>, ptr_list<ir::ir_basicblock>>& get_predecessor_ref() {return predecessor;}
@@ -351,6 +354,8 @@ public:
     // std::set<ptr<ir::ir_userfunc>> get_caller() {return caller;}
     void mark_fun(ptr<ir::ir_userfunc> fun) {cur_fun_ptr = fun;}
     ptr<ir::ir_userfunc> get_fun() {return cur_fun_ptr;}
+    void mark_analysed() {this->analysed_cfg = true;}
+    bool check_analysed() {return this->analysed_cfg;}
 };
 
 //below is instruction
@@ -390,7 +395,7 @@ public:
 class jump : public control_ins {
     friend IrPrinter;
     friend LoongArch::ProgramBuilder;
-    friend LoongArch::ColoringAllocator;
+    friend LoongArch::RookieAllocator;
     ptr<ir_basicblock> target;
 public:
     jump(ptr<ir_basicblock> target):target(target){}
@@ -453,7 +458,7 @@ public:
 class alloc : public reg_write_ins {
     friend IrPrinter;
     friend LoongArch::ProgramBuilder;
-    friend LoongArch::ColoringAllocator;
+    friend LoongArch::RookieAllocator;
     ptr<ir_memobj> var;
 public:
     alloc(ptr<ir_memobj>  var):var(var){}
@@ -569,7 +574,7 @@ public:
 class get_element_ptr : public ir_instr {
     friend IrPrinter;
     friend LoongArch::ProgramBuilder;
-    friend LoongArch::ColoringAllocator;
+    friend LoongArch::RookieAllocator;
 private:
     ptr<ir_memobj> base;
     ptr<ir_reg> dst;
@@ -586,7 +591,7 @@ public:
 class while_loop : public ir_instr {
     friend IrPrinter;
     friend LoongArch::ProgramBuilder;
-    friend LoongArch::ColoringAllocator;
+    friend LoongArch::RookieAllocator;
 private:
     ptr<ir_basicblock> cond_from;
     ptr<ir_basicblock> self;
@@ -605,7 +610,7 @@ public:
 class break_or_continue : public control_ins {
     friend IrPrinter;
     friend LoongArch::ProgramBuilder;
-    friend LoongArch::ColoringAllocator;
+    friend LoongArch::RookieAllocator;
     ptr<ir_basicblock> target;
 public:
     break_or_continue(ptr<ir_basicblock> target):target(target){}
@@ -621,7 +626,7 @@ class func_call : public control_ins {
     friend IrPrinter;
     friend IrBuilder;
     friend LoongArch::ProgramBuilder;
-    friend LoongArch::ColoringAllocator;
+    friend LoongArch::RookieAllocator;
     string func_name;
     ptr_list<ir_value> params;
     ptr<ir_reg> ret_reg;
@@ -641,7 +646,7 @@ public:
 class global_def : public ir_instr {
     friend IrPrinter;
     friend IrBuilder;
-    friend LoongArch::ColoringAllocator;
+    friend LoongArch::RookieAllocator;
     friend LoongArch::Program;
 private:
     string var_name;

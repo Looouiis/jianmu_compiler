@@ -17,13 +17,13 @@ int main(){
     std::shared_ptr<ir::IrBuilder> irbuilder = std::make_shared<ir::IrBuilder>();
     syntax_tree.accept(*irbuilder);
     
-    // std::shared_ptr<ir::IrPrinter> irprinter = std::make_shared<ir::IrPrinter>();
+    std::shared_ptr<ir::IrPrinter> irprinter = std::make_shared<ir::IrPrinter>();
     // irbuilder->compunit->accept(*irprinter);
 
     Passes::PassManager pass_manager(irbuilder->compunit);
-    pass_manager.add_pass(Passes::PassType::MEM2REG);
-    pass_manager.add_pass(Passes::PassType::DEAD_CODE_ELIMINATION);
-    // pass_manager.enable_printer(irprinter);
+    // pass_manager.add_pass(Passes::PassType::MEM2REG);
+    // pass_manager.add_pass(Passes::PassType::DEAD_CODE_ELIMINATION);
+    pass_manager.enable_printer(irprinter);
     pass_manager.run();
 
     // std::cout << "----------------------------------------------------------" << std::endl;
