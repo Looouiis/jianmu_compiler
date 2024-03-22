@@ -161,6 +161,7 @@ void ir::ir_module::reg_allocate(int base_reg, ptr_list<global_def> global_var) 
         this->global_init_func->reg_allocate(allocator);
 
         LoongArch::ColoringAllocator all(this->global_init_func, base_reg, global_var);
+        all.run(LoongArch::INT);
     }
     for(auto & [name, func] : this->usrfuncs){
         LoongArch::RookieAllocator allocator(func, base_reg, global_var);     // 我修改了allocator的构造函数
@@ -168,6 +169,7 @@ void ir::ir_module::reg_allocate(int base_reg, ptr_list<global_def> global_var) 
         func->reg_allocate(allocator);
 
         LoongArch::ColoringAllocator all(func, base_reg, global_var);
+        all.run(LoongArch::INT);
     }
 }
 
@@ -342,11 +344,13 @@ void ir::store::print(std::ostream & out )
     out << '\n';
 }
 
-std::vector<ptr<ir::ir_value>> ir::store::use_reg() {
-    return {this->addr,this->value};
+std::vector<ptr<ir::ir_reg>> ir::store::use_reg() {
+    auto is_reg = std::dynamic_pointer_cast<ir::ir_reg>(this->value);
+    if(is_reg) return {this->addr, is_reg};
+    else return {this->addr};
 }
 
-std::vector<ptr<ir::ir_value>> ir::store::def_reg() {
+std::vector<ptr<ir::ir_reg>> ir::store::def_reg() {
     return {};
 }
 
@@ -378,11 +382,11 @@ void ir::jump::print(std::ostream & out )
     out << '\n';
 }
 
-std::vector<ptr<ir::ir_value>> ir::jump::use_reg() {
+std::vector<ptr<ir::ir_reg>> ir::jump::use_reg() {
   return {};
 }
 
-std::vector<ptr<ir::ir_value>> ir::jump::def_reg() {
+std::vector<ptr<ir::ir_reg>> ir::jump::def_reg() {
   return {};
 }
 
@@ -415,11 +419,13 @@ void ir::br::print(std::ostream & out )
         out << '\n';
 }
 
-std::vector<ptr<ir::ir_value>> ir::br::use_reg() {
-     return {this->cond};
+std::vector<ptr<ir::ir_reg>> ir::br::use_reg() {
+    auto is_reg = std::dynamic_pointer_cast<ir::ir_reg>(this->cond);
+    if(is_reg) return {is_reg};
+    else return {};
 }
 
-std::vector<ptr<ir::ir_value>> ir::br::def_reg() { return std::vector<ptr<ir::ir_value>>(); }
+std::vector<ptr<ir::ir_reg>> ir::br::def_reg() { return std::vector<ptr<ir::ir_reg>>(); }
 
 void ir::br::replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) {        // sysy没有bool，br使用的都是icmp比较出来的条件，所以不用换？
     auto it = replace_map.find(this->cond);
@@ -449,9 +455,13 @@ void ir::ret::print(std::ostream & out)
         out << '\n';
 }
 
-std::vector<ptr<ir::ir_value>> ir::ret::use_reg() { return {this->value};}
+std::vector<ptr<ir::ir_reg>> ir::ret::use_reg() {
+    auto is_reg = std::dynamic_pointer_cast<ir::ir_reg>(this->value);
+    if(is_reg) return {is_reg};
+    else return {};
+}
 
-std::vector<ptr<ir::ir_value>> ir::ret::def_reg() { return std::vector<ptr<ir::ir_value>>(); }
+std::vector<ptr<ir::ir_reg>> ir::ret::def_reg() { return std::vector<ptr<ir::ir_reg>>(); }
 
 void ir::ret::replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) {
     auto it = replace_map.find(this->value);
@@ -481,11 +491,11 @@ void ir::load::print(std::ostream & out )
     out << '\n';
 }
 
-std::vector<ptr<ir::ir_value>> ir::load::use_reg() {
+std::vector<ptr<ir::ir_reg>> ir::load::use_reg() {
     return {addr};
 }
 
-std::vector<ptr<ir::ir_value>> ir::load::def_reg() {
+std::vector<ptr<ir::ir_reg>> ir::load::def_reg() {
     return {dst};
 }
 
@@ -519,11 +529,11 @@ void ir::alloc::print(std::ostream & out )
     out << '\n';
 }
 
-std::vector<ptr<ir::ir_value>> ir::alloc::use_reg() {
-  return std::vector<ptr<ir::ir_value>>();
+std::vector<ptr<ir::ir_reg>> ir::alloc::use_reg() {
+  return std::vector<ptr<ir::ir_reg>>();
 }
 
-std::vector<ptr<ir::ir_value>> ir::alloc::def_reg() {
+std::vector<ptr<ir::ir_reg>> ir::alloc::def_reg() {
   return {var->get_addr()};
 }
 
@@ -553,12 +563,12 @@ void ir::phi::print(std::ostream & out )
         out << '\n';
 }
 
-std::vector<ptr<ir::ir_value>> ir::phi::use_reg() {
-    std::vector<ptr<ir::ir_value>> use_regs;
+std::vector<ptr<ir::ir_reg>> ir::phi::use_reg() {
+    std::vector<ptr<ir::ir_reg>> use_regs;
     std::vector<ptr<ir::ir_value>> use_values;
     for(auto & [value, bb] : this->uses) {
         if(auto reg = std::dynamic_pointer_cast<ir_reg>(value)){
-            use_regs.push_back(value);
+            use_regs.push_back(reg);
         }else if(auto constant_value = std::dynamic_pointer_cast<ir_constant>(value)){
             use_values.push_back(value);
         }
@@ -566,7 +576,7 @@ std::vector<ptr<ir::ir_value>> ir::phi::use_reg() {
     return use_regs;
 }
 
-std::vector<ptr<ir::ir_value>> ir::phi::def_reg() { 
+std::vector<ptr<ir::ir_reg>> ir::phi::def_reg() { 
     return {this->dst}; 
 }
 
@@ -589,12 +599,16 @@ void ir::unary_op_ins::print(std::ostream & out )
     
 }
 
-std::vector<ptr<ir::ir_value>> ir::unary_op_ins::use_reg() {
-    return {this->src};
+std::vector<ptr<ir::ir_reg>> ir::unary_op_ins::use_reg() {
+    auto is_reg = std::dynamic_pointer_cast<ir::ir_reg>(this->src);
+    if(is_reg) return {is_reg};
+    else return {};
 }
 
-std::vector<ptr<ir::ir_value>> ir::unary_op_ins::def_reg() {
-    return {this->dst};
+std::vector<ptr<ir::ir_reg>> ir::unary_op_ins::def_reg() {
+    auto is_reg = std::dynamic_pointer_cast<ir::ir_reg>(this->dst);
+    if(is_reg) return {is_reg};
+    else return {};
 };
 
 void ir::unary_op_ins::replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) {
@@ -623,11 +637,18 @@ void ir::binary_op_ins::print(std::ostream & out )
         i->print();
     }
 }
-std::vector<ptr<ir::ir_value>> ir::binary_op_ins::use_reg() {
-  return {this->src1,this->src2};
+std::vector<ptr<ir::ir_reg>> ir::binary_op_ins::use_reg() {
+    std::vector<ptr<ir::ir_reg>> ret;
+    auto is_reg = std::dynamic_pointer_cast<ir::ir_reg>(this->src1);
+    if(is_reg) ret.push_back(is_reg);
+    is_reg = std::dynamic_pointer_cast<ir::ir_reg>(this->src2);
+    if(is_reg) ret.push_back(is_reg);
+    return ret;
 }
-std::vector<ptr<ir::ir_value>> ir::binary_op_ins::def_reg() {
-  return {this->dst};
+std::vector<ptr<ir::ir_reg>> ir::binary_op_ins::def_reg() {
+    auto is_reg = std::dynamic_pointer_cast<ir::ir_reg>(this->dst);
+    if(is_reg) return {is_reg};
+    else return {};
 }
 
 void ir::binary_op_ins::replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) {
@@ -689,11 +710,16 @@ void ir::cmp_ins::print(std::ostream &out)
 {
 }
 
-std::vector<ptr<ir::ir_value>> ir::cmp_ins::use_reg() {
-  return {this->src1,this->src2};
+std::vector<ptr<ir::ir_reg>> ir::cmp_ins::use_reg() {
+    std::vector<ptr<ir::ir_reg>> ret;
+    auto is_reg = std::dynamic_pointer_cast<ir::ir_reg>(this->src1);
+    if(is_reg) ret.push_back(is_reg);
+    is_reg = std::dynamic_pointer_cast<ir::ir_reg>(this->src2);
+    if(is_reg) ret.push_back(is_reg);
+    return ret;
 }
 
-std::vector<ptr<ir::ir_value>> ir::cmp_ins::def_reg() {
+std::vector<ptr<ir::ir_reg>> ir::cmp_ins::def_reg() {
   return {this->dst};
 }
 
@@ -717,12 +743,19 @@ void ir::logic_ins::print(std::ostream &out)
 {
 }
 
-std::vector<ptr<ir::ir_value>> ir::logic_ins::use_reg() {
-  return {this->src1,this->src2};
+std::vector<ptr<ir::ir_reg>> ir::logic_ins::use_reg() {
+    std::vector<ptr<ir::ir_reg>> ret;
+    auto is_reg = std::dynamic_pointer_cast<ir::ir_reg>(this->src1);
+    if(is_reg) ret.push_back(is_reg);
+    is_reg = std::dynamic_pointer_cast<ir::ir_reg>(this->src2);
+    if(is_reg) ret.push_back(is_reg);
+    return ret;
 }
 
-std::vector<ptr<ir::ir_value>> ir::logic_ins::def_reg() {
-  return {this->dst};
+std::vector<ptr<ir::ir_reg>> ir::logic_ins::def_reg() {
+    auto is_reg = std::dynamic_pointer_cast<ir::ir_reg>(this->dst);
+    if(is_reg) return {is_reg};
+    else return {};
 }
 
 void ir::logic_ins::replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) {
@@ -736,22 +769,22 @@ void ir::logic_ins::replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir
     }
 }
 
-std::vector<ptr<ir::ir_value>> ir::reg_write_ins::use_reg() {
-  return std::vector<ptr<ir::ir_value>>();
+std::vector<ptr<ir::ir_reg>> ir::reg_write_ins::use_reg() {
+  return std::vector<ptr<ir::ir_reg>>();
 }
 
-std::vector<ptr<ir::ir_value>> ir::reg_write_ins::def_reg() {
-  return std::vector<ptr<ir::ir_value>>();
+std::vector<ptr<ir::ir_reg>> ir::reg_write_ins::def_reg() {
+  return std::vector<ptr<ir::ir_reg>>();
 }
 
 void ir::reg_write_ins::replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) {}    // 抽象类，不用换
 
-std::vector<ptr<ir::ir_value>> ir::control_ins::use_reg() {
-  return std::vector<ptr<ir::ir_value>>();
+std::vector<ptr<ir::ir_reg>> ir::control_ins::use_reg() {
+  return std::vector<ptr<ir::ir_reg>>();
 }
 
-std::vector<ptr<ir::ir_value>> ir::control_ins::def_reg() {
-  return std::vector<ptr<ir::ir_value>>();
+std::vector<ptr<ir::ir_reg>> ir::control_ins::def_reg() {
+  return std::vector<ptr<ir::ir_reg>>();
 }
 
 void ir::control_ins::replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) {}      // 抽象类，不用换
@@ -765,14 +798,20 @@ void ir::get_element_ptr::print(std::ostream &out)
 {
 }
 
-std::vector<ptr<ir::ir_value>> ir::get_element_ptr::use_reg() {
-    ptr_list<ir_value> vec = this->obj_offset;
-    vec.push_back(this->base->get_addr());
-  return vec;
+std::vector<ptr<ir::ir_reg>> ir::get_element_ptr::use_reg() {
+    ptr_list<ir::ir_reg> ret;
+    for(auto offset : this->obj_offset) {
+        auto is_reg = std::dynamic_pointer_cast<ir::ir_reg>(offset);
+        if(is_reg) ret.push_back(is_reg);
+    }
+    ret.push_back(this->base->get_addr());
+    return ret;
 }
 
-std::vector<ptr<ir::ir_value>> ir::get_element_ptr::def_reg() {
-  return {this->dst};
+std::vector<ptr<ir::ir_reg>> ir::get_element_ptr::def_reg() {
+    auto is_reg = std::dynamic_pointer_cast<ir::ir_reg>(this->dst);
+    if(is_reg) return {is_reg};
+    else return {};
 }
 
 void ir::get_element_ptr::replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) {
@@ -793,11 +832,11 @@ void ir::while_loop::print(std::ostream &out)
 {
 }
 
-std::vector<ptr<ir::ir_value>> ir::while_loop::use_reg() {
+std::vector<ptr<ir::ir_reg>> ir::while_loop::use_reg() {
   return {};
 }
 
-std::vector<ptr<ir::ir_value>> ir::while_loop::def_reg() {
+std::vector<ptr<ir::ir_reg>> ir::while_loop::def_reg() {
   return {};
 }
 
@@ -812,11 +851,11 @@ void ir::break_or_continue::print(std::ostream &out)
 {
 }
 
-std::vector<ptr<ir::ir_value>> ir::break_or_continue::use_reg() {
+std::vector<ptr<ir::ir_reg>> ir::break_or_continue::use_reg() {
   return {};
 }
 
-std::vector<ptr<ir::ir_value>> ir::break_or_continue::def_reg() {
+std::vector<ptr<ir::ir_reg>> ir::break_or_continue::def_reg() {
   return {};
 }
 
@@ -835,12 +874,17 @@ void ir::func_call::print(std::ostream &out)
 {
 }
 
-std::vector<ptr<ir::ir_value>> ir::func_call::use_reg() {
-    return this->params;
+std::vector<ptr<ir::ir_reg>> ir::func_call::use_reg() {
+    ptr_list<ir::ir_reg> ret;
+    for(auto offset : this->params) {
+        auto is_reg = std::dynamic_pointer_cast<ir::ir_reg>(offset);
+        if(is_reg) ret.push_back(is_reg);
+    }
+    return ret;
 //   return {};
 }
 
-std::vector<ptr<ir::ir_value>> ir::func_call::def_reg() {
+std::vector<ptr<ir::ir_reg>> ir::func_call::def_reg() {
   return {this->ret_reg};
 }
 
@@ -862,11 +906,16 @@ void ir::global_def::print(std::ostream &out)
 {
 }
 
-std::vector<ptr<ir::ir_value>> ir::global_def::use_reg() {
-  return init_val;
+std::vector<ptr<ir::ir_reg>> ir::global_def::use_reg() {
+    ptr_list<ir::ir_reg> ret;
+    for(auto offset : this->init_val) {
+        auto is_reg = std::dynamic_pointer_cast<ir::ir_reg>(offset);
+        if(is_reg) ret.push_back(is_reg);
+    }
+    return ret;
 }
 
-std::vector<ptr<ir::ir_value>> ir::global_def::def_reg() {
+std::vector<ptr<ir::ir_reg>> ir::global_def::def_reg() {
   return {obj->get_addr()};
 }
 
@@ -885,11 +934,13 @@ void ir::trans::print(std::ostream &out)
 {
 }
 
-std::vector<ptr<ir::ir_value>> ir::trans::use_reg() {
-  return {src};
+std::vector<ptr<ir::ir_reg>> ir::trans::use_reg() {
+    auto is_reg = std::dynamic_pointer_cast<ir::ir_reg>(this->src);
+    if(is_reg) return {is_reg};
+    else return {};
 }
 
-std::vector<ptr<ir::ir_value>> ir::trans::def_reg() {
+std::vector<ptr<ir::ir_reg>> ir::trans::def_reg() {
   return {dst};
 }
 
@@ -909,11 +960,11 @@ void ir::memset::print(std::ostream &out)
 {
 }
 
-std::vector<ptr<ir::ir_value>> ir::memset::use_reg() {
+std::vector<ptr<ir::ir_reg>> ir::memset::use_reg() {
   return {base};
 }
 
-std::vector<ptr<ir::ir_value>> ir::memset::def_reg() {
+std::vector<ptr<ir::ir_reg>> ir::memset::def_reg() {
   return {};
 }
 

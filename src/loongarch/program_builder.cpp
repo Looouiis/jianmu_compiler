@@ -896,7 +896,7 @@ void LoongArch::ProgramBuilder::visit(ir::jump &node) {
 }
 
 void LoongArch::ProgramBuilder::visit(ir::br &node) {
-    node.use_reg()[0]->accept(*this);
+    node.get_cond()->accept(*this);
     Reg cond = pass_reg;
     if(cond.type == FBOOL) {
         auto target_true = cur_mapping->blockmapping[node.get_target_true()];
@@ -1019,10 +1019,10 @@ void LoongArch::ProgramBuilder::fb2gr(Reg src, Reg dst) {
 
 void LoongArch::ProgramBuilder::visit(ir::unary_op_ins &node) {
     is_dst = true;
-    node.def_reg()[0]->accept(*this);
+    node.get_dst()->accept(*this);
     Reg dst = pass_reg;
     using_reg = const_reg_l;
-    node.use_reg()[0]->accept(*this);
+    node.get_src()->accept(*this);
     Reg src = pass_reg;                                                                                            // Reg：物理寄存器
     if(node.op == unaryop::minus) {                                                                     // 当op为“-”（取反指令）
         if(src.is_float()) {
@@ -1091,9 +1091,9 @@ void LoongArch::ProgramBuilder::visit(ir::binary_op_ins &node) {
 
 void LoongArch::ProgramBuilder::visit(ir::cmp_ins &node) {
     is_dst = true;
-    node.def_reg()[0]->accept(*this);
+    node.get_dst()->accept(*this);
     Reg dst = pass_reg;
-    auto exps = node.use_reg();
+    auto exps = node.get_src();
     using_reg = const_reg_l;
     exps[0]->accept(*this);
     Reg exp1 = pass_reg;
@@ -1141,9 +1141,9 @@ void LoongArch::ProgramBuilder::visit(ir::cmp_ins &node) {
 void LoongArch::ProgramBuilder::visit(ir::logic_ins &node) {
     // auto dst = cur_mapping->transfer_reg(*std::dynamic_pointer_cast<ir::ir_reg>(node.def_reg()[0]).get());
     is_dst = true;
-    node.def_reg()[0]->accept(*this);
+    node.get_dst()->accept(*this);
     auto dst = pass_reg;
-    auto srcs = node.use_reg();
+    auto srcs = node.get_src();
     using_reg = const_reg_l;
     srcs[0]->accept(*this);
     Reg src1 = pass_reg;
