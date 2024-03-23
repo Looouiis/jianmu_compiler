@@ -62,9 +62,18 @@ bool LoongArch::ColoringAllocator::rewrite() {
     if(spill_set.empty()) {
         return false;
     }
+    std::unordered_map<vartype, vartype> base_type = {
+    //    {vartype::FLOATADDR, "float"},
+        {vartype::FLOATADDR, vartype::FLOAT},
+        {vartype::INTADDR, vartype::INT},
+        {vartype::BOOLADDR, vartype::BOOL},
+        {vartype::FBOOLADDR, vartype::FBOOL}
+    };
+    std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map(1);
     for(auto reg : spill_set) {
         auto def_ins = reg->get_def_loc();
         auto def_block = def_ins->get_block();
+        auto spill_obj = fun->new_spill_obj(std::to_string(reg->get_id()) + "spilled_virtual_reg", reg->get_type());
         ptr_list<ir::ir_basicblock> work_lst = {def_block};
         ptr_list<ir::ir_basicblock> nxt_iter;
         std::unordered_map<ptr<ir::ir_basicblock>, bool> visit;
@@ -77,6 +86,10 @@ bool LoongArch::ColoringAllocator::rewrite() {
                 std::list<ptr<ir::ir_instr>>::iterator it;
                 if(block == def_block) {
                     it = std::find(ins.begin(), ins.end(), def_ins);
+                    auto store_it =std::next(it);
+                    block->insert_spill(store_it, std::make_shared<ir::store>(spill_obj->get_addr(), reg));
+                    it++;   // 此时指向插入的store语句
+                    it++;   // 此时指向原文的下一条语句
                 }
                 else {
                     it = ins.begin();
@@ -89,7 +102,11 @@ bool LoongArch::ColoringAllocator::rewrite() {
                     if(live_in[cur_ins].find(reg) != live_in[cur_ins].end()) {    // 这个reg在当前指令处仍然活跃
                         auto use = cur_ins->use_reg();
                         if(std::find(use.begin(), use.end(), reg) != use.end()) {   // 这个reg活跃且被使用
-                            // TODO：保存需要添加加载指令的位置并且保存加载的def_reg值
+                            auto load_reg = fun->new_spill_reg(base_type[spill_obj->get_addr()->get_type()]);
+                            load_vec.push_back({it, load_reg});
+                            replace_map.clear();
+                            replace_map[reg] = load_reg;
+                            cur_ins->replace_reg(replace_map);
                         }
                         auto def = cur_ins->def_reg();
                         if(std::find(def.begin(), def.end(), reg) != def.end()) {   // 这个reg活跃且被定值
@@ -103,9 +120,9 @@ bool LoongArch::ColoringAllocator::rewrite() {
                 }
 
                 // 插入load
-                auto &ins_ref = block->get_instructions_ref();
-                for(auto load_it : load_vec) {
-                    // TODO：添加加载指令
+                // auto &ins_ref = block->get_instructions_ref();
+                for(auto [load_it, load_reg] : load_vec) {
+                    block->insert_spill(load_it, std::make_shared<ir::load>(load_reg, spill_obj->get_addr()));
                 }
 
                 if(cur_block_is_finished) continue;
@@ -136,6 +153,7 @@ void LoongArch::ColoringAllocator::kempe_opt() {
         auto n = stk.back();
         stk.pop_back();
         if(!assign_color(n)) {
+            if(n->check_is_unspillable()) abort();
             spill_set.insert(n);
         }
     }
@@ -163,6 +181,13 @@ ptr<ir::ir_reg> LoongArch::ColoringAllocator::remove(std::unordered_map<ptr<ir::
     for(auto [reg, vec] : g) {
         if(vec.size() < this->using_color.size()) {
             del_item = reg;
+            if(reg->check_is_unspillable()) break;  // 不可下放的寄存器优先
+        }
+    }
+    if(del_item == nullptr) {
+        for(auto [reg, vec] : g) {
+            del_item = reg;
+            if(reg->check_is_unspillable()) break;  // 不可下放的寄存器优先
         }
     }
     if(del_item == nullptr) {

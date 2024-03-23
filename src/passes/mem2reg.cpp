@@ -121,13 +121,13 @@ std::unordered_map<ptr<ir::ir_reg>, ptr<ir::ir_memobj>> Passes::Mem2Reg::insert_
     auto defs = this->defs[fun];
     auto df = this->df[fun];
     std::unordered_map<ptr<ir::ir_reg>, ptr<ir::ir_memobj>> phi_reg_2_mem;
-   std::unordered_map<vartype, vartype> base_type = {
-    //    {vartype::FLOATADDR, "float"},
-       {vartype::FLOATADDR, vartype::FLOAT},
-       {vartype::INTADDR, vartype::INT},
-       {vartype::BOOLADDR, vartype::BOOL},
-       {vartype::FBOOLADDR, vartype::FBOOL}
-   };
+    std::unordered_map<vartype, vartype> base_type = {
+        //    {vartype::FLOATADDR, "float"},
+        {vartype::FLOATADDR, vartype::FLOAT},
+        {vartype::INTADDR, vartype::INT},
+        {vartype::BOOLADDR, vartype::BOOL},
+        {vartype::FBOOLADDR, vartype::FBOOL}
+    };
     for(auto alloc : fun->get_var_list()) {
         auto v = alloc->get_var();
         f.clear();

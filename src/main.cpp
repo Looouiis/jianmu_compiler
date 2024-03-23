@@ -23,7 +23,7 @@ int main(){
     Passes::PassManager pass_manager(irbuilder->compunit);
     pass_manager.add_pass(Passes::PassType::MEM2REG);
     pass_manager.add_pass(Passes::PassType::DEAD_CODE_ELIMINATION);
-    pass_manager.enable_printer(irprinter);
+    // pass_manager.enable_printer(irprinter);
     pass_manager.run();
 
     // std::cout << "----------------------------------------------------------" << std::endl;

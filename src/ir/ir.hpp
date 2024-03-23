@@ -98,6 +98,7 @@ private:
     bool is_param = false;
     bool is_local = false;
     ptr<ir::ir_instr> def_at;
+    bool unspillable = false;
 public:
     ir_reg(int id,vartype type,int size, bool is_global) : id(id) , type(type), size(size), is_global(is_global) {}
     // ir_reg(string global_name, vartype type, int size) : global_name(global_name), type(type), size(size), is_global(true) {}
@@ -114,6 +115,9 @@ public:
     bool check_local() {return is_local;}
     virtual void mark_def_loc(ptr<ir::ir_instr> loc) override final {def_at = loc;}
     virtual ptr<ir::ir_instr> get_def_loc() override final {return def_at;}
+    int get_id() {return this->id;}
+    void mark_unspillable() {this->unspillable = true;}
+    bool check_is_unspillable() {return this->unspillable;}
 };
 class ir_constant : public ir_value {
     friend IrBuilder;
@@ -208,6 +212,7 @@ public:
     ir_basicblock(int id) : id(id) { name = "bb"+std::to_string(id); };
     void push_back(ptr<ir_instr> inst);
     void push_front(ptr<ir_instr> inst);
+    void insert_spill(std::list<ptr<ir::ir_instr>>::iterator it, ptr<ir_instr> inst);
     ptr<ir_instr> pop_back();
     virtual void accept(ir_visitor& visitor) override final;
     virtual void print(std::ostream & out = std::cout) override final;
@@ -218,7 +223,7 @@ public:
     void for_each(std::function<void(std::shared_ptr<ir::ir_instr> inst)> f,bool isReverse);
     void mark_while() {this->is_while_body = true;}
     std::list<std::shared_ptr<ir_instr>> get_instructions() {return instructions;}
-    std::list<std::shared_ptr<ir_instr>>& get_instructions_ref() {return instructions;}
+    // std::list<std::shared_ptr<ir_instr>>& get_instructions_ref() {return instructions;}
     void mark_entry() {is_entry = true;}
     bool check_is_entry() {return is_entry;}
     void del_ins(ptr<ir::ir_instr> ins);
@@ -330,7 +335,9 @@ private:
 public:
     ir_userfunc(std::string name, int reg_cnt, std::vector<vartype> arg_tpyes); 
     ptr<ir_memobj> new_obj(std::string name, vartype var_type);
+    ptr<ir_memobj> new_spill_obj(std::string name, vartype var_type);
     ptr<ir_reg> new_reg(vartype type);//自动创建序号递增的寄存器
+    ptr<ir_reg> new_spill_reg(vartype type);
     ptr<ir_basicblock> new_block();//创建BB
     virtual void accept(ir_visitor& visitor);
     virtual void print(std::ostream & out = std::cout) override;

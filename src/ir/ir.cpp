@@ -76,6 +76,19 @@ void ir::ir_basicblock::push_front(ptr<ir_instr> inst) {
     this->instructions.push_front(inst);
 }
 
+void ir::ir_basicblock::insert_spill(std::list<ptr<ir::ir_instr>>::iterator it, ptr<ir::ir_instr> inst) {
+    auto def_val = inst->def_reg();
+    for(auto def : def_val) {
+        if(def)
+            def->mark_def_loc(inst);
+    }
+    assert(this->get_block());
+    assert(this->get_fun());
+    inst->mark_block(this->get_block());
+    inst->mark_fun(this->get_fun());
+    this->instructions.insert(it, inst);
+}
+
 ptr<ir::ir_instr> ir::ir_basicblock::pop_back() {
     auto back = this->instructions.back();
     this->instructions.pop_back();
@@ -178,18 +191,31 @@ ir::ir_userfunc::ir_userfunc(std::string name, int reg_cnt, std::vector<vartype>
 }
 
 ptr<ir::ir_memobj> ir::ir_userfunc::new_obj(std::string name, vartype var_type) {
-    std::unordered_map<vartype, vartype> var_reg_trans = {{vartype::INT, vartype::INTADDR}, {vartype::FLOAT, vartype::FLOATADDR}, {vartype::BOOL, vartype::BOOLADDR}, {vartype::FBOOL, vartype::FBOOLADDR}};
-  auto addr = this->new_reg(var_reg_trans[var_type]);
-  addr->mark_local();
-  auto obj = std::make_shared<ir_memobj>(name, addr, i32_size);
-  this->scope->ir_objs.push_back(obj);
-  return obj;
+    std::unordered_map<vartype, vartype> var_reg_trans = {{vartype::INT, vartype::INTADDR}, {vartype::FLOAT, vartype::FLOATADDR}, {vartype::BOOL, vartype::BOOLADDR}, {vartype::FBOOL, vartype::FBOOLADDR},
+    {vartype::INTADDR, vartype::INTADDR}, {vartype::FLOATADDR, vartype::FLOATADDR}, {vartype::BOOLADDR, vartype::BOOLADDR}, {vartype::FBOOLADDR, vartype::FBOOLADDR}};
+    auto addr = this->new_reg(var_reg_trans[var_type]);
+    addr->mark_local();
+    auto obj = std::make_shared<ir_memobj>(name, addr, i32_size);
+    this->scope->ir_objs.push_back(obj);
+    return obj;
+}
+
+ptr<ir::ir_memobj> ir::ir_userfunc::new_spill_obj(std::string name, vartype var_type) {
+    auto obj = new_obj(name, var_type);
+    obj->get_addr()->mark_unspillable();
+    return obj;
 }
 
 ptr<ir::ir_reg> ir::ir_userfunc::new_reg(vartype type)
 {
     int reg_size = 4;
     return std::make_shared<ir_reg>(max_reg++,type,reg_size, false);
+}
+
+ptr<ir::ir_reg> ir::ir_userfunc::new_spill_reg(vartype type) {
+    auto reg = new_reg(type);
+    reg->mark_unspillable();
+    return reg;
 }
 
 ptr<ir::ir_basicblock> ir::ir_userfunc::new_block()
