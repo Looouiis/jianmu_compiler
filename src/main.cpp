@@ -32,9 +32,10 @@ int main(){
     // irbuilder->compunit->accept(*irprinter);
 
     //下面是后端的部分
-    std::shared_ptr<LoongArch::ProgramBuilder> progbuilder= std::make_shared<LoongArch::ProgramBuilder>();
+    std::shared_ptr<LoongArch::ProgramBuilder> progbuilder= std::make_shared<LoongArch::ProgramBuilder>(irprinter);
     irbuilder->compunit->accept(*progbuilder);
     auto prog = progbuilder->prog;
 
     prog->get_asm(std::cout);
+    // irbuilder->compunit->accept(*irprinter);
 }

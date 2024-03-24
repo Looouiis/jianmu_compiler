@@ -8,6 +8,7 @@ namespace LoongArch {
 
 class ProgramBuilder : public ir::ir_visitor {
 public:
+    ProgramBuilder(ptr<ir::ir_visitor> printer) : printer(printer) {}
     virtual void visit(ir::ir_reg & node) override final;  
     virtual void visit(ir::ir_constant & node) override final;  
     virtual void visit(ir::ir_basicblock & node) override final;  
@@ -36,6 +37,9 @@ public:
     void check_write_back(LoongArch::Reg tar);
     // std::vector<std::shared_ptr<ir::ir_reg>> loaded;
 protected:
+    ptr<ir::ir_visitor> printer;
+
+
     void fb2gr(Reg src, Reg dst);
     std::shared_ptr<Function> cur_func;
     std::shared_ptr<Block> cur_block, next_block;

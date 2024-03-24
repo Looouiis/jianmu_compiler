@@ -1,5 +1,5 @@
-project(compiler CXX)
 cmake_minimum_required(VERSION 3.15)
+project(compiler CXX)
 file(GLOB_RECURSE DIR_SRC "src/*.cpp")
 file(GLOB_RECURSE DIR_SRC_E "include/*.cpp")
 # add_compile_options(-g -std=c++17 -O2)

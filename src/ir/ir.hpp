@@ -19,7 +19,9 @@ const int i32_size = 4;
 namespace LoongArch{
     class ProgramBuilder;
     class IrMapping;
+    class RegisterAllocator;
     class RookieAllocator;
+    class ColoringAllocator;
     class Program;
     // class what;
 }
@@ -87,6 +89,7 @@ class ir_reg : public ir_value {
     friend LoongArch::IrMapping;
     friend LoongArch::ProgramBuilder;
     friend LoongArch::RookieAllocator;
+    friend LoongArch::ColoringAllocator;
 private:
     int id;                                                     //virtual register id
     vartype type;                                               //int or float (extension)
@@ -234,6 +237,9 @@ public:
     ptr<ir::ir_userfunc> get_fun() {return cur_func;}
     void mark_block(ptr<ir::ir_basicblock> block) {cur_block_ptr = block;}
     ptr<ir::ir_basicblock> get_block() {return cur_block_ptr;}
+    std::list<ptr<ir::ir_instr>>::iterator search(ptr<ir::ir_instr> ins);
+    std::list<ptr<ir::ir_instr>>::iterator get_ins_begin() {return this->instructions.begin();}
+    std::list<ptr<ir::ir_instr>>::iterator get_ins_end() {return this->instructions.end();}
 };
 
 
@@ -284,7 +290,7 @@ public:
     ptr<global_def> new_global(std::string name, vartype type);
     virtual void accept(ir_visitor& visitor) override final;
     virtual void print(std::ostream & out = std::cout) override final;
-    virtual void reg_allocate(int base_reg, ptr_list<global_def> global_var);
+    virtual void reg_allocate(int base_reg, ptr_list<global_def> global_var, ptr<ir_visitor> printer);
     void mark_passes_completed(Passes::PassType tar) {processed_passes.insert(tar);};
     bool check_passes_completed(Passes::PassType tar) {return processed_passes.find(tar) != processed_passes.end();}
 };
@@ -343,7 +349,7 @@ public:
     virtual void print(std::ostream & out = std::cout) override;
     std::unordered_map<ptr<ir::ir_value>,Pass::LiveInterval> GetLiveInterval();
     std::vector<std::shared_ptr<ir_basicblock>> GetLinerSequence();
-    virtual void reg_allocate(LoongArch::RookieAllocator allocator);
+    virtual void reg_allocate(LoongArch::RegisterAllocator &allocator);
     void save_current_globl(std::list<std::pair<std::string, ptr<ir::global_def>>> current_globl);
     std::list<std::shared_ptr<ir_basicblock>> get_bbs() {return bbs;}
     std::list<std::shared_ptr<ir_basicblock>>& get_bbs_ref() {return bbs;}

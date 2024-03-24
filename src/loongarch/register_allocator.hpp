@@ -16,8 +16,14 @@ struct Reg;
 struct Function;
 struct alloc_res;
 
+class RegisterAllocator {
+public:
+  // RegisterAllocator(std::shared_ptr<ir::ir_userfunc> _func, int base_reg, ptr_list<ir::global_def> global_var);
+  virtual alloc_res run(Rtype target) = 0;
+};
+
 // no coalescing
-class RookieAllocator {
+class RookieAllocator : public RegisterAllocator {
   std::shared_ptr<ir::ir_userfunc> func;
   std::unordered_map<std::shared_ptr<ir::ir_reg> ,std::vector<std::shared_ptr<ir::ir_reg>>> conflictGraph;
   std::unordered_map<std::shared_ptr<ir::ir_reg>,Pass::LiveInterval> mappingToInterval;                         // interval:寄存器的活跃区间
@@ -84,7 +90,7 @@ class RookieAllocator {
  public:
   RookieAllocator(std::shared_ptr<ir::ir_userfunc> _func, int base_reg, ptr_list<ir::global_def> global_var);
   // std::pair<std::unordered_map<std::shared_ptr<ir::ir_reg>,int>, std::vector<std::shared_ptr<ir::ir_reg>>> run();
-  alloc_res run(Rtype target);
+  alloc_res run(Rtype target) override final;
 };
 
 struct alloc_res {

@@ -587,6 +587,7 @@ void ir::IrBuilder::global_init(ptr<ir::global_def> global, ptr<ast::init_syntax
             this->cur_func = compunit->global_init_func;
             if(!compunit->init_block) {
                 compunit->init_block = compunit->global_init_func->new_block();
+                compunit->global_init_func->entry = compunit->init_block;
                 compunit->init_block->mark_ret();
                 compunit->global_init_func->max_reg = compunit->global_var_cnt;
                 compunit->global_init_func->set_retype(vartype::VOID);
@@ -702,6 +703,7 @@ void ir::IrBuilder::visit(ast::var_def_stmt_syntax &node)       // self5
             if(!compunit->init_block) {
                 compunit->global_init_func->mark_fun(compunit->global_init_func);
                 compunit->init_block = compunit->global_init_func->new_block();
+                compunit->global_init_func->entry = compunit->init_block;
                 compunit->init_block->mark_ret();
                 compunit->global_init_func->max_reg = compunit->global_var_cnt;
                 compunit->global_init_func->set_retype(vartype::VOID);

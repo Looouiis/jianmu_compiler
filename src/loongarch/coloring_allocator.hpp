@@ -10,7 +10,9 @@
 #include <unordered_set>
 namespace LoongArch {
 
-class ColoringAllocator {
+class ColoringAllocator : public RegisterAllocator {
+public:
+    ptr<ir::ir_visitor> printer;
 private:
     ptr<ir::ir_userfunc> fun;
     std::unordered_map<ptr<ir::ir_instr>, std::unordered_set<ptr<ir::ir_reg>>> live_in;
@@ -57,13 +59,13 @@ private:
     void analyse_live();
     void build_ig();
     void kempe_opt();
-    ptr<ir::ir_reg> remove(std::unordered_map<ptr<ir::ir_reg>, std::unordered_set<ptr<ir::ir_reg>>> &g);
+    ptr<ir::ir_reg> remove(std::unordered_map<ptr<ir::ir_reg>, std::unordered_set<ptr<ir::ir_reg>>> &g, bool &triggered);
     bool assign_color(ptr<ir::ir_reg> node);
     bool rewrite();
     
 public:
     ColoringAllocator(ptr<ir::ir_userfunc> fun, int base_reg, ptr_list<ir::global_def> global_var);
-    alloc_res run(Rtype target);
+    alloc_res run(Rtype target) override final;
 };
 
 };

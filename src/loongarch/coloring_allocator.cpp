@@ -41,12 +41,17 @@ LoongArch::alloc_res LoongArch::ColoringAllocator::run(Rtype target) {
     this->dealing = target;
 
     bool success = false;
+    int rewrite_cnt = 0;
     while(!success) {
         clear();
         // analyse_live();
         build_ig();
         kempe_opt();
-        if(rewrite()) continue;
+        if(rewrite()) {
+            // fun->accept(*printer);
+            rewrite_cnt++;
+            continue;
+        }
 
         success = true;
     }
@@ -69,6 +74,16 @@ bool LoongArch::ColoringAllocator::rewrite() {
         {vartype::BOOLADDR, vartype::BOOL},
         {vartype::FBOOLADDR, vartype::FBOOL}
     };
+    std::clog << "rewrite!" << std::endl;
+    std::clog << "rewrite!" << std::endl;
+    std::clog << "rewrite!" << std::endl;
+    std::clog << "rewrite!" << std::endl;
+    std::clog << "rewrite!" << std::endl;
+    std::clog << "rewrite!" << std::endl;
+    std::clog << "rewrite!" << std::endl;
+    std::clog << "rewrite!" << std::endl;
+    std::clog << "rewrite!" << std::endl;
+    std::clog << "rewrite!" << std::endl;
     std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map(1);
     for(auto reg : spill_set) {
         auto def_ins = reg->get_def_loc();
@@ -82,21 +97,23 @@ bool LoongArch::ColoringAllocator::rewrite() {
             nxt_iter.clear();
             for(auto block : work_lst) {
                 std::vector<std::pair<std::list<ptr<ir::ir_instr>>::iterator, ptr<ir::ir_reg>>> load_vec;
-                auto ins = block->get_instructions();
+                // auto ins = block->get_instructions();
                 std::list<ptr<ir::ir_instr>>::iterator it;
                 if(block == def_block) {
-                    it = std::find(ins.begin(), ins.end(), def_ins);
+                    it = block->search(def_ins);
+                    // it = std::find(ins.begin(), ins.end(), def_ins);
                     auto store_it =std::next(it);
                     block->insert_spill(store_it, std::make_shared<ir::store>(spill_obj->get_addr(), reg));
                     it++;   // 此时指向插入的store语句
                     it++;   // 此时指向原文的下一条语句
                 }
                 else {
-                    it = ins.begin();
+                    it = block->get_ins_begin();
                 }
 
                 bool cur_block_is_finished = false;
-                for(; it != ins.end(); it++) {
+                auto end = block->get_ins_end();
+                for(; it != end; it++) {
                     auto cur_ins = *it;
                     
                     if(live_in[cur_ins].find(reg) != live_in[cur_ins].end()) {    // 这个reg在当前指令处仍然活跃
@@ -145,8 +162,9 @@ bool LoongArch::ColoringAllocator::rewrite() {
 void LoongArch::ColoringAllocator::kempe_opt() {
     auto remove_ig = ig;
     ptr_list<ir::ir_reg> stk;
+    bool triggered = false;
     while(remove_ig.size()) {
-        auto n = remove(remove_ig);
+        auto n = remove(remove_ig, triggered);
         stk.push_back(n);
     }
     while(stk.size()) {
@@ -163,7 +181,11 @@ bool LoongArch::ColoringAllocator::assign_color(ptr<ir::ir_reg> node) {
     auto available_color = using_color;
     assert(!available_color.empty());
     for(auto reg : ig[node]) {
-        available_color.erase(std::find(available_color.begin(), available_color.end(), mapping_to_reg.find(reg)->second));
+        auto colored_it = mapping_to_reg.find(reg);
+        if(colored_it != mapping_to_reg.end()) {
+            auto color = colored_it->second;
+            available_color.erase(std::find(available_color.begin(), available_color.end(), color));
+        }
     }
     if(!available_color.empty()) {
         mapping_to_reg[node] = available_color.front();
@@ -174,20 +196,25 @@ bool LoongArch::ColoringAllocator::assign_color(ptr<ir::ir_reg> node) {
     }
 }
 
-ptr<ir::ir_reg> LoongArch::ColoringAllocator::remove(std::unordered_map<ptr<ir::ir_reg>, std::unordered_set<ptr<ir::ir_reg>>> &g) {
+ptr<ir::ir_reg> LoongArch::ColoringAllocator::remove(std::unordered_map<ptr<ir::ir_reg>, std::unordered_set<ptr<ir::ir_reg>>> &g, bool &triggered) {
     assert(!g.empty());
     assert(!this->using_color.empty());
     ptr<ir::ir_reg> del_item = nullptr;
     for(auto [reg, vec] : g) {
         if(vec.size() < this->using_color.size()) {
             del_item = reg;
-            if(reg->check_is_unspillable()) break;  // 不可下放的寄存器优先
+            if(triggered) {
+                if(!reg->check_is_unspillable()) break; // 在已经存在可能溢出的节点时，不可溢出的寄存器应该放到最后
+            }
+            else {
+                if(reg->check_is_unspillable()) break;  // 不可溢出的寄存器优先
+            }
         }
     }
     if(del_item == nullptr) {
         for(auto [reg, vec] : g) {
             del_item = reg;
-            if(reg->check_is_unspillable()) break;  // 不可下放的寄存器优先
+            if(!reg->check_is_unspillable()) break;  // 在可能溢出时，不可溢出的寄存器应该放到最后
         }
     }
     if(del_item == nullptr) {
@@ -195,7 +222,8 @@ ptr<ir::ir_reg> LoongArch::ColoringAllocator::remove(std::unordered_map<ptr<ir::
     }
 
     assert(del_item);
-    for(auto conf : g[del_item]) {
+    auto iter = g[del_item];
+    for(auto conf : iter) {
         g[conf].erase(del_item);
     }
     g.erase(del_item);
@@ -203,8 +231,11 @@ ptr<ir::ir_reg> LoongArch::ColoringAllocator::remove(std::unordered_map<ptr<ir::
 }
 
 void LoongArch::ColoringAllocator::build_ig() {
-    analyse_live();
     ig.clear();
+    analyse_live();
+    for(auto arg : fun->get_params()) {
+        ig[arg->get_addr()] = {};
+    }
     ptr_list<ir::ir_basicblock> work_lst = {fun->get_entry()};
     ptr_list<ir::ir_basicblock> nxt_iter;
     std::unordered_map<ptr<ir::ir_basicblock>, bool> visit;
@@ -224,7 +255,7 @@ void LoongArch::ColoringAllocator::build_ig() {
                 // llvm-ir不存在直接的赋值语句（x = y）
                 for(auto u : live_out[ins]) {
                     for(auto v : ins->def_reg()) {
-                        if(is_target(u) && is_target(v)) {
+                        if(is_target(u) && is_target(v) && u != v) {
                             ig[u].insert(v);
                             ig[v].insert(u);
                         }
@@ -266,6 +297,7 @@ void LoongArch::ColoringAllocator::analyse_live() {
                 auto instructions = block->get_instructions();
                 for(auto it = instructions.rbegin(); it != instructions.rend(); it++) {
                     auto ins = *it;
+                    // auto is_phi = std::dynamic_pointer_cast<ir::phi>(ins);
                     auto &out = live_out[ins];
                     auto bak = live_out[ins];
                     // out.clear();            // 每次迭代都是新增的话clear理应能去除掉
@@ -273,15 +305,17 @@ void LoongArch::ColoringAllocator::analyse_live() {
                         auto successor = fun->check_nxt(block);
                         for(auto s : successor) {
                             for(auto in : live_in[s->get_instructions().front()]) {
-                                if(is_target(in))
+                                if(is_target(in)) {
                                     out.insert(in);
+                                }
                             }
                         }
                     }
                     else {
                         for(auto in : live_in[*std::prev(it)]) {
-                            if(is_target(in))
+                            if(is_target(in)) {
                                 out.insert(in);
+                            }
                         }
                     }
                     changed |= (out != bak);
@@ -293,15 +327,22 @@ void LoongArch::ColoringAllocator::analyse_live() {
                         // auto is_reg = std::dynamic_pointer_cast<ir::ir_reg>(def);
                         // assert(is_reg);
                         // if(is_reg) in.erase(is_reg);
-                        if(is_target(def))
+                        if(is_target(def)) {
                             in.erase(def);
+                            ig[def] = {};           // addVertix
+                        }
                     }
                     for(auto use : ins->use_reg()) {
                         // auto is_reg = std::dynamic_pointer_cast<ir::ir_reg>(use);
                         // assert(is_reg);
                         // if(is_reg) in.insert(is_reg);
-                        if(is_target(use))
+                        if(is_target(use)) {
                             in.insert(use);
+                            ig[use] = {};           // addVertix
+                        }
+                        // if(is_phi) {
+                        //     use->mark_unspillable();    // 书上没有，但是phi应该放在首位
+                        // }
                     }
                     changed |= (in != bak);
                 }
@@ -315,6 +356,8 @@ void LoongArch::ColoringAllocator::clear() {
     this->ig.clear();
     this->mapping_to_reg.clear();
     this->spill_set.clear();
+    this->live_in.clear();
+    this->live_out.clear();
 }
 
 void LoongArch::ColoringAllocator::analyse_cfg_flow() {

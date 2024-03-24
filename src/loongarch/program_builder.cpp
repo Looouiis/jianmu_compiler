@@ -194,7 +194,7 @@ void LoongArch::ProgramBuilder::visit(ir::ir_module &node) {
     }
 
     //可以调用寄存器分配函数进行寄存器分配
-    node.reg_allocate(cur_mapping->regn, prog->global_var);       // 新增了传入分配起始地址的信息，方便分配
+    node.reg_allocate(cur_mapping->regn, prog->global_var, printer);       // 新增了传入分配起始地址的信息，方便分配
 
     for(auto & [name, func] : node.libfuncs) {
         prog->lib_funcs.push_back(std::make_shared<LoongArch::Function>(name));
@@ -1370,6 +1370,12 @@ void LoongArch::ProgramBuilder::visit(ir::ir_libfunc& node) {
 }
 
 void LoongArch::ProgramBuilder::visit(ir::memset& node) {
+    cur_block->instructions.push_back(std::make_shared<RegImmInst>(RegImmInst::addi_d, Reg{sp}, Reg{sp}, -24));
+    cur_block->instructions.push_back(std::make_shared<st>(spill_dst, Reg{sp}, 0, st::st_d));
+    cur_block->instructions.push_back(std::make_shared<st>(spill_use_1, Reg{sp}, 8, st::st_d));
+    cur_block->instructions.push_back(std::make_shared<st>(spill_use_2, Reg{sp}, 16, st::st_d));
+
+
     auto var_it = cur_mapping->mem_var.find(node.base->id);
     int cnt = node.cnt * node.base->size;
     if(var_it != cur_mapping->mem_var.end()) {
@@ -1386,4 +1392,11 @@ void LoongArch::ProgramBuilder::visit(ir::memset& node) {
     // cur_block->instructions.push_back(std::make_shared<RegRegInst>(RegRegInst::add_d, spill_use_1, spill_dst, spill_use_1));
     cur_block->instructions.push_back(std::make_shared<LoadImm>(spill_use_2, node.base->size));
     cur_block->instructions.push_back(std::make_shared<Bl>("Looouiiis_self_memset"));
+
+
+    
+    cur_block->instructions.push_back(std::make_shared<ld>(spill_dst, Reg{sp}, 0, ld::ld_d));
+    cur_block->instructions.push_back(std::make_shared<ld>(spill_use_1, Reg{sp}, 8, ld::ld_d));
+    cur_block->instructions.push_back(std::make_shared<ld>(spill_use_2, Reg{sp}, 16, ld::ld_d));
+    cur_block->instructions.push_back(std::make_shared<RegImmInst>(RegImmInst::addi_d, Reg{sp}, Reg{sp}, 24));
 }

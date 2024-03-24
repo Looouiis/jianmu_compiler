@@ -137,6 +137,12 @@ void ir::ir_basicblock::del_ins_by_vec(ptr_list<ir::ir_instr> del_ins) {
     }
 }
 
+std::list<ptr<ir::ir_instr>>::iterator ir::ir_basicblock::search(ptr<ir::ir_instr> ins) {
+    auto it = std::find(this->instructions.begin(), this->instructions.end(), ins);
+    assert(it != this->instructions.end());
+    return it;
+}
+
 ptr<ir::ir_userfunc> ir::ir_module::new_func(std::string name, std::vector<vartype> arg_types) {
   auto pfunc = std::make_shared<ir_userfunc>(name, this->global_var_cnt, arg_types);
   pfunc->mark_fun(pfunc);
@@ -167,22 +173,26 @@ void ir::ir_module::print(std::ostream & out)
 {
 }
 
-void ir::ir_module::reg_allocate(int base_reg, ptr_list<global_def> global_var) {
+void ir::ir_module::reg_allocate(int base_reg, ptr_list<global_def> global_var, ptr<ir::ir_visitor> printer) {
     if(this->init_block) {
-        LoongArch::RookieAllocator allocator(this->global_init_func, base_reg, global_var);
+        // LoongArch::RookieAllocator allocator(this->global_init_func, base_reg, global_var);
+        LoongArch::ColoringAllocator allocator(this->global_init_func, base_reg, global_var);
+        allocator.printer = printer;
         // auto ret = allocator.run();
         this->global_init_func->reg_allocate(allocator);
 
-        LoongArch::ColoringAllocator all(this->global_init_func, base_reg, global_var);
-        all.run(LoongArch::INT);
+        // LoongArch::ColoringAllocator all(this->global_init_func, base_reg, global_var);
+        // all.run(LoongArch::INT);
     }
     for(auto & [name, func] : this->usrfuncs){
-        LoongArch::RookieAllocator allocator(func, base_reg, global_var);     // 我修改了allocator的构造函数
+        // LoongArch::RookieAllocator allocator(func, base_reg, global_var);     // 我修改了allocator的构造函数
+        LoongArch::ColoringAllocator allocator(func, base_reg, global_var);
+        allocator.printer = printer;
         // auto ret = allocator.run();                                 // 我也修改了run方法的返回值
         func->reg_allocate(allocator);
 
-        LoongArch::ColoringAllocator all(func, base_reg, global_var);
-        all.run(LoongArch::INT);
+        // LoongArch::ColoringAllocator all(func, base_reg, global_var);
+        // all.run(LoongArch::INT);
     }
 }
 
@@ -203,6 +213,7 @@ ptr<ir::ir_memobj> ir::ir_userfunc::new_obj(std::string name, vartype var_type) 
 ptr<ir::ir_memobj> ir::ir_userfunc::new_spill_obj(std::string name, vartype var_type) {
     auto obj = new_obj(name, var_type);
     obj->get_addr()->mark_unspillable();
+    this->alloc_list.push_back(std::make_shared<ir::alloc>(obj));
     return obj;
 }
 
@@ -259,7 +270,7 @@ std::vector<ptr<ir::ir_basicblock>> ir::ir_userfunc::GetLinerSequence()
    
 }
 
-void ir::ir_userfunc::reg_allocate(LoongArch::RookieAllocator allocator) {
+void ir::ir_userfunc::reg_allocate(LoongArch::RegisterAllocator &allocator) {
 
     auto ret_int = allocator.run(LoongArch::Rtype::INT);
     for(auto res : ret_int.mapping_to_reg) {
@@ -911,7 +922,10 @@ std::vector<ptr<ir::ir_reg>> ir::func_call::use_reg() {
 }
 
 std::vector<ptr<ir::ir_reg>> ir::func_call::def_reg() {
-  return {this->ret_reg};
+    if(this->ret_reg)
+        return {this->ret_reg};
+    else
+        return {};
 }
 
 void ir::func_call::replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) {
