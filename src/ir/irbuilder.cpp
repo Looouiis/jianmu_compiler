@@ -928,6 +928,7 @@ void ir::IrBuilder::visit(ast::func_f_param_syntax &node) {
     // else {
         mem = this->cur_func->new_obj(node.name, node.accept_type);
         mem->addr->is_param = true;
+        mem->addr->clear_local();
     // }
     if(node.dimension) {
         mem->dim = node.dimension;
@@ -942,6 +943,7 @@ void ir::IrBuilder::visit(ast::func_f_param_syntax &node) {
         // cur_block->push_back(std::make_shared<ir::alloc>(changeable));
         cur_func->alloc_list.push_back(std::make_shared<ir::alloc>(changeable));
         changeable->addr->is_param = true;
+        changeable->addr->clear_local();
         cur_block->push_back(std::make_shared<ir::store>(changeable->get_addr(), mem->get_addr()));
         this->scope.push_var(node.name, changeable);
     }

@@ -58,8 +58,9 @@ private:
     void clear();
     void analyse_live();
     void build_ig();
-    void kempe_opt();
-    ptr<ir::ir_reg> remove(std::unordered_map<ptr<ir::ir_reg>, std::unordered_set<ptr<ir::ir_reg>>> &g, bool &triggered);
+    // bool kempe_opt();
+    bool kempe();
+    ptr<ir::ir_reg> remove(std::unordered_map<ptr<ir::ir_reg>, std::unordered_set<ptr<ir::ir_reg>>> &g, ptr<ir::ir_reg> del_item);
     bool assign_color(ptr<ir::ir_reg> node);
     bool rewrite();
     

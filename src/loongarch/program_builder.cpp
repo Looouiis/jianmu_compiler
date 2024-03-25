@@ -957,7 +957,7 @@ void LoongArch::ProgramBuilder::visit(ir::load &node) {
         cur_block->instructions.push_back(std::make_shared<ldptr>(dst, reg, 0, ldtype));
     }
     else if(node.addr->is_global) {
-        node.addr->accept(*this);
+        // node.addr->accept(*this);
         Reg reg = const_reg_r;
         cur_block->instructions.push_back(std::make_shared<la>(node.addr, reg));
         cur_block->instructions.push_back(std::make_shared<ldptr>(dst, reg, 0, ldtype));
@@ -1177,6 +1177,7 @@ void LoongArch::ProgramBuilder::visit(ir::get_element_ptr& node) {
         cur_block->instructions.push_back(std::make_shared<RegImmInst>(RegImmInst::addi_d, dst, Reg{fp}, offset));
     }
     else {
+        assert(!node.base->addr->check_local());
         node.base->addr->accept(*this);
         auto base_add = pass_reg;
         cur_block->instructions.push_back(std::make_shared<RegRegInst>(RegRegInst::add_d, dst, base_add, Reg{0}));

@@ -89,6 +89,15 @@ void ir::ir_basicblock::insert_spill(std::list<ptr<ir::ir_instr>>::iterator it, 
     this->instructions.insert(it, inst);
 }
 
+void ir::ir_basicblock::insert_after_phi(ptr<ir_instr> inst) {
+    auto it = this->instructions.begin();
+    for(; it != this->instructions.end(); it++) {
+        auto is_phi = std::dynamic_pointer_cast<ir::phi>(*it);
+        if(is_phi == nullptr) break;
+    }
+    this->instructions.insert(it, inst);
+}
+
 ptr<ir::ir_instr> ir::ir_basicblock::pop_back() {
     auto back = this->instructions.back();
     this->instructions.pop_back();
@@ -139,7 +148,7 @@ void ir::ir_basicblock::del_ins_by_vec(ptr_list<ir::ir_instr> del_ins) {
 
 std::list<ptr<ir::ir_instr>>::iterator ir::ir_basicblock::search(ptr<ir::ir_instr> ins) {
     auto it = std::find(this->instructions.begin(), this->instructions.end(), ins);
-    assert(it != this->instructions.end());
+    // assert(it != this->instructions.end());         // TODO：在确保没有其他出现=end（）的情况后对coloring_allocator中的def_it逻辑进行重构
     return it;
 }
 
@@ -212,6 +221,10 @@ ptr<ir::ir_memobj> ir::ir_userfunc::new_obj(std::string name, vartype var_type) 
 
 ptr<ir::ir_memobj> ir::ir_userfunc::new_spill_obj(std::string name, vartype var_type) {
     auto obj = new_obj(name, var_type);
+    if(var_type == vartype::INTADDR || var_type == vartype::FLOATADDR || var_type == vartype::BOOLADDR || var_type == vartype::FBOOLADDR) {
+        obj->set_size(8);
+        obj->get_addr()->set_size(8);
+    }
     obj->get_addr()->mark_unspillable();
     this->alloc_list.push_back(std::make_shared<ir::alloc>(obj));
     return obj;
@@ -537,12 +550,12 @@ std::vector<ptr<ir::ir_reg>> ir::load::def_reg() {
 }
 
 void ir::load::replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) {
-    // auto it = replace_map.find(this->dst);
-    // if(it != replace_map.end()) {
-    //     auto is_reg = std::dynamic_pointer_cast<ir::ir_reg>(it->second);
-    //     if(is_reg)
-    //         this->dst = is_reg;
-    // }
+    auto it = replace_map.find(this->addr);
+    if(it != replace_map.end()) {
+        auto is_reg = std::dynamic_pointer_cast<ir::ir_reg>(it->second);
+        if(is_reg)
+            this->addr = is_reg;
+    }
 }
 
 void ir::alloc::accept(ir_visitor &visitor)
@@ -963,7 +976,7 @@ ptr<ir::ir_memobj> ir::global_def::get_obj() {
     return obj;
 }
 
-void ir::global_def::replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) {}       // mem2reg不处理全局变量，不用换？
+void ir::global_def::replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) {}       // mem2reg不处理全局变量，不用换？coloring_allocator也不需要
 
 void ir::trans::accept(ir_visitor &visitor)
 {
@@ -1008,4 +1021,11 @@ std::vector<ptr<ir::ir_reg>> ir::memset::def_reg() {
   return {};
 }
 
-void ir::memset::replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) {}       // memset不用换
+void ir::memset::replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) {        // mem2reg不用换，register_allocator需要
+    auto it = replace_map.find(base);
+    if(it != replace_map.end()) {
+        auto reg = std::dynamic_pointer_cast<ir::ir_reg>(it->second);
+        assert(reg);
+        base = reg;
+    }
+}

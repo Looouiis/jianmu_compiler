@@ -93,7 +93,7 @@ void ir::IrPrinter::visit(ir_userfunc &node)
     for(auto alloc : node.alloc_list) {
         alloc->accept(*this);
     }
-    ir::jump to_first_bb(node.bbs.front());
+    ir::jump to_first_bb(node.entry);
     to_first_bb.accept(*this);
     for(auto & bb : node.bbs)
         bb->accept(*this);
@@ -180,7 +180,7 @@ void ir::IrPrinter::visit(alloc &node)
         out<<base_type[node.var->addr->type];
     }
 
-    out << " , align 4";
+    out << " , align " << node.var->addr->size;
     out<<std::endl;
 }
 

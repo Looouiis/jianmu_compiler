@@ -95,11 +95,11 @@ private:
     vartype type;                                               //int or float (extension)
     int size;                                                   //some byte
     string global_name;
-    bool is_global;
+    bool is_global = false;
     bool is_const;
     bool is_arr = false;
     bool is_param = false;
-    bool is_local = false;
+    bool is_local = false;  // 似乎真的和is_global重复了   不重复！is_local表示的是sysy层面上的本地变量对应的reg，而is_global为假的reg不一定对应本地变量
     ptr<ir::ir_instr> def_at;
     bool unspillable = false;
 public:
@@ -115,12 +115,17 @@ public:
     string get_name();
     bool check_is_param() {return this->is_param;}
     void mark_local() {is_local = true;}
+    void clear_local() {is_local = false;}
     bool check_local() {return is_local;}
+    bool check_global() {return is_global;}
     virtual void mark_def_loc(ptr<ir::ir_instr> loc) override final {def_at = loc;}
     virtual ptr<ir::ir_instr> get_def_loc() override final {return def_at;}
     int get_id() {return this->id;}
     void mark_unspillable() {this->unspillable = true;}
     bool check_is_unspillable() {return this->unspillable;}
+    void set_size(int size) {this->size = size;}
+    void mark_addr() {this->is_arr = true;}
+    bool check_is_arr() {return this->is_arr;}
 };
 class ir_constant : public ir_value {
     friend IrBuilder;
@@ -163,11 +168,12 @@ protected:
 public:
     ptr<ir_reg> get_addr() { return this->addr;};
     int get_size() {return this->size;}
+    void set_size(int size) {this->size = size;}
     ptr<ast::var_dimension_syntax> get_dim() {return this->dim;};
     ir_memobj(std::string name , ptr<ir_reg> addr, int size) : name(name) , addr(addr) , size(size) {}
     virtual void accept(ir_visitor& visitor) override final;
     virtual void print(std::ostream & out = std::cout) override final;
-    bool is_arr() {return this->dim != nullptr;}
+    bool is_arr() {return this->addr->check_is_arr();}
 };
 
 class ir_func_arg : public ir_memobj {
@@ -216,6 +222,8 @@ public:
     void push_back(ptr<ir_instr> inst);
     void push_front(ptr<ir_instr> inst);
     void insert_spill(std::list<ptr<ir::ir_instr>>::iterator it, ptr<ir_instr> inst);
+    void erase(std::list<ptr<ir::ir_instr>>::iterator it) {this->instructions.erase(it);}
+    void insert_after_phi(ptr<ir_instr> inst);
     ptr<ir_instr> pop_back();
     virtual void accept(ir_visitor& visitor) override final;
     virtual void print(std::ostream & out = std::cout) override final;

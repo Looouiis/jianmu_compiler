@@ -3,6 +3,9 @@
 #include "loongarch/register_allocator.hpp"
 #include "parser/SyntaxTree.hpp"
 #include <cassert>
+#include <cstdlib>
+#include <iterator>
+#include <list>
 #include <memory>
 #include <queue>
 #include <unordered_map>
@@ -46,8 +49,8 @@ LoongArch::alloc_res LoongArch::ColoringAllocator::run(Rtype target) {
         clear();
         // analyse_live();
         build_ig();
-        kempe_opt();
-        if(rewrite()) {
+        if(kempe()) {
+            rewrite();
             // fun->accept(*printer);
             rewrite_cnt++;
             continue;
@@ -67,13 +70,13 @@ bool LoongArch::ColoringAllocator::rewrite() {
     if(spill_set.empty()) {
         return false;
     }
-    std::unordered_map<vartype, vartype> base_type = {
-    //    {vartype::FLOATADDR, "float"},
-        {vartype::FLOATADDR, vartype::FLOAT},
-        {vartype::INTADDR, vartype::INT},
-        {vartype::BOOLADDR, vartype::BOOL},
-        {vartype::FBOOLADDR, vartype::FBOOL}
-    };
+    // std::unordered_map<vartype, vartype> base_type = {
+    // //    {vartype::FLOATADDR, "float"},
+    //     {vartype::FLOATADDR, vartype::FLOAT},
+    //     {vartype::INTADDR, vartype::INT},
+    //     {vartype::BOOLADDR, vartype::BOOL},
+    //     {vartype::FBOOLADDR, vartype::FBOOL}
+    // };
     std::clog << "rewrite!" << std::endl;
     std::clog << "rewrite!" << std::endl;
     std::clog << "rewrite!" << std::endl;
@@ -86,8 +89,15 @@ bool LoongArch::ColoringAllocator::rewrite() {
     std::clog << "rewrite!" << std::endl;
     std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map(1);
     for(auto reg : spill_set) {
-        auto def_ins = reg->get_def_loc();
-        auto def_block = def_ins->get_block();
+        ptr<ir::ir_basicblock> def_block;
+        ptr<ir::ir_instr> def_ins;
+        if(reg->check_is_param()) {
+            def_block = fun->get_entry();
+        }
+        else {
+            def_ins = reg->get_def_loc();
+            def_block = def_ins->get_block();
+        }
         auto spill_obj = fun->new_spill_obj(std::to_string(reg->get_id()) + "spilled_virtual_reg", reg->get_type());
         ptr_list<ir::ir_basicblock> work_lst = {def_block};
         ptr_list<ir::ir_basicblock> nxt_iter;
@@ -97,15 +107,23 @@ bool LoongArch::ColoringAllocator::rewrite() {
             nxt_iter.clear();
             for(auto block : work_lst) {
                 std::vector<std::pair<std::list<ptr<ir::ir_instr>>::iterator, ptr<ir::ir_reg>>> load_vec;
+                std::vector<std::pair<std::list<ptr<ir::ir_instr>>::iterator, ptr<ir::ir_reg>>> change_vec;
                 // auto ins = block->get_instructions();
                 std::list<ptr<ir::ir_instr>>::iterator it;
                 if(block == def_block) {
-                    it = block->search(def_ins);
-                    // it = std::find(ins.begin(), ins.end(), def_ins);
-                    auto store_it =std::next(it);
-                    block->insert_spill(store_it, std::make_shared<ir::store>(spill_obj->get_addr(), reg));
-                    it++;   // 此时指向插入的store语句
-                    it++;   // 此时指向原文的下一条语句
+                    if(def_ins) {
+                        it = block->search(def_ins);
+                        // it = std::find(ins.begin(), ins.end(), def_ins);
+                        auto store_it =std::next(it);
+                        block->insert_spill(store_it, std::make_shared<ir::store>(spill_obj->get_addr(), reg));
+                        it++;   // 此时指向插入的store语句
+                        it++;   // 此时指向原文的下一条语句
+                    }
+                    else {
+                        block->insert_spill(block->get_ins_begin(), std::make_shared<ir::store>(spill_obj->get_addr(), reg));
+                        it = block->get_ins_begin();
+                        it++;
+                    }
                 }
                 else {
                     it = block->get_ins_begin();
@@ -115,15 +133,47 @@ bool LoongArch::ColoringAllocator::rewrite() {
                 auto end = block->get_ins_end();
                 for(; it != end; it++) {
                     auto cur_ins = *it;
+                    auto is_phi = std::dynamic_pointer_cast<ir::phi>(cur_ins);
                     
                     if(live_in[cur_ins].find(reg) != live_in[cur_ins].end()) {    // 这个reg在当前指令处仍然活跃
                         auto use = cur_ins->use_reg();
                         if(std::find(use.begin(), use.end(), reg) != use.end()) {   // 这个reg活跃且被使用
-                            auto load_reg = fun->new_spill_reg(base_type[spill_obj->get_addr()->get_type()]);
-                            load_vec.push_back({it, load_reg});
-                            replace_map.clear();
-                            replace_map[reg] = load_reg;
-                            cur_ins->replace_reg(replace_map);
+                            if(is_phi) {
+                                change_vec.push_back({it, is_phi->dst});
+                                for(auto [value, block_from] : is_phi->uses) {
+                                    auto reg_from = std::dynamic_pointer_cast<ir::ir_reg>(value);
+                                    std::list<ptr<ir::ir_instr>>::iterator def_it;
+                                    if(reg_from) {
+                                        def_it = block_from->search(reg_from->get_def_loc());
+                                        def_it = std::next(def_it);
+                                    }
+                                    else {
+                                        def_it = block_from->get_ins_end();
+                                        auto begin = block_from->get_ins_begin();
+                                        while(def_it != begin) {
+                                            auto prev_it = std::prev(def_it);
+                                            auto is_jump = std::dynamic_pointer_cast<ir::jump>(*prev_it);
+                                            auto is_br = std::dynamic_pointer_cast<ir::br>(*prev_it);
+                                            auto is_bc = std::dynamic_pointer_cast<ir::break_or_continue>(*prev_it);
+                                            auto is_while_loop = std::dynamic_pointer_cast<ir::while_loop>(*prev_it);
+                                            if(is_jump == nullptr && is_br == nullptr && is_bc == nullptr && is_while_loop == nullptr) {
+                                                break;
+                                            }
+                                            else {
+                                                def_it = prev_it;
+                                            }
+                                        }
+                                    }
+                                    block_from->insert_spill(def_it, std::make_shared<ir::store>(spill_obj->get_addr(), value));
+                                }
+                            }
+                            else {
+                                auto load_reg = fun->new_spill_reg(reg->get_type());
+                                load_vec.push_back({it, load_reg});
+                                replace_map.clear();
+                                replace_map[reg] = load_reg;
+                                cur_ins->replace_reg(replace_map);
+                            }
                         }
                         auto def = cur_ins->def_reg();
                         if(std::find(def.begin(), def.end(), reg) != def.end()) {   // 这个reg活跃且被定值
@@ -139,7 +189,16 @@ bool LoongArch::ColoringAllocator::rewrite() {
                 // 插入load
                 // auto &ins_ref = block->get_instructions_ref();
                 for(auto [load_it, load_reg] : load_vec) {
+                    auto id = spill_obj->get_addr()->id;
                     block->insert_spill(load_it, std::make_shared<ir::load>(load_reg, spill_obj->get_addr()));
+                }
+
+                for(auto [phi_it, _load_reg] : change_vec) {
+                    block->erase(phi_it);
+                }
+                for(auto [_phi_it, load_reg] : change_vec) {
+                    auto id = spill_obj->get_addr()->id;
+                    block->insert_after_phi(std::make_shared<ir::load>(load_reg, spill_obj->get_addr()));
                 }
 
                 if(cur_block_is_finished) continue;
@@ -158,24 +217,72 @@ bool LoongArch::ColoringAllocator::rewrite() {
     return true;
 }
 
-// 返回值：true代表需要spill，false代表不需要
-void LoongArch::ColoringAllocator::kempe_opt() {
+bool LoongArch::ColoringAllocator::kempe() {
     auto remove_ig = ig;
+    bool need_spill = false;
     ptr_list<ir::ir_reg> stk;
-    bool triggered = false;
     while(remove_ig.size()) {
-        auto n = remove(remove_ig, triggered);
-        stk.push_back(n);
-    }
-    while(stk.size()) {
-        auto n = stk.back();
-        stk.pop_back();
-        if(!assign_color(n)) {
-            if(n->check_is_unspillable()) abort();
-            spill_set.insert(n);
+        ptr<ir::ir_reg> del_item = nullptr;
+        for(auto [reg, vec] : remove_ig) {
+            if(vec.size() < this->using_color.size()) {
+                del_item = reg;
+                break;
+            }
+        }
+        if(del_item) {
+            remove(remove_ig, del_item);
+            // assert(assign_color(del_item));
+            stk.push_back(del_item);
+        }
+        else {
+            bool spilled = false;
+            for(auto [reg, vec] : remove_ig) {
+                if(!reg->check_is_unspillable()) {
+                    spilled = true;
+                    spill_set.insert(reg);
+                    remove(remove_ig, reg);
+                    remove(ig, reg);
+                    break;
+                }
+            }
+            assert(spilled);
+            need_spill = true;
         }
     }
+    while(!stk.empty()) {
+        auto reg = stk.back();
+        stk.pop_back();
+        assert(assign_color(reg));
+    }
+    return need_spill;
 }
+
+// // 返回值：true代表需要spill，false代表不需要
+// bool LoongArch::ColoringAllocator::kempe_opt() {
+//     auto remove_ig = ig;
+//     ptr_list<ir::ir_reg> stk;
+//     bool triggered = false;
+//     bool need_spill = false;
+//     ptr_list<ir::ir_reg> unsp;
+//     while(remove_ig.size()) {
+//         auto n = remove(remove_ig, triggered);
+//         stk.push_back(n);
+//     }
+//     while(stk.size()) {
+//         auto n = stk.back();
+//         stk.pop_back();
+//         if(!assign_color(n)) {
+//             need_spill = true;
+//             if(n->check_is_unspillable()) {
+//                 unsp.push_back(n);
+//                 continue;
+//             }
+//             spill_set.insert(n);
+//         }
+//     }
+//     assert(!(need_spill && spill_set.empty()));    // 剩下的全是不可spill的reg了
+//     return need_spill;
+// }
 
 bool LoongArch::ColoringAllocator::assign_color(ptr<ir::ir_reg> node) {
     auto available_color = using_color;
@@ -184,7 +291,10 @@ bool LoongArch::ColoringAllocator::assign_color(ptr<ir::ir_reg> node) {
         auto colored_it = mapping_to_reg.find(reg);
         if(colored_it != mapping_to_reg.end()) {
             auto color = colored_it->second;
-            available_color.erase(std::find(available_color.begin(), available_color.end(), color));
+            auto available_it = std::find(available_color.begin(), available_color.end(), color);
+            if(available_it != available_color.end()) {
+                available_color.erase(available_it);
+            }
         }
     }
     if(!available_color.empty()) {
@@ -196,37 +306,48 @@ bool LoongArch::ColoringAllocator::assign_color(ptr<ir::ir_reg> node) {
     }
 }
 
-ptr<ir::ir_reg> LoongArch::ColoringAllocator::remove(std::unordered_map<ptr<ir::ir_reg>, std::unordered_set<ptr<ir::ir_reg>>> &g, bool &triggered) {
+ptr<ir::ir_reg> LoongArch::ColoringAllocator::remove(std::unordered_map<ptr<ir::ir_reg>, std::unordered_set<ptr<ir::ir_reg>>> &g, ptr<ir::ir_reg> del_item) {
     assert(!g.empty());
     assert(!this->using_color.empty());
-    ptr<ir::ir_reg> del_item = nullptr;
-    for(auto [reg, vec] : g) {
-        if(vec.size() < this->using_color.size()) {
-            del_item = reg;
-            if(triggered) {
-                if(!reg->check_is_unspillable()) break; // 在已经存在可能溢出的节点时，不可溢出的寄存器应该放到最后
-            }
-            else {
-                if(reg->check_is_unspillable()) break;  // 不可溢出的寄存器优先
-            }
-        }
-    }
-    if(del_item == nullptr) {
-        for(auto [reg, vec] : g) {
-            del_item = reg;
-            if(!reg->check_is_unspillable()) break;  // 在可能溢出时，不可溢出的寄存器应该放到最后
-        }
-    }
-    if(del_item == nullptr) {
-        del_item = g.begin()->first;
-    }
+    // ptr<ir::ir_reg> del_item = nullptr;
+    // for(auto [reg, vec] : g) {
+    //     if(vec.size() < this->using_color.size()) {
+    //         del_item = reg;
+    //         if(triggered) {
+    //             if(reg->check_is_unspillable()) break; // 在已经存在可能溢出的节点时，不可溢出的寄存器应该放到最后
+    //         }
+    //         else {
+    //             if(reg->check_is_unspillable()) break;  // 不可溢出的寄存器优先
+    //         }
+    //     }
+    // }
+    // if(del_item == nullptr) {
+    //     triggered = true;
+    //     for(auto [reg, vec] : g) {
+    //         del_item = reg;
+    //         if(reg->check_is_unspillable()) break;  // 在可能溢出时，不可溢出的寄存器应该放到最后
+    //     }
+    // }
+    // if(del_item == nullptr) {
+    //     del_item = g.begin()->first;
+    // }
 
     assert(del_item);
     auto iter = g[del_item];
     for(auto conf : iter) {
-        g[conf].erase(del_item);
+        auto it = g[conf].find(del_item);
+        if(it != g[conf].end()) {
+            g[conf].erase(it);
+        }
+        // else {
+        //     g[conf].erase(del_item);
+        // }
     }
-    g.erase(del_item);
+    auto it = g.find(del_item);
+    if(it != g.end()) {
+        g.erase(it);
+    }
+    // g.erase(del_item);
     return del_item;
 }
 
@@ -327,7 +448,7 @@ void LoongArch::ColoringAllocator::analyse_live() {
                         // auto is_reg = std::dynamic_pointer_cast<ir::ir_reg>(def);
                         // assert(is_reg);
                         // if(is_reg) in.erase(is_reg);
-                        if(is_target(def)) {
+                        if(is_target(def) && !def->check_global() && !def->check_local()) {
                             in.erase(def);
                             ig[def] = {};           // addVertix
                         }
@@ -336,7 +457,7 @@ void LoongArch::ColoringAllocator::analyse_live() {
                         // auto is_reg = std::dynamic_pointer_cast<ir::ir_reg>(use);
                         // assert(is_reg);
                         // if(is_reg) in.insert(is_reg);
-                        if(is_target(use)) {
+                        if(is_target(use) && !use->check_global() && !use->check_local()) {
                             in.insert(use);
                             ig[use] = {};           // addVertix
                         }
