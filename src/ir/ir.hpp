@@ -126,6 +126,8 @@ public:
     void set_size(int size) {this->size = size;}
     void mark_addr() {this->is_arr = true;}
     bool check_is_arr() {return this->is_arr;}
+    void clone_attribute(ptr<ir::ir_reg> other);
+    auto check_const() {return this->is_const;}
 };
 class ir_constant : public ir_value {
     friend IrBuilder;
@@ -351,7 +353,7 @@ public:
     ptr<ir_memobj> new_obj(std::string name, vartype var_type);
     ptr<ir_memobj> new_spill_obj(std::string name, vartype var_type);
     ptr<ir_reg> new_reg(vartype type);//自动创建序号递增的寄存器
-    ptr<ir_reg> new_spill_reg(vartype type);
+    ptr<ir_reg> new_spill_reg(ptr<ir::ir_reg> reg);
     ptr<ir_basicblock> new_block();//创建BB
     virtual void accept(ir_visitor& visitor);
     virtual void print(std::ostream & out = std::cout) override;

@@ -51,7 +51,7 @@ LoongArch::alloc_res LoongArch::ColoringAllocator::run(Rtype target) {
         build_ig();
         if(kempe()) {
             rewrite();
-            // fun->accept(*printer);
+            fun->accept(*printer);
             rewrite_cnt++;
             continue;
         }
@@ -77,18 +77,20 @@ bool LoongArch::ColoringAllocator::rewrite() {
     //     {vartype::BOOLADDR, vartype::BOOL},
     //     {vartype::FBOOLADDR, vartype::FBOOL}
     // };
-    std::clog << "rewrite!" << std::endl;
-    std::clog << "rewrite!" << std::endl;
-    std::clog << "rewrite!" << std::endl;
-    std::clog << "rewrite!" << std::endl;
-    std::clog << "rewrite!" << std::endl;
-    std::clog << "rewrite!" << std::endl;
-    std::clog << "rewrite!" << std::endl;
-    std::clog << "rewrite!" << std::endl;
-    std::clog << "rewrite!" << std::endl;
-    std::clog << "rewrite!" << std::endl;
+    // std::clog << "rewrite!" << std::endl;
+    // std::clog << "rewrite!" << std::endl;
+    // std::clog << "rewrite!" << std::endl;
+    // std::clog << "rewrite!" << std::endl;
+    // std::clog << "rewrite!" << std::endl;
+    // std::clog << "rewrite!" << std::endl;
+    // std::clog << "rewrite!" << std::endl;
+    // std::clog << "rewrite!" << std::endl;
+    // std::clog << "rewrite!" << std::endl;
+    // std::clog << "rewrite!" << std::endl;
+    std::set<ptr<ir::ir_reg>> phi_side_effect;
     std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map(1);
     for(auto reg : spill_set) {
+        reg->mark_unspillable();
         ptr<ir::ir_basicblock> def_block;
         ptr<ir::ir_instr> def_ins;
         if(reg->check_is_param()) {
@@ -144,6 +146,7 @@ bool LoongArch::ColoringAllocator::rewrite() {
                                     auto reg_from = std::dynamic_pointer_cast<ir::ir_reg>(value);
                                     std::list<ptr<ir::ir_instr>>::iterator def_it;
                                     if(reg_from) {
+                                        if(reg_from == reg) continue;
                                         def_it = block_from->search(reg_from->get_def_loc());
                                         def_it = std::next(def_it);
                                     }
@@ -168,7 +171,7 @@ bool LoongArch::ColoringAllocator::rewrite() {
                                 }
                             }
                             else {
-                                auto load_reg = fun->new_spill_reg(reg->get_type());
+                                auto load_reg = fun->new_spill_reg(reg);
                                 load_vec.push_back({it, load_reg});
                                 replace_map.clear();
                                 replace_map[reg] = load_reg;
@@ -245,7 +248,14 @@ bool LoongArch::ColoringAllocator::kempe() {
                     break;
                 }
             }
-            assert(spilled);
+            // assert(spilled);
+            if(!spilled) {
+                for(auto [reg, vec] : remove_ig) {
+                    int cnt = vec.size();
+                    bool unspillable = reg->check_is_unspillable();
+                    bool what = true;
+                }
+            }
             need_spill = true;
         }
     }
@@ -254,6 +264,7 @@ bool LoongArch::ColoringAllocator::kempe() {
         stk.pop_back();
         assert(assign_color(reg));
     }
+    std::clog << spill_set.size() << std::endl;
     return need_spill;
 }
 

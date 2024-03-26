@@ -36,6 +36,14 @@ string ir::ir_reg::get_name() {
     return "g" + std::to_string(this->id);
 }
 
+void ir::ir_reg::clone_attribute(ptr<ir::ir_reg> other) {
+    this->is_global = other->check_global();
+    this->is_const = other->check_const();
+    this->is_arr = other->check_is_arr();
+    this->is_param = other->check_is_param();
+    this->is_local = other->check_local();
+}
+
 void ir::ir_memobj::accept(ir_visitor &visitor) {
 
 }
@@ -236,10 +244,11 @@ ptr<ir::ir_reg> ir::ir_userfunc::new_reg(vartype type)
     return std::make_shared<ir_reg>(max_reg++,type,reg_size, false);
 }
 
-ptr<ir::ir_reg> ir::ir_userfunc::new_spill_reg(vartype type) {
-    auto reg = new_reg(type);
-    reg->mark_unspillable();
-    return reg;
+ptr<ir::ir_reg> ir::ir_userfunc::new_spill_reg(ptr<ir::ir_reg> reg) {
+    auto res = new_reg(reg->get_type());
+    res->clone_attribute(reg);
+    res->mark_unspillable();
+    return res;
 }
 
 ptr<ir::ir_basicblock> ir::ir_userfunc::new_block()
@@ -407,6 +416,7 @@ std::vector<ptr<ir::ir_reg>> ir::store::def_reg() {
 void ir::store::replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) {
     auto it = replace_map.find(this->value);
     if(it != replace_map.end()) {
+        auto first = it->first;
         this->value = it->second;
     }
 }
