@@ -51,7 +51,7 @@ LoongArch::alloc_res LoongArch::ColoringAllocator::run(Rtype target) {
         build_ig();
         if(kempe()) {
             rewrite();
-            fun->accept(*printer);
+            // fun->accept(*printer);
             rewrite_cnt++;
             continue;
         }
@@ -87,134 +87,239 @@ bool LoongArch::ColoringAllocator::rewrite() {
     // std::clog << "rewrite!" << std::endl;
     // std::clog << "rewrite!" << std::endl;
     // std::clog << "rewrite!" << std::endl;
+    std::unordered_map<ptr<ir::ir_reg>, ptr<ir::ir_memobj>> spill_map;
     std::set<ptr<ir::ir_reg>> phi_side_effect;
+    std::set<ptr<ir::ir_reg>> all_spilled = spill_set;
     std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map(1);
-    for(auto reg : spill_set) {
-        reg->mark_unspillable();
-        ptr<ir::ir_basicblock> def_block;
-        ptr<ir::ir_instr> def_ins;
-        if(reg->check_is_param()) {
-            def_block = fun->get_entry();
-        }
-        else {
-            def_ins = reg->get_def_loc();
-            def_block = def_ins->get_block();
-        }
-        auto spill_obj = fun->new_spill_obj(std::to_string(reg->get_id()) + "spilled_virtual_reg", reg->get_type());
-        ptr_list<ir::ir_basicblock> work_lst = {def_block};
-        ptr_list<ir::ir_basicblock> nxt_iter;
-        std::unordered_map<ptr<ir::ir_basicblock>, bool> visit;
-        visit[def_block] = true;
-        while(!work_lst.empty()) {
-            nxt_iter.clear();
-            for(auto block : work_lst) {
-                std::vector<std::pair<std::list<ptr<ir::ir_instr>>::iterator, ptr<ir::ir_reg>>> load_vec;
-                std::vector<std::pair<std::list<ptr<ir::ir_instr>>::iterator, ptr<ir::ir_reg>>> change_vec;
-                // auto ins = block->get_instructions();
-                std::list<ptr<ir::ir_instr>>::iterator it;
-                if(block == def_block) {
-                    if(def_ins) {
-                        it = block->search(def_ins);
-                        // it = std::find(ins.begin(), ins.end(), def_ins);
-                        auto store_it =std::next(it);
-                        block->insert_spill(store_it, std::make_shared<ir::store>(spill_obj->get_addr(), reg));
-                        it++;   // 此时指向插入的store语句
-                        it++;   // 此时指向原文的下一条语句
-                    }
-                    else {
-                        block->insert_spill(block->get_ins_begin(), std::make_shared<ir::store>(spill_obj->get_addr(), reg));
-                        it = block->get_ins_begin();
-                        it++;
-                    }
-                }
-                else {
-                    it = block->get_ins_begin();
-                }
-
-                bool cur_block_is_finished = false;
-                auto end = block->get_ins_end();
-                for(; it != end; it++) {
-                    auto cur_ins = *it;
-                    auto is_phi = std::dynamic_pointer_cast<ir::phi>(cur_ins);
-                    
-                    if(live_in[cur_ins].find(reg) != live_in[cur_ins].end()) {    // 这个reg在当前指令处仍然活跃
-                        auto use = cur_ins->use_reg();
-                        if(std::find(use.begin(), use.end(), reg) != use.end()) {   // 这个reg活跃且被使用
+    while(!spill_set.empty()) {
+        phi_side_effect.clear();
+        for(auto reg : spill_set) {
+            reg->mark_unspillable();
+            ptr<ir::ir_basicblock> def_block;
+            ptr<ir::ir_instr> def_ins;
+            if(reg->check_is_param()) {
+                def_block = fun->get_entry();
+            }
+            else {
+                def_ins = reg->get_def_loc();
+                def_block = def_ins->get_block();
+            }
+            ptr<ir::ir_memobj> spill_obj = nullptr;
+            // auto spill_obj = fun->new_spill_obj(std::to_string(reg->get_id()) + "spilled_virtual_reg", reg->get_type());
+            ptr_list<ir::ir_basicblock> work_lst = {def_block};
+            ptr_list<ir::ir_basicblock> nxt_iter;
+            std::unordered_map<ptr<ir::ir_basicblock>, bool> visit;
+            visit[def_block] = true;
+            while(!work_lst.empty()) {
+                nxt_iter.clear();
+                for(auto block : work_lst) {
+                    std::vector<std::pair<std::list<ptr<ir::ir_instr>>::iterator, ptr<ir::ir_reg>>> load_vec;
+                    std::vector<std::pair<std::list<ptr<ir::ir_instr>>::iterator, ptr<ir::ir_reg>>> change_vec;
+                    // auto ins = block->get_instructions();
+                    std::list<ptr<ir::ir_instr>>::iterator it;
+                    if(block == def_block) {
+                        if(reg->check_is_param()) {
+                            spill_obj = fun->new_spill_obj(std::to_string(reg->get_id()) + "spilled_virtual_reg", reg->get_type());
+                            block->insert_spill(block->get_ins_begin(), std::make_shared<ir::store>(spill_obj->get_addr(), reg));
+                            it = block->get_ins_begin();
+                            it++;
+                        }
+                        else {
+                            it = block->search(def_ins);
+                            auto is_phi = std::dynamic_pointer_cast<ir::phi>(def_ins);
+                            // assert(it != block->get_ins_end());
                             if(is_phi) {
-                                change_vec.push_back({it, is_phi->dst});
-                                for(auto [value, block_from] : is_phi->uses) {
-                                    auto reg_from = std::dynamic_pointer_cast<ir::ir_reg>(value);
-                                    std::list<ptr<ir::ir_instr>>::iterator def_it;
-                                    if(reg_from) {
-                                        if(reg_from == reg) continue;
-                                        def_it = block_from->search(reg_from->get_def_loc());
-                                        def_it = std::next(def_it);
+                                if(it != block->get_ins_end()) {            // 判断phi指令是否已经在上一轮循环中处理，处理后仍须执行热那么操作
+                                    auto spill_map_it = spill_map.find(reg);
+                                    if(spill_map_it != spill_map.end()) {
+                                        spill_obj = spill_map_it->second;
                                     }
                                     else {
-                                        def_it = block_from->get_ins_end();
-                                        auto begin = block_from->get_ins_begin();
-                                        while(def_it != begin) {
-                                            auto prev_it = std::prev(def_it);
-                                            auto is_jump = std::dynamic_pointer_cast<ir::jump>(*prev_it);
-                                            auto is_br = std::dynamic_pointer_cast<ir::br>(*prev_it);
-                                            auto is_bc = std::dynamic_pointer_cast<ir::break_or_continue>(*prev_it);
-                                            auto is_while_loop = std::dynamic_pointer_cast<ir::while_loop>(*prev_it);
-                                            if(is_jump == nullptr && is_br == nullptr && is_bc == nullptr && is_while_loop == nullptr) {
-                                                break;
+                                        spill_obj = fun->new_spill_obj(std::to_string(reg->get_id()) + "spilled_virtual_reg", reg->get_type());
+                                        spill_map[reg] = spill_obj;
+                                    }
+                                    for(auto [value, block_from] : is_phi->uses) {
+                                        auto reg_from = std::dynamic_pointer_cast<ir::ir_reg>(value);
+                                        std::list<ptr<ir::ir_instr>>::iterator def_it;
+                                        if(reg_from) {
+                                            // if(reg_from == reg) continue;
+                                            if(reg_from->check_is_param()) {
+                                                def_it = fun->get_entry()->get_ins_begin();
+                                                fun->get_entry()->insert_spill(def_it, std::make_shared<ir::store>(spill_obj->get_addr(), value));
                                             }
                                             else {
-                                                def_it = prev_it;
+                                                auto reg_from_def_block = reg_from->get_def_loc()->get_block();
+                                                def_it = reg_from_def_block->search(reg_from->get_def_loc());
+                                                // auto is_deleted = reg_from_def_block->search(reg_from->get_def_loc());
+                                                if(def_it == reg_from_def_block->get_ins_end()) {
+                                                    auto spill_map_it = spill_map.find(reg_from);
+                                                    assert(spill_map_it != spill_map.end());
+                                                    auto phi_obj = spill_map_it->second;
+                                                    auto load_reg = fun->new_spill_reg(reg_from);
+                                                    auto load_ins = std::make_shared<ir::load>(load_reg, phi_obj->get_addr());
+                                                    reg_from_def_block->insert_after_phi(load_ins);
+                                                    auto load_it = reg_from_def_block->search(load_ins);
+                                                    auto store_it = std::next(load_it);
+                                                    reg_from_def_block->insert_spill(store_it, std::make_shared<ir::store>(spill_obj->get_addr(), load_reg));
+                                                }
+                                                else {
+                                                    def_it = std::next(def_it);
+                                                    if(all_spilled.find(reg_from) != all_spilled.end()) {
+                                                        phi_side_effect.insert(reg_from);
+                                                    }
+                                                    reg_from_def_block->insert_spill(def_it, std::make_shared<ir::store>(spill_obj->get_addr(), value));
+                                                }
                                             }
                                         }
+                                        else {
+                                            def_it = block_from->get_ins_end();
+                                            auto begin = block_from->get_ins_begin();
+                                            while(def_it != begin) {
+                                                auto prev_it = std::prev(def_it);
+                                                auto is_jump = std::dynamic_pointer_cast<ir::jump>(*prev_it);
+                                                auto is_br = std::dynamic_pointer_cast<ir::br>(*prev_it);
+                                                auto is_bc = std::dynamic_pointer_cast<ir::break_or_continue>(*prev_it);
+                                                auto is_while_loop = std::dynamic_pointer_cast<ir::while_loop>(*prev_it);
+                                                if(is_jump == nullptr && is_br == nullptr && is_bc == nullptr && is_while_loop == nullptr) {
+                                                    break;
+                                                }
+                                                else {
+                                                    def_it = prev_it;
+                                                }
+                                            }
+                                            block_from->insert_spill(def_it, std::make_shared<ir::store>(spill_obj->get_addr(), value));
+                                        }
                                     }
-                                    block_from->insert_spill(def_it, std::make_shared<ir::store>(spill_obj->get_addr(), value));
+                                    auto del_it = it;
+                                    it = std::next(it);         // 先指向下一个语句，以免删除时it受影响而失效
+                                    block->erase(del_it);
+                                    // phi_side_effect.erase(reg);     // 如果mark_spill但是def本来也被spill的话，在第一遍phi就被处理了，所以需要删掉
+                                    phi_side_effect.insert(reg);
+                                }
+                                else {
+                                    auto spill_map_it = spill_map.find(reg);
+                                    assert(spill_map_it != spill_map.end());
+                                    spill_obj = spill_map_it->second;
                                 }
                             }
                             else {
-                                auto load_reg = fun->new_spill_reg(reg);
-                                load_vec.push_back({it, load_reg});
-                                replace_map.clear();
-                                replace_map[reg] = load_reg;
-                                cur_ins->replace_reg(replace_map);
+                                spill_obj = fun->new_spill_obj(std::to_string(reg->get_id()) + "spilled_virtual_reg", reg->get_type());
+                                // it = std::find(ins.begin(), ins.end(), def_ins);
+                                auto store_it = std::next(it);
+                                block->insert_spill(store_it, std::make_shared<ir::store>(spill_obj->get_addr(), reg));
+                                it++;   // 此时指向插入的store语句
+                                it++;   // 此时指向原文的下一条语句
                             }
                         }
-                        auto def = cur_ins->def_reg();
-                        if(std::find(def.begin(), def.end(), reg) != def.end()) {   // 这个reg活跃且被定值
-                            abort();                                                                // 不应该出现这种情况
+                    }
+                    else {
+                        it = block->get_ins_begin();
+                    }
+
+                    assert(spill_obj);
+                    bool cur_block_is_finished = false;
+                    auto end = block->get_ins_end();
+                    for(; it != end; it++) {
+                        auto cur_ins = *it;
+                        auto is_phi = std::dynamic_pointer_cast<ir::phi>(cur_ins);
+                        
+                        // if(live_in[cur_ins].find(reg) != live_in[cur_ins].end()) {    // 这个reg在当前指令处仍然活跃
+                            auto use = cur_ins->use_reg();
+                            if(std::find(use.begin(), use.end(), reg) != use.end()) {   // 这个reg活跃且被使用
+                                if(is_phi) {
+                                    auto def = is_phi->def_reg();
+                                    for(auto d : def) {
+                                        auto spill_map_it = spill_map.find(d);
+                                        if(spill_map_it == spill_map.end()) {
+                                            spill_map[d] = spill_obj;
+                                            phi_side_effect.insert(d);
+                                            auto def_ins = d->get_def_loc();
+                                            auto def_block = def_ins->get_block();
+                                            if(def_ins) {
+                                                assert(def_block->search(def_ins) != def_block->get_ins_end());
+                                            }
+                                        }
+                                    }
+                                    // change_vec.push_back({it, is_phi->dst});
+                                    // for(auto [value, block_from] : is_phi->uses) {
+                                    //     auto reg_from = std::dynamic_pointer_cast<ir::ir_reg>(value);
+                                    //     std::list<ptr<ir::ir_instr>>::iterator def_it;
+                                    //     if(reg_from) {
+                                    //         if(reg_from == reg) continue;
+                                    //         def_it = block_from->search(reg_from->get_def_loc());
+                                    //         def_it = std::next(def_it);
+                                    //     }
+                                    //     else {
+                                    //         def_it = block_from->get_ins_end();
+                                    //         auto begin = block_from->get_ins_begin();
+                                    //         while(def_it != begin) {
+                                    //             auto prev_it = std::prev(def_it);
+                                    //             auto is_jump = std::dynamic_pointer_cast<ir::jump>(*prev_it);
+                                    //             auto is_br = std::dynamic_pointer_cast<ir::br>(*prev_it);
+                                    //             auto is_bc = std::dynamic_pointer_cast<ir::break_or_continue>(*prev_it);
+                                    //             auto is_while_loop = std::dynamic_pointer_cast<ir::while_loop>(*prev_it);
+                                    //             if(is_jump == nullptr && is_br == nullptr && is_bc == nullptr && is_while_loop == nullptr) {
+                                    //                 break;
+                                    //             }
+                                    //             else {
+                                    //                 def_it = prev_it;
+                                    //             }
+                                    //         }
+                                    //     }
+                                    //     block_from->insert_spill(def_it, std::make_shared<ir::store>(spill_obj->get_addr(), value));
+                                    // }
+                                }
+                                else {
+                                    auto load_reg = fun->new_spill_reg(reg);
+                                    load_vec.push_back({it, load_reg});
+                                    replace_map.clear();
+                                    replace_map[reg] = load_reg;
+                                    cur_ins->replace_reg(replace_map);
+                                }
+                            }
+                            auto def = cur_ins->def_reg();
+                            if(std::find(def.begin(), def.end(), reg) != def.end()) {   // 这个reg活跃且被定值
+                                abort();                                                                // 不应该出现这种情况
+                            }
+                        // }
+                        // 由于中途可能插入指令，所以不可以直接判定不再活跃
+                        // else {      // 这个reg已经在当前指令已经不再活跃了
+                        //     cur_block_is_finished = true;
+                        //     auto a = live_out[cur_ins];
+                        //     break;  // 没必要继续分析了
+                        // }
+                    }
+
+                    // 插入load
+                    // auto &ins_ref = block->get_instructions_ref();
+                    for(auto [load_it, load_reg] : load_vec) {
+                        auto id = spill_obj->get_addr()->id;
+                        block->insert_spill(load_it, std::make_shared<ir::load>(load_reg, spill_obj->get_addr()));
+                    }
+
+                    // for(auto [phi_it, _load_reg] : change_vec) {
+                    //     block->erase(phi_it);
+                    // }
+                    // for(auto [_phi_it, load_reg] : change_vec) {
+                    //     auto id = spill_obj->get_addr()->id;
+                    //     block->insert_after_phi(std::make_shared<ir::load>(load_reg, spill_obj->get_addr()));
+                    // }
+
+                    if(cur_block_is_finished) continue;
+                    auto successor = fun->check_nxt(block);     // 如果已经抵达了use的终点，则不用寻找这个block的nxt
+                    for(auto s : successor) {
+                        if(!visit[s]) {
+                            visit[s] = true;
+                            nxt_iter.push_back(s);
                         }
                     }
-                    else {      // 这个reg已经在当前指令已经不再活跃了
-                        cur_block_is_finished = true;
-                        break;  // 没必要继续分析了
-                    }
                 }
-
-                // 插入load
-                // auto &ins_ref = block->get_instructions_ref();
-                for(auto [load_it, load_reg] : load_vec) {
-                    auto id = spill_obj->get_addr()->id;
-                    block->insert_spill(load_it, std::make_shared<ir::load>(load_reg, spill_obj->get_addr()));
-                }
-
-                for(auto [phi_it, _load_reg] : change_vec) {
-                    block->erase(phi_it);
-                }
-                for(auto [_phi_it, load_reg] : change_vec) {
-                    auto id = spill_obj->get_addr()->id;
-                    block->insert_after_phi(std::make_shared<ir::load>(load_reg, spill_obj->get_addr()));
-                }
-
-                if(cur_block_is_finished) continue;
-                auto successor = fun->check_nxt(block);     // 如果已经抵达了use的终点，则不用寻找这个block的nxt
-                for(auto s : successor) {
-                    if(!visit[s]) {
-                        visit[s] = true;
-                        nxt_iter.push_back(s);
-                    }
-                }
+                work_lst = nxt_iter;
             }
-
-            work_lst = nxt_iter;
+        }
+        spill_set = phi_side_effect;
+        for(auto reg : phi_side_effect) {
+            all_spilled.insert(reg);
         }
     }
     return true;
@@ -248,14 +353,14 @@ bool LoongArch::ColoringAllocator::kempe() {
                     break;
                 }
             }
-            // assert(spilled);
-            if(!spilled) {
-                for(auto [reg, vec] : remove_ig) {
-                    int cnt = vec.size();
-                    bool unspillable = reg->check_is_unspillable();
-                    bool what = true;
-                }
-            }
+            assert(spilled);
+            // if(!spilled) {
+            //     for(auto [reg, vec] : remove_ig) {
+            //         int cnt = vec.size();
+            //         bool unspillable = reg->check_is_unspillable();
+            //         bool what = true;
+            //     }
+            // }
             need_spill = true;
         }
     }
@@ -264,7 +369,8 @@ bool LoongArch::ColoringAllocator::kempe() {
         stk.pop_back();
         assert(assign_color(reg));
     }
-    std::clog << spill_set.size() << std::endl;
+    if(!spill_set.empty())
+        std::clog << spill_set.size() << std::endl;
     return need_spill;
 }
 

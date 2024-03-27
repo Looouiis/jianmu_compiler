@@ -42,6 +42,7 @@ void ir::ir_reg::clone_attribute(ptr<ir::ir_reg> other) {
     this->is_arr = other->check_is_arr();
     this->is_param = other->check_is_param();
     this->is_local = other->check_local();
+    this->size = other->get_size();
 }
 
 void ir::ir_memobj::accept(ir_visitor &visitor) {

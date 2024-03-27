@@ -127,7 +127,8 @@ public:
     void mark_addr() {this->is_arr = true;}
     bool check_is_arr() {return this->is_arr;}
     void clone_attribute(ptr<ir::ir_reg> other);
-    auto check_const() {return this->is_const;}
+    bool check_const() {return this->is_const;}
+    int get_size() {return this->size;}
 };
 class ir_constant : public ir_value {
     friend IrBuilder;
