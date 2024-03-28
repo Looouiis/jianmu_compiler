@@ -51,7 +51,7 @@ LoongArch::alloc_res LoongArch::ColoringAllocator::run(Rtype target) {
         build_ig();
         if(kempe()) {
             rewrite();
-            // fun->accept(*printer);
+            fun->accept(*printer);
             rewrite_cnt++;
             continue;
         }
@@ -163,7 +163,18 @@ bool LoongArch::ColoringAllocator::rewrite() {
                                                     reg_from_def_block->insert_spill(store_it, std::make_shared<ir::store>(spill_obj->get_addr(), load_reg));
                                                 }
                                                 else {
-                                                    def_it = std::next(def_it);
+                                                    def_it = std::next(def_it);             // 避免在def_ins的前面进行插入
+                                                    auto block_end = reg_from_def_block->get_ins_end();
+                                                    while(def_it != block_end) {                // 由于既要保证在def_it之后又要保证在phi之后，所以没法直接使用insdert_after_phi
+                                                        auto is_phi = std::dynamic_pointer_cast<ir::phi>(*def_it);
+                                                        if(is_phi) {
+                                                            def_it = std::next(def_it);
+                                                        }
+                                                        else {
+                                                            break;
+                                                        }
+                                                    }
+
                                                     if(all_spilled.find(reg_from) != all_spilled.end()) {
                                                         phi_side_effect.insert(reg_from);
                                                     }
@@ -353,14 +364,15 @@ bool LoongArch::ColoringAllocator::kempe() {
                     break;
                 }
             }
+            // assert(spilled);
+            if(!spilled) {
+                for(auto [reg, vec] : remove_ig) {
+                    int cnt = vec.size();
+                    bool unspillable = reg->check_is_unspillable();
+                    bool what = true;
+                }
+            }
             assert(spilled);
-            // if(!spilled) {
-            //     for(auto [reg, vec] : remove_ig) {
-            //         int cnt = vec.size();
-            //         bool unspillable = reg->check_is_unspillable();
-            //         bool what = true;
-            //     }
-            // }
             need_spill = true;
         }
     }

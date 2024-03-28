@@ -514,13 +514,13 @@ void ir::IrBuilder::visit(ast::lval_syntax &node)                   // self4----
                     dim.push_back(pass_value);
                 }
                 if(node.dimension->dimensions.size() < var_size) {
-                    cur_block->push_back(std::make_shared<get_element_ptr>(var, element_ptr, dim));
+                    cur_block->push_back(std::make_shared<get_element_ptr>(var->dim, var->addr, element_ptr, dim));
                     pass_value = element_ptr;
                     // return;
                 }
                 else if(node.dimension->dimensions.size() == var_size) {
                     auto dst = cur_func->new_reg(node.restype);
-                    cur_block->push_back(std::make_shared<get_element_ptr>(var, element_ptr, dim));
+                    cur_block->push_back(std::make_shared<get_element_ptr>(var->dim, var->addr, element_ptr, dim));
                     cur_block->push_back(std::make_shared<ir::load>(dst, element_ptr));
                     this->pass_value = dst;
                 }
@@ -529,7 +529,7 @@ void ir::IrBuilder::visit(ast::lval_syntax &node)                   // self4----
                 }
             }
             else {
-                cur_block->push_back(std::make_shared<get_element_ptr>(var, element_ptr, dim));
+                cur_block->push_back(std::make_shared<get_element_ptr>(var->dim, var->addr, element_ptr, dim));
                 pass_value = element_ptr;
                 // return;
             }
@@ -749,7 +749,7 @@ void ir::IrBuilder::visit(ast::assign_stmt_syntax &node)        // self6
                 a->accept(*this);
                 dim.push_back(pass_value);
             }
-            cur_block->push_back(std::make_shared<ir::get_element_ptr>(obj, element_ptr, dim));
+            cur_block->push_back(std::make_shared<ir::get_element_ptr>(obj->dim, obj->addr, element_ptr, dim));
             cur_block->push_back(std::make_shared<ir::store>(element_ptr, value));
         }
         else {
@@ -1068,7 +1068,7 @@ void ir::IrBuilder::visit(ast::init_syntax &node) {
             dim.push_back(pass_value);
         }
         auto what = std::dynamic_pointer_cast<ir::ir_constant>(val);
-        cur_block->push_back(std::make_shared<get_element_ptr>(obj, dst, dim));
+        cur_block->push_back(std::make_shared<get_element_ptr>(obj->dim, obj->addr, dst, dim));
         cur_block->push_back(std::make_shared<ir::store>(dst, val));
     }
 }

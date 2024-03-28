@@ -179,6 +179,8 @@ void ir::IrPrinter::visit(alloc &node)
     else {
         out<<base_type[node.var->addr->type];
     }
+    if(node.var->addr->size == 8)
+        out << "*";
 
     out << " , align " << node.var->addr->size;
     out<<std::endl;
@@ -313,41 +315,41 @@ void ir::IrPrinter::visit(get_element_ptr &node) {
     auto dst = std::dynamic_pointer_cast<ir::ir_reg>(node.dst);
     out << "\t" << get_reg_name(node.dst) << " = getelementptr ";
     // for(auto a : node.base->dim->dimensions) {
-    for(auto a : node.base->dim->dimensions) {
+    for(auto a : node.base_dimension->dimensions) {
         out << "[" << a->calc_res() << " x ";
-        if(a == node.base->dim->dimensions.back()) {
-            out<<base_type[node.base->addr->type];
+        if(a == node.base_dimension->dimensions.back()) {
+            out<<base_type[node.base_reg->type];
         }
         // out << "]";
     }
-    for(auto a : node.base->dim->dimensions) {
+    for(auto a : node.base_dimension->dimensions) {
         out << "]";
     }
-    if(node.base->dim->dimensions.empty()) {
-        out << base_type[node.base->addr->type];
+    if(node.base_dimension->dimensions.empty()) {
+        out << base_type[node.base_reg->type];
     }
     // }
     out << ", ";
     // for(auto a : node.base->dim->dimensions) {
-    for(auto a : node.base->dim->dimensions) {
+    for(auto a : node.base_dimension->dimensions) {
         out << "[" << a->calc_res() << " x ";
-        if(a == node.base->dim->dimensions.back()) {
-            out<<base_type[node.base->addr->type];
+        if(a == node.base_dimension->dimensions.back()) {
+            out<<base_type[node.base_reg->type];
         }
         // out << "]";
     }
-    for(auto a : node.base->dim->dimensions) {
+    for(auto a : node.base_dimension->dimensions) {
         out << "]";
         out << "*";
     }
-    if(node.base->dim->dimensions.empty()) {
+    if(node.base_dimension->dimensions.empty()) {
         out << "ptr";
     }
     // }
     // out << "* ";
     out << " ";
-    out << get_value(node.base->get_addr());
-    if(node.base->dim->has_first_dim) {
+    out << get_value(node.base_reg);
+    if(node.base_dimension->has_first_dim) {
         out << ", i32 0";
     }
     for(auto offset : node.obj_offset) {

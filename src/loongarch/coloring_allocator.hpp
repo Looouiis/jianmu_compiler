@@ -21,7 +21,7 @@ private:
     std::set<ptr<ir::ir_reg>> spill_set;
     std::unordered_map<ptr<ir::ir_reg>, std::unordered_set<ptr<ir::ir_reg>>> ig;
     // vector<Reg> i_color = {Reg{12}, Reg{13}, Reg{14}, Reg{5}, Reg{6}, Reg{7}, Reg{8}, Reg{9}, Reg{10}, Reg{11}};
-    vector<Reg> i_color = {Reg{12}, Reg{13}, Reg{14}, Reg{5}, Reg{6}};
+    vector<Reg> i_color = {Reg{12}, Reg{13}, Reg{14}};
     vector<Reg> f_color = {
         Reg(8, FLOAT),
         Reg(9, FLOAT),

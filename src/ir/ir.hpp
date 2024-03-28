@@ -608,11 +608,13 @@ class get_element_ptr : public ir_instr {
     friend LoongArch::ProgramBuilder;
     friend LoongArch::RookieAllocator;
 private:
-    ptr<ir_memobj> base;
+    // ptr<ir_memobj> base;
+    ptr<ast::var_dimension_syntax> base_dimension;
+    ptr<ir_reg> base_reg;
     ptr<ir_reg> dst;
     ptr_list<ir_value> obj_offset;
 public:
-    get_element_ptr(ptr<ir_memobj> base, ptr<ir_reg> dst, ptr_list<ir_value> offset) : base(base), dst(dst), obj_offset(offset) {}
+    get_element_ptr(ptr<ast::var_dimension_syntax> base_dimension, ptr<ir_reg> base_reg, ptr<ir_reg> dst, ptr_list<ir_value> offset) : base_dimension(base_dimension), base_reg(base_reg), dst(dst), obj_offset(offset) {}
     virtual void accept(ir_visitor& visitor) override final;
     virtual void print(std::ostream & out = std::cout) override final;
     virtual std::vector<ptr<ir::ir_reg>> use_reg() override final;

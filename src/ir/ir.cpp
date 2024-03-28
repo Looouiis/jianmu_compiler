@@ -865,7 +865,7 @@ std::vector<ptr<ir::ir_reg>> ir::get_element_ptr::use_reg() {
         auto is_reg = std::dynamic_pointer_cast<ir::ir_reg>(offset);
         if(is_reg) ret.push_back(is_reg);
     }
-    ret.push_back(this->base->get_addr());
+    ret.push_back(this->base_reg);
     return ret;
 }
 
@@ -880,6 +880,13 @@ void ir::get_element_ptr::replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<
         auto it = replace_map.find(offset);
         if(it != replace_map.end()) {
             offset = it->second;
+        }
+    }
+    auto it = replace_map.find(this->base_reg);
+    if(it != replace_map.end()) {
+        auto reg = std::dynamic_pointer_cast<ir::ir_reg>(it->second);
+        if(reg) {
+            this->base_reg = reg;
         }
     }
 }

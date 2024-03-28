@@ -1161,14 +1161,14 @@ void LoongArch::ProgramBuilder::visit(ir::logic_ins &node) {
 void LoongArch::ProgramBuilder::visit(ir::get_element_ptr& node) {
     auto dimensions = node.obj_offset;
     is_dst = true;
-    int base_dim_cnt = node.base->dim->dimensions.size() + (node.base->dim->has_first_dim ? 0 : 1);
+    int base_dim_cnt = node.base_dimension->dimensions.size() + (node.base_dimension->has_first_dim ? 0 : 1);
     node.dst->accept(*this);
     auto dst = pass_reg;
-    if(node.base->addr->is_global) {
-        cur_block->instructions.push_back(std::make_shared<la>(node.base->addr, dst, la::local));
+    if(node.base_reg->is_global) {
+        cur_block->instructions.push_back(std::make_shared<la>(node.base_reg, dst, la::local));
     }
-    else if(node.base->dim->has_first_dim) {
-        int offset = cur_mapping->mem_var.find(node.base->addr->id)->second/* + cur_mapping->call_mem*/ - cur_func->stack_size;
+    else if(node.base_dimension->has_first_dim) {
+        int offset = cur_mapping->mem_var.find(node.base_reg->id)->second/* + cur_mapping->call_mem*/ - cur_func->stack_size;
         // if((uint32_t)offset >> 12) {
         //     cur_block->instructions.push_back(std::make_shared<LoadImm>(const_reg_l, offset));
         //     cur_block->instructions.push_back(std::make_shared<RegRegInst>(RegRegInst::add_d, dst, Reg{fp}, const_reg_l));
@@ -1177,8 +1177,8 @@ void LoongArch::ProgramBuilder::visit(ir::get_element_ptr& node) {
         cur_block->instructions.push_back(std::make_shared<RegImmInst>(RegImmInst::addi_d, dst, Reg{fp}, offset));
     }
     else {
-        assert(!node.base->addr->check_local());
-        node.base->addr->accept(*this);
+        assert(!node.base_reg->check_local());
+        node.base_reg->accept(*this);
         auto base_add = pass_reg;
         cur_block->instructions.push_back(std::make_shared<RegRegInst>(RegRegInst::add_d, dst, base_add, Reg{0}));
     }
@@ -1194,7 +1194,7 @@ void LoongArch::ProgramBuilder::visit(ir::get_element_ptr& node) {
         }
         int total_cnt = 1;
         for(int j = i + 1; j < base_dim_cnt; j++) {
-            total_cnt *= node.base->dim->dimensions[node.base->dim->has_first_dim ? j : j - 1]->calc_res();
+            total_cnt *= node.base_dimension->dimensions[node.base_dimension->has_first_dim ? j : j - 1]->calc_res();
         }
         auto load_cnt = std::make_shared<ir::ir_constant>(total_cnt);
         load_cnt->type = vartype::INT;
@@ -1216,7 +1216,7 @@ void LoongArch::ProgramBuilder::visit(ir::get_element_ptr& node) {
         if(base_dim_cnt > dimensions.size()) {
             int total_cnt = 1;
             for(int j = dimensions.size(); j < base_dim_cnt; j++) {
-                total_cnt *= node.base->dim->dimensions[node.base->dim->has_first_dim ? j : j - 1]->calc_res();
+                total_cnt *= node.base_dimension->dimensions[node.base_dimension->has_first_dim ? j : j - 1]->calc_res();
             }
             auto load_cnt = std::make_shared<ir::ir_constant>(total_cnt);
             load_cnt->type = vartype::INT;

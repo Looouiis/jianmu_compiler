@@ -434,7 +434,7 @@ LoongArch::RookieAllocator::RookieAllocator(std::shared_ptr<ir::ir_userfunc> _fu
       auto get = std::dynamic_pointer_cast<ir::get_element_ptr>(instruction);
       auto is_call = std::dynamic_pointer_cast<ir::func_call>(instruction);
       if(get) {
-        auto ss = get->base->addr->id;
+        auto ss = get->base_reg->id;
       }
       if(block->is_while_body) {
         for(auto r : x) {
