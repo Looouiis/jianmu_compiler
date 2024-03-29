@@ -6,6 +6,7 @@
 #include "passes/pass_type.hpp"
 #include <memory>
 #include <set>
+#include <unordered_set>
 #include <variant>
 #include <list>
 #include <optional>
@@ -225,6 +226,7 @@ public:
     void push_back(ptr<ir_instr> inst);
     void push_front(ptr<ir_instr> inst);
     void insert_spill(std::list<ptr<ir::ir_instr>>::iterator it, ptr<ir_instr> inst);
+    void insert_before_jump(ptr<ir_instr> inst);
     void erase(std::list<ptr<ir::ir_instr>>::iterator it) {this->instructions.erase(it);}
     void insert_after_phi(ptr<ir_instr> inst);
     ptr<ir_instr> pop_back();
@@ -349,6 +351,7 @@ private:
 
     ptr<ir::ir_userfunc> cur_fun_ptr;
     bool analysed_cfg = false;
+    std::unordered_map<ptr<ir::ir_reg>, ptr<ir::ir_memobj>> spilled_args;
 public:
     ir_userfunc(std::string name, int reg_cnt, std::vector<vartype> arg_tpyes); 
     ptr<ir_memobj> new_obj(std::string name, vartype var_type);
@@ -381,6 +384,7 @@ public:
     ptr<ir::ir_userfunc> get_fun() {return cur_fun_ptr;}
     void mark_analysed() {this->analysed_cfg = true;}
     bool check_analysed() {return this->analysed_cfg;}
+    void insert_spilled_args(ptr<ir::ir_reg> dst, ptr<ir::ir_memobj> obj) {this->spilled_args.insert({dst, obj});}
 };
 
 //below is instruction
@@ -613,6 +617,7 @@ private:
     ptr<ir_reg> base_reg;
     ptr<ir_reg> dst;
     ptr_list<ir_value> obj_offset;
+    std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_memobj>> spilled_obj;
 public:
     get_element_ptr(ptr<ast::var_dimension_syntax> base_dimension, ptr<ir_reg> base_reg, ptr<ir_reg> dst, ptr_list<ir_value> offset) : base_dimension(base_dimension), base_reg(base_reg), dst(dst), obj_offset(offset) {}
     virtual void accept(ir_visitor& visitor) override final;
@@ -620,6 +625,8 @@ public:
     virtual std::vector<ptr<ir::ir_reg>> use_reg() override final;
     virtual std::vector<ptr<ir::ir_reg>> def_reg() override final;
     void replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) override;
+    ptr<ir_reg> get_base() {return this->base_reg;}
+    void insert_spilled_obj(ptr<ir::ir_reg> reg, ptr<ir::ir_memobj> obj) {this->spilled_obj.insert({reg, obj});}
 };
 
 class while_loop : public ir_instr {
@@ -667,6 +674,7 @@ class func_call : public control_ins {
     vartype ret_type;
     bool is_lib = false;
     ptr<ir::ir_func> callee;
+    std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_memobj>> spilled_obj;
 public:
     func_call(string func_name, ptr_list<ir_value> params, vartype ret_type, ptr<ir::ir_func> callee) : func_name(func_name), params(params), ret_type(ret_type), callee(callee) {}
     virtual void accept(ir_visitor& visitor) override final;
@@ -675,6 +683,7 @@ public:
     virtual std::vector<ptr<ir::ir_reg>> def_reg() override final;
     void replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) override;
     ptr<ir::ir_func> get_callee() {return callee;}
+    void insert_spilled_obj(ptr<ir::ir_reg> reg, ptr<ir::ir_memobj> obj) {this->spilled_obj.insert({reg, obj});}
 };
 
 class global_def : public ir_instr {

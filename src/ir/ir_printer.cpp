@@ -2,6 +2,7 @@
 #include "ir/ir.hpp"
 #include "parser/SyntaxTree.hpp"
 #include <bitset>
+#include <cassert>
 #include <iomanip>
 #include <ios>
 #include <memory>
@@ -92,6 +93,10 @@ void ir::IrPrinter::visit(ir_userfunc &node)
     out << ")"<< " " <<"{" << std::endl;
     for(auto alloc : node.alloc_list) {
         alloc->accept(*this);
+    }
+    for(auto [param, obj] : node.spilled_args) {
+        ir::store store_ins(obj->get_addr(), param);
+        store_ins.accept(*this);
     }
     ir::jump to_first_bb(node.entry);
     to_first_bb.accept(*this);
@@ -312,6 +317,12 @@ void ir::IrPrinter::visit(logic_ins &node)
 }
 
 void ir::IrPrinter::visit(get_element_ptr &node) {
+    for(auto [value, obj] : node.spilled_obj) {
+        auto reg = std::dynamic_pointer_cast<ir::ir_reg>(value);
+        assert(reg != nullptr);
+        ir::load load_ins(reg, obj->addr);
+        load_ins.accept(*this);
+    }
     auto dst = std::dynamic_pointer_cast<ir::ir_reg>(node.dst);
     out << "\t" << get_reg_name(node.dst) << " = getelementptr ";
     // for(auto a : node.base->dim->dimensions) {
@@ -367,6 +378,12 @@ void ir::IrPrinter::visit(ir::break_or_continue &node) {
 }
 
 void ir::IrPrinter::visit(ir::func_call &node) {
+    for(auto [value, obj] : node.spilled_obj) {
+        auto reg = std::dynamic_pointer_cast<ir::ir_reg>(value);
+        assert(reg != nullptr);
+        ir::load load_ins(reg, obj->addr);
+        load_ins.accept(*this);
+    }
     out << "\t";
     if(node.ret_reg) {
         out << get_reg_name(node.ret_reg) << " = ";

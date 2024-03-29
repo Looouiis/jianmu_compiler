@@ -337,43 +337,92 @@ void LoongArch::ProgramBuilder::visit(ir::ir_userfunc &node) {
     auto bak = cur_block;
     cur_block = cur_func->entry;
     for(auto arg : node.func_args) {
-        is_dst = true;
-        arg->addr->accept(*this);
-        auto reg = pass_reg;
-        if(reg.is_float()) {
-            if(f_pointer < 8) {
-                cur_func->entry->instructions.push_back(std::make_shared<LoongArch::mov>(reg, Reg{f_pointer++, Rtype::FLOAT}, mov::ftf_f));
+        auto is_spilled = node.spilled_args.find(arg->addr);
+        if(is_spilled != node.spilled_args.end()) {
+            auto param = is_spilled->first;
+            auto spill_obj = is_spilled->second;
+            auto middle = const_reg_l;
+            int offset = cur_mapping->mem_var.find(spill_obj->addr->id)->second;
+            offset = cur_func->stack_size - offset;
+            if(param->type == vartype::FLOAT) {
+                middle.type = FLOAT;
+                if(f_pointer < 8) {
+                    cur_func->entry->instructions.push_back(std::make_shared<LoongArch::st>(Reg{f_pointer++, Rtype::FLOAT}, Reg{fp}, -offset, param->is_arr ? st::fst_d : st::fst_f));
+                }
+                else {
+                    if(i_pointer < 12) {
+                        cur_func->entry->instructions.push_back(std::make_shared<LoongArch::mov>(middle, Reg{i_pointer++}, mov::gtf));
+                        cur_func->entry->instructions.push_back(std::make_shared<LoongArch::st>(middle, Reg{fp}, -offset, param->is_arr ? st::fst_d : st::fst_f));
+                    }
+                    else {
+                        if(arg->addr->is_arr) {
+                            cur_func->entry->instructions.push_back(std::make_shared<ld>(middle, Reg{fp}, cur_stk, ld::fld_d));
+                            cur_func->entry->instructions.push_back(std::make_shared<LoongArch::st>(middle, Reg{fp}, -offset, st::fst_d));
+                        }
+                        else {
+                            cur_func->entry->instructions.push_back(std::make_shared<ldptr>(middle, Reg{fp}, cur_stk, ldptr::fld_d));
+                            cur_func->entry->instructions.push_back(std::make_shared<LoongArch::st>(middle, Reg{fp}, -offset, st::fst_f));
+                        }
+                        cur_stk += 8;
+                    }
+                }
             }
             else {
                 if(i_pointer < 12) {
-                    cur_func->entry->instructions.push_back(std::make_shared<LoongArch::mov>(reg, Reg{i_pointer++}, mov::gtf));
+                    cur_func->entry->instructions.push_back(std::make_shared<st>(Reg{i_pointer++}, Reg{fp}, -offset, param->is_arr ? st::st_d : st::st_w));
                 }
                 else {
                     if(arg->addr->is_arr) {
-                        cur_func->entry->instructions.push_back(std::make_shared<ld>(reg, Reg{fp}, cur_stk, ld::fld_d));
+                        cur_func->entry->instructions.push_back(std::make_shared<ld>(middle, Reg{fp}, cur_stk, ld::ld_d));
+                        cur_func->entry->instructions.push_back(std::make_shared<LoongArch::st>(middle, Reg{fp}, -offset, st::st_d));
                     }
                     else {
-                        cur_func->entry->instructions.push_back(std::make_shared<ldptr>(reg, Reg{fp}, cur_stk, ldptr::fld_d));
+                        cur_func->entry->instructions.push_back(std::make_shared<ldptr>(middle, Reg{fp}, cur_stk, ldptr::ld_d));
+                        cur_func->entry->instructions.push_back(std::make_shared<LoongArch::st>(middle, Reg{fp}, -offset, st::st_w));
                     }
                     cur_stk += 8;
                 }
             }
         }
         else {
-            if(i_pointer < 12) {
-                cur_func->entry->instructions.push_back(std::make_shared<RegRegInst>(RegRegInst::add_d, reg, Reg{i_pointer++}, Reg{0}));
-            }
-            else {
-                if(arg->addr->is_arr) {
-                    cur_func->entry->instructions.push_back(std::make_shared<ld>(reg, Reg{fp}, cur_stk, ld::ld_d));
+            is_dst = true;
+            arg->addr->accept(*this);
+            auto reg = pass_reg;
+            if(reg.is_float()) {
+                if(f_pointer < 8) {
+                    cur_func->entry->instructions.push_back(std::make_shared<LoongArch::mov>(reg, Reg{f_pointer++, Rtype::FLOAT}, mov::ftf_f));
                 }
                 else {
-                    cur_func->entry->instructions.push_back(std::make_shared<ldptr>(reg, Reg{fp}, cur_stk, ldptr::ld_d));
+                    if(i_pointer < 12) {
+                        cur_func->entry->instructions.push_back(std::make_shared<LoongArch::mov>(reg, Reg{i_pointer++}, mov::gtf));
+                    }
+                    else {
+                        if(arg->addr->is_arr) {
+                            cur_func->entry->instructions.push_back(std::make_shared<ld>(reg, Reg{fp}, cur_stk, ld::fld_d));
+                        }
+                        else {
+                            cur_func->entry->instructions.push_back(std::make_shared<ldptr>(reg, Reg{fp}, cur_stk, ldptr::fld_d));
+                        }
+                        cur_stk += 8;
+                    }
                 }
-                cur_stk += 8;
             }
+            else {
+                if(i_pointer < 12) {
+                    cur_func->entry->instructions.push_back(std::make_shared<RegRegInst>(RegRegInst::add_d, reg, Reg{i_pointer++}, Reg{0}));
+                }
+                else {
+                    if(arg->addr->is_arr) {
+                        cur_func->entry->instructions.push_back(std::make_shared<ld>(reg, Reg{fp}, cur_stk, ld::ld_d));
+                    }
+                    else {
+                        cur_func->entry->instructions.push_back(std::make_shared<ldptr>(reg, Reg{fp}, cur_stk, ldptr::ld_d));
+                    }
+                    cur_stk += 8;
+                }
+            }
+            check_write_back(reg);
         }
-        check_write_back(reg);
     }
     cur_block = bak;
     // int pointer = 4 + node.func_args.size();
@@ -1186,8 +1235,16 @@ void LoongArch::ProgramBuilder::visit(ir::get_element_ptr& node) {
         using_reg = const_reg_l;
         // auto ini_r = std::make_shared<ir::ir_constant>(1);
         // ini_r->accept(*this);
-        dimensions[i]->accept(*this);
-        Reg ini = pass_reg;
+        auto is_spilled = node.spilled_obj.find(dimensions[i]);
+        Reg ini;
+        if(is_spilled != node.spilled_obj.end()) {
+            // TODO
+            continue;
+        }
+        else {
+            dimensions[i]->accept(*this);
+            ini = pass_reg;
+        }
         if(ini.id != using_reg.id) {
             cur_block->instructions.push_back(std::make_shared<LoongArch::RegRegInst>(RegRegInst::add_d, using_reg, ini, Reg{0}));
             ini = using_reg;
@@ -1207,8 +1264,16 @@ void LoongArch::ProgramBuilder::visit(ir::get_element_ptr& node) {
     }
     if(!dimensions.empty()) {
         using_reg = const_reg_l;
-        dimensions.back()->accept(*this);
-        auto ini = pass_reg;
+        auto is_spilled = node.spilled_obj.find(dimensions.back());
+        Reg ini;
+        if(is_spilled != node.spilled_obj.end()) {
+            ini = using_reg;
+            // TODO
+        }
+        else {
+            dimensions.back()->accept(*this);
+            ini = pass_reg;
+        }
         if(ini.id != using_reg.id) {
             cur_block->instructions.push_back(std::make_shared<LoongArch::RegRegInst>(RegRegInst::add_d, using_reg, ini, Reg{0}));
             ini = using_reg;
@@ -1259,8 +1324,16 @@ void LoongArch::ProgramBuilder::visit(ir::func_call& node) {
     if(cur_mapping->call_mem)
         cur_block->instructions.push_back(std::make_shared<LoongArch::RegImmInst>(RegImmInst::addi_d, Reg{sp}, Reg{sp}, -cur_mapping->call_mem));
     for(auto par : node.params) {
-        par->accept(*this);
-        auto reg = pass_reg;
+        auto is_spilled = node.spilled_obj.find(par);
+        Reg reg;
+        if(is_spilled != node.spilled_obj.end()) {
+            // TODO：添加将spilled_obj中的obj加载到const_reg_l，然会为reg赋值为const_reg_l并配置Rtype的逻辑
+            continue;   // TODO
+        }
+        else {
+            par->accept(*this);
+            reg = pass_reg;   
+        }
         if(reg.is_float()) {
             if(f_pointer < 8) {
                 cur_block->instructions.push_back(std::make_shared<LoongArch::mov>(Reg{f_pointer++, FLOAT}, reg, mov::ftf_f));

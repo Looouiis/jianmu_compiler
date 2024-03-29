@@ -98,6 +98,25 @@ void ir::ir_basicblock::insert_spill(std::list<ptr<ir::ir_instr>>::iterator it, 
     this->instructions.insert(it, inst);
 }
 
+void ir::ir_basicblock::insert_before_jump(ptr<ir_instr> inst) {
+    auto it = this->instructions.end();
+    auto begin = this->instructions.begin();
+    while(it != begin) {
+        auto prev_it = std::prev(it);
+        auto is_jump = std::dynamic_pointer_cast<ir::jump>(*prev_it);
+        auto is_br = std::dynamic_pointer_cast<ir::br>(*prev_it);
+        auto is_bc = std::dynamic_pointer_cast<ir::break_or_continue>(*prev_it);
+        auto is_while_loop = std::dynamic_pointer_cast<ir::while_loop>(*prev_it);
+        if(is_jump == nullptr && is_br == nullptr && is_bc == nullptr && is_while_loop == nullptr) {
+            break;
+        }
+        else {
+            it = prev_it;
+        }
+    }
+    this->instructions.insert(it, inst);
+}
+
 void ir::ir_basicblock::insert_after_phi(ptr<ir_instr> inst) {
     auto it = this->instructions.begin();
     for(; it != this->instructions.end(); it++) {

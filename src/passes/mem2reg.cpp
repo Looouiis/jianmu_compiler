@@ -77,6 +77,7 @@ void Passes::Mem2Reg::rename(ptr<ir::ir_userfunc> fun, ptr<ir::ir_basicblock> bl
                         }
                         else {
                             zero = std::make_shared<ir::ir_constant>(0);
+                            zero->set_type(vartype::INT);
                         }
                         is_phi->uses.push_back({zero, block});
                     }

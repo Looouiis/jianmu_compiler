@@ -51,7 +51,7 @@ LoongArch::alloc_res LoongArch::ColoringAllocator::run(Rtype target) {
         build_ig();
         if(kempe()) {
             rewrite();
-            fun->accept(*printer);
+            // fun->accept(*printer);
             rewrite_cnt++;
             continue;
         }
@@ -120,16 +120,18 @@ bool LoongArch::ColoringAllocator::rewrite() {
                     if(block == def_block) {
                         if(reg->check_is_param()) {
                             spill_obj = fun->new_spill_obj(std::to_string(reg->get_id()) + "spilled_virtual_reg", reg->get_type());
-                            block->insert_spill(block->get_ins_begin(), std::make_shared<ir::store>(spill_obj->get_addr(), reg));
+                            fun->insert_spilled_args(reg, spill_obj);
+                            // block->insert_spill(block->get_ins_begin(), std::make_shared<ir::store>(spill_obj->get_addr(), reg));
                             it = block->get_ins_begin();
-                            it++;
+                            // it++;
+                            spill_map[reg] = spill_obj;
                         }
                         else {
                             it = block->search(def_ins);
                             auto is_phi = std::dynamic_pointer_cast<ir::phi>(def_ins);
                             // assert(it != block->get_ins_end());
                             if(is_phi) {
-                                if(it != block->get_ins_end()) {            // 判断phi指令是否已经在上一轮循环中处理，处理后仍须执行热那么操作
+                                if(it != block->get_ins_end()) {            // 判断phi指令是否已经在上一轮循环中处理，处理后仍须执行rename操作
                                     auto spill_map_it = spill_map.find(reg);
                                     if(spill_map_it != spill_map.end()) {
                                         spill_obj = spill_map_it->second;
@@ -142,45 +144,104 @@ bool LoongArch::ColoringAllocator::rewrite() {
                                         auto reg_from = std::dynamic_pointer_cast<ir::ir_reg>(value);
                                         std::list<ptr<ir::ir_instr>>::iterator def_it;
                                         if(reg_from) {
-                                            // if(reg_from == reg) continue;
                                             if(reg_from->check_is_param()) {
-                                                def_it = fun->get_entry()->get_ins_begin();
-                                                fun->get_entry()->insert_spill(def_it, std::make_shared<ir::store>(spill_obj->get_addr(), value));
-                                            }
-                                            else {
-                                                auto reg_from_def_block = reg_from->get_def_loc()->get_block();
-                                                def_it = reg_from_def_block->search(reg_from->get_def_loc());
-                                                // auto is_deleted = reg_from_def_block->search(reg_from->get_def_loc());
-                                                if(def_it == reg_from_def_block->get_ins_end()) {
-                                                    auto spill_map_it = spill_map.find(reg_from);
-                                                    assert(spill_map_it != spill_map.end());
-                                                    auto phi_obj = spill_map_it->second;
-                                                    auto load_reg = fun->new_spill_reg(reg_from);
-                                                    auto load_ins = std::make_shared<ir::load>(load_reg, phi_obj->get_addr());
-                                                    reg_from_def_block->insert_after_phi(load_ins);
-                                                    auto load_it = reg_from_def_block->search(load_ins);
-                                                    auto store_it = std::next(load_it);
-                                                    reg_from_def_block->insert_spill(store_it, std::make_shared<ir::store>(spill_obj->get_addr(), load_reg));
+                                                auto entry = fun->get_entry();
+                                                if(entry == block_from) {
+                                                    entry->insert_after_phi(std::make_shared<ir::store>(spill_obj->get_addr(), value));
                                                 }
                                                 else {
-                                                    def_it = std::next(def_it);             // 避免在def_ins的前面进行插入
-                                                    auto block_end = reg_from_def_block->get_ins_end();
-                                                    while(def_it != block_end) {                // 由于既要保证在def_it之后又要保证在phi之后，所以没法直接使用insdert_after_phi
-                                                        auto is_phi = std::dynamic_pointer_cast<ir::phi>(*def_it);
-                                                        if(is_phi) {
-                                                            def_it = std::next(def_it);
-                                                        }
-                                                        else {
-                                                            break;
-                                                        }
+                                                    auto reg_in_spill = spill_map.find(reg_from);
+                                                    if(reg_in_spill == spill_map.end()) {
+                                                        block_from->insert_before_jump(std::make_shared<ir::store>(spill_obj->get_addr(), value));
                                                     }
-
-                                                    if(all_spilled.find(reg_from) != all_spilled.end()) {
-                                                        phi_side_effect.insert(reg_from);
+                                                    else {
+                                                        auto load_reg = fun->new_spill_reg(reg_from);
+                                                        block_from->insert_before_jump(std::make_shared<ir::load>(load_reg, reg_in_spill->second->get_addr()));
+                                                        block_from->insert_before_jump(std::make_shared<ir::store>(spill_obj->get_addr(), load_reg));
                                                     }
-                                                    reg_from_def_block->insert_spill(def_it, std::make_shared<ir::store>(spill_obj->get_addr(), value));
                                                 }
                                             }
+                                            else {
+                                                auto def_block = reg_from->get_def_loc()->get_block();
+                                                if(def_block == block_from) {
+                                                    def_it = def_block->search(reg_from->get_def_loc());
+                                                    if(def_it != def_block->get_ins_end()) {            // 表示的是如果def指令是除phi之外的指令或者是目前没被消解的phi指令
+                                                        def_it = std::next(def_it);
+                                                        auto block_end = def_block->get_ins_end();
+                                                        while(def_it != block_end) {
+                                                            auto is_phi = std::dynamic_pointer_cast<ir::phi>(*def_it);
+                                                            if(is_phi) {
+                                                                def_it = std::next(def_it);
+                                                            }
+                                                            else {
+                                                                break;
+                                                            }
+                                                        }
+                                                        def_block->insert_spill(def_it, std::make_shared<ir::store>(spill_obj->get_addr(), reg_from));
+                                                    }
+                                                    else {
+                                                        auto reg_in_spill = spill_map.find(reg_from);
+                                                        assert(reg_in_spill != spill_map.end());
+                                                        auto load_reg = fun->new_spill_reg(reg_from);
+                                                        def_block->insert_before_jump(std::make_shared<ir::load>(load_reg, reg_in_spill->second->get_addr()));
+                                                        def_block->insert_before_jump(std::make_shared<ir::store>(spill_obj->get_addr(), load_reg));
+
+                                                    }
+                                                }
+                                                else {
+                                                    auto reg_in_spill = spill_map.find(reg_from);
+                                                    if(reg_in_spill == spill_map.end()) {
+                                                        block_from->insert_before_jump(std::make_shared<ir::store>(spill_obj->get_addr(), value));
+                                                    }
+                                                    else {
+                                                        auto load_reg = fun->new_spill_reg(reg_from);
+                                                        block_from->insert_before_jump(std::make_shared<ir::load>(load_reg, reg_in_spill->second->get_addr()));
+                                                        block_from->insert_before_jump(std::make_shared<ir::store>(spill_obj->get_addr(), load_reg));
+                                                    }
+                                                }
+                                            }
+
+
+
+                                            // // if(reg_from == reg) continue;
+                                            // if(reg_from->check_is_param()) {
+                                            //     def_it = fun->get_entry()->get_ins_begin();
+                                            //     // fun->get_entry()->insert_spill(def_it, std::make_shared<ir::store>(spill_obj->get_addr(), value));   // 已经添加至最初始的加载名单
+                                            // }
+                                            // else {
+                                            //     auto reg_from_def_block = reg_from->get_def_loc()->get_block();
+                                            //     def_it = reg_from_def_block->search(reg_from->get_def_loc());
+                                            //     // auto is_deleted = reg_from_def_block->search(reg_from->get_def_loc());
+                                            //     if(def_it == reg_from_def_block->get_ins_end()) {
+                                            //         auto spill_map_it = spill_map.find(reg_from);
+                                            //         assert(spill_map_it != spill_map.end());
+                                            //         auto phi_obj = spill_map_it->second;
+                                            //         auto load_reg = fun->new_spill_reg(reg_from);
+                                            //         auto load_ins = std::make_shared<ir::load>(load_reg, phi_obj->get_addr());
+                                            //         reg_from_def_block->insert_after_phi(load_ins);
+                                            //         auto load_it = reg_from_def_block->search(load_ins);
+                                            //         auto store_it = std::next(load_it);
+                                            //         reg_from_def_block->insert_spill(store_it, std::make_shared<ir::store>(spill_obj->get_addr(), load_reg));
+                                            //     }
+                                            //     else {
+                                            //         def_it = std::next(def_it);             // 避免在def_ins的前面进行插入
+                                            //         auto block_end = reg_from_def_block->get_ins_end();
+                                            //         while(def_it != block_end) {                // 由于既要保证在def_it之后又要保证在phi之后，所以没法直接使用insdert_after_phi
+                                            //             auto is_phi = std::dynamic_pointer_cast<ir::phi>(*def_it);
+                                            //             if(is_phi) {
+                                            //                 def_it = std::next(def_it);
+                                            //             }
+                                            //             else {
+                                            //                 break;
+                                            //             }
+                                            //         }
+
+                                            //         if(all_spilled.find(reg_from) != all_spilled.end()) {
+                                            //             phi_side_effect.insert(reg_from);
+                                            //         }
+                                            //         reg_from_def_block->insert_spill(def_it, std::make_shared<ir::store>(spill_obj->get_addr(), value));
+                                            //     }
+                                            // }
                                         }
                                         else {
                                             def_it = block_from->get_ins_end();
@@ -215,6 +276,7 @@ bool LoongArch::ColoringAllocator::rewrite() {
                             }
                             else {
                                 spill_obj = fun->new_spill_obj(std::to_string(reg->get_id()) + "spilled_virtual_reg", reg->get_type());
+                                spill_map[reg] = spill_obj;
                                 // it = std::find(ins.begin(), ins.end(), def_ins);
                                 auto store_it = std::next(it);
                                 block->insert_spill(store_it, std::make_shared<ir::store>(spill_obj->get_addr(), reg));
@@ -227,22 +289,44 @@ bool LoongArch::ColoringAllocator::rewrite() {
                         it = block->get_ins_begin();
                     }
 
+                    assert(spill_map.find(reg) != spill_map.end());
                     assert(spill_obj);
                     bool cur_block_is_finished = false;
                     auto end = block->get_ins_end();
                     for(; it != end; it++) {
                         auto cur_ins = *it;
                         auto is_phi = std::dynamic_pointer_cast<ir::phi>(cur_ins);
+                        auto is_call = std::dynamic_pointer_cast<ir::func_call>(cur_ins);
+                        auto is_get_element = std::dynamic_pointer_cast<ir::get_element_ptr>(cur_ins);
                         
                         // if(live_in[cur_ins].find(reg) != live_in[cur_ins].end()) {    // 这个reg在当前指令处仍然活跃
                             auto use = cur_ins->use_reg();
                             if(std::find(use.begin(), use.end(), reg) != use.end()) {   // 这个reg活跃且被使用
                                 if(is_phi) {
                                     auto def = is_phi->def_reg();
+                                    auto uses = is_phi->uses;
                                     for(auto d : def) {
                                         auto spill_map_it = spill_map.find(d);
                                         if(spill_map_it == spill_map.end()) {
-                                            spill_map[d] = spill_obj;
+                                            bool def_at_from = false;
+                                            for(auto [use_value, from] : uses) {
+                                                auto use_reg = std::dynamic_pointer_cast<ir::ir_reg>(use_value);
+                                                if(use_reg == reg) {
+                                                    if(use_reg->check_is_param()) {
+                                                        def_at_from = false;
+                                                    }
+                                                    else {
+                                                        def_at_from = (use_reg->get_def_loc()->get_block() == from);
+                                                    }
+                                                    break;
+                                                }
+                                            }
+                                            if(def_at_from) {
+                                                spill_map[d] = spill_obj;
+                                            }
+                                            else {
+                                                spill_map[d] = fun->new_spill_obj(std::to_string(d->get_id()) + "spilled_virtual_reg", d->get_type());
+                                            }
                                             phi_side_effect.insert(d);
                                             auto def_ins = d->get_def_loc();
                                             auto def_block = def_ins->get_block();
@@ -279,6 +363,20 @@ bool LoongArch::ColoringAllocator::rewrite() {
                                     //     }
                                     //     block_from->insert_spill(def_it, std::make_shared<ir::store>(spill_obj->get_addr(), value));
                                     // }
+                                }
+                                else if(is_call) {
+                                    auto load_reg = fun->new_spill_reg(reg);    // 换成load_reg的作用是能够将rewrite的中间代码通过llvm的检查编译，如果直接转汇编可以不换
+                                    load_reg->mark_local();                                  // 仅仅是用来绕过下一次的live分析，可能会因为冲突换成另一个标志
+                                    is_call->insert_spilled_obj(load_reg, spill_obj);
+                                    replace_map[reg] = load_reg;
+                                    cur_ins->replace_reg(replace_map);
+                                }
+                                else if(is_get_element && reg != is_get_element->get_base()) {
+                                    auto load_reg = fun->new_spill_reg(reg);    // 换成load_reg的作用是能够将rewrite的中间代码通过llvm的检查编译，如果直接转汇编可以不换
+                                    load_reg->mark_local();                                  // 仅仅是用来绕过下一次的live分析，可能会因为冲突换成另一个标志
+                                    is_get_element->insert_spilled_obj(load_reg, spill_obj);
+                                    replace_map[reg] = load_reg;
+                                    cur_ins->replace_reg(replace_map);
                                 }
                                 else {
                                     auto load_reg = fun->new_spill_reg(reg);
