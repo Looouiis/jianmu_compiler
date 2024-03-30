@@ -309,18 +309,18 @@ bool LoongArch::ColoringAllocator::rewrite() {
                                         auto spill_map_it = spill_map.find(d);
                                         if(spill_map_it == spill_map.end()) {
                                             bool def_at_from = false;
-                                            for(auto [use_value, from] : uses) {
-                                                auto use_reg = std::dynamic_pointer_cast<ir::ir_reg>(use_value);
-                                                if(use_reg == reg) {
-                                                    if(use_reg->check_is_param()) {
-                                                        def_at_from = false;
-                                                    }
-                                                    else {
-                                                        def_at_from = (use_reg->get_def_loc()->get_block() == from);
-                                                    }
-                                                    break;
-                                                }
-                                            }
+                                            // for(auto [use_value, from] : uses) {
+                                            //     auto use_reg = std::dynamic_pointer_cast<ir::ir_reg>(use_value);
+                                            //     if(use_reg == reg) {
+                                            //         if(use_reg->check_is_param()) {
+                                            //             def_at_from = false;
+                                            //         }
+                                            //         else {
+                                            //             def_at_from = (use_reg->get_def_loc()->get_block() == from);
+                                            //         }
+                                            //         break;
+                                            //     }
+                                            // }
                                             if(def_at_from) {
                                                 spill_map[d] = spill_obj;
                                             }
