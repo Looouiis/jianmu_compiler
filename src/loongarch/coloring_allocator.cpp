@@ -147,7 +147,21 @@ bool LoongArch::ColoringAllocator::rewrite() {
                                             if(reg_from->check_is_param()) {
                                                 auto entry = fun->get_entry();
                                                 if(entry == block_from) {
-                                                    entry->insert_after_phi(std::make_shared<ir::store>(spill_obj->get_addr(), value));
+                                                    auto par_it = spill_map.find(reg_from);
+                                                    if(par_it == spill_map.end()) {             // 这个param还没有被处理spill或者不用被处理spill
+                                                        entry->insert_after_phi(std::make_shared<ir::store>(spill_obj->get_addr(), value));
+                                                    }
+                                                    else {                                      // 这个param已经被spill处理过了，应该有加载
+                                                        auto par_obj = par_it->second;
+                                                        assert(par_obj);
+                                                        auto middle = fun->new_spill_reg(reg_from);
+                                                        entry->insert_after_phi(std::make_shared<ir::store>(spill_obj->get_addr(), middle));
+                                                        entry->insert_after_phi(std::make_shared<ir::load>(middle, par_obj->get_addr()));
+                                                    }
+                                                    // entry->insert_after_phi(std::make_shared<ir::store>(spill_obj->get_addr(), value));
+                                                    auto addr = spill_obj->get_addr();
+                                                    int id = addr->get_id();
+                                                    int what;
                                                 }
                                                 else {
                                                     auto reg_in_spill = spill_map.find(reg_from);
@@ -582,7 +596,8 @@ void LoongArch::ColoringAllocator::build_ig() {
     ig.clear();
     analyse_live();
     for(auto arg : fun->get_params()) {
-        ig[arg->get_addr()] = {};
+        if(is_target(arg->get_addr()))
+            ig[arg->get_addr()] = {};
     }
     ptr_list<ir::ir_basicblock> work_lst = {fun->get_entry()};
     ptr_list<ir::ir_basicblock> nxt_iter;
@@ -606,6 +621,25 @@ void LoongArch::ColoringAllocator::build_ig() {
                         if(is_target(u) && is_target(v) && u != v) {
                             ig[u].insert(v);
                             ig[v].insert(u);
+                        }
+                    }
+                    auto use_reg = ins->use_reg();
+                    for(auto v : use_reg) {
+                        if(is_target(u) && is_target(v) && u != v && !v->check_global() && !v->check_local()) {
+                            ig[u].insert(v);
+                            ig[v].insert(u);
+                        }
+                    }
+                    for(auto i_it = use_reg.begin(); i_it != use_reg.end(); i_it++) {
+                        auto u = *i_it;
+                        if(is_target(u) && !u->check_global() && !u->check_local()) {
+                            for(auto j_it = std::next(i_it); j_it != use_reg.end(); j_it++) {
+                                auto v = *j_it;
+                                if(is_target(v) && !v->check_global() && !v->check_local()) {
+                                    ig[u].insert(v);
+                                    ig[v].insert(u);
+                                }
+                            }
                         }
                     }
                 }

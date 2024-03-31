@@ -439,6 +439,12 @@ void ir::store::replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_val
         auto first = it->first;
         this->value = it->second;
     }
+    it = replace_map.find(this->addr);
+    if(it != replace_map.end()) {
+        auto replace_reg = std::dynamic_pointer_cast<ir::ir_reg>(it->second);
+        assert(replace_reg);
+        this->addr = replace_reg;
+    }
 }
 
 void ir::jump::accept(ir_visitor &visitor)

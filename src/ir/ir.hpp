@@ -352,6 +352,8 @@ private:
     ptr<ir::ir_userfunc> cur_fun_ptr;
     bool analysed_cfg = false;
     std::unordered_map<ptr<ir::ir_reg>, ptr<ir::ir_memobj>> spilled_args;
+
+    std::unordered_map<ptr<ir::ir_reg>, ptr<ir::ir_memobj>> phi_args;
 public:
     ir_userfunc(std::string name, int reg_cnt, std::vector<vartype> arg_tpyes); 
     ptr<ir_memobj> new_obj(std::string name, vartype var_type);
@@ -385,6 +387,7 @@ public:
     void mark_analysed() {this->analysed_cfg = true;}
     bool check_analysed() {return this->analysed_cfg;}
     void insert_spilled_args(ptr<ir::ir_reg> dst, ptr<ir::ir_memobj> obj) {this->spilled_args.insert({dst, obj});}
+    void insert_phi_args(ptr<ir::ir_reg> dst, ptr<ir::ir_memobj> obj) {this->phi_args.insert({dst, obj});}
 };
 
 //below is instruction

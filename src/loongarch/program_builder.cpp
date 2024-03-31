@@ -891,6 +891,11 @@ void LoongArch::ProgramBuilder::visit(ir::store &node) {
         type = st::fst_f;
         sttype = stptr::fst_f;
     }
+    auto val_is_reg = std::dynamic_pointer_cast<ir::ir_reg>(node.value);
+    if(val_is_reg && val_is_reg->check_is_arr()) {             // CHECK：根据node.dst决定为ld_w还是ld_d
+        type = st::st_d;
+        sttype = stptr::st_d;
+    }
     // cur_block->instructions.push_back(std::make_shared<LoongArch::RegRegInst>(RegRegInst::add_w, reg, Reg{0}, dst));
     if(node.addr->is_arr) {
         node.addr->accept(*this);
@@ -998,6 +1003,9 @@ void LoongArch::ProgramBuilder::visit(ir::load &node) {
     if(dst.is_float()) {
         // type = ld::fld_f;
         ldtype = ldptr::fld_f;
+    }
+    if(node.dst->check_is_arr()) {
+        ldtype = ldptr::ld_d;        // CHECK：根据node.dst决定为ld_w还是ld_d
     }
     // cur_block->instructions.push_back(std::make_shared<LoongArch::RegImmInst>(RegImmInst::addi_w, dst, src, 0));
     if(node.addr->is_arr) {
@@ -1238,8 +1246,18 @@ void LoongArch::ProgramBuilder::visit(ir::get_element_ptr& node) {
         auto is_spilled = node.spilled_obj.find(dimensions[i]);
         Reg ini;
         if(is_spilled != node.spilled_obj.end()) {
-            // TODO
-            continue;
+            ini = using_reg;
+            // CHECK
+            auto ir_reg = is_spilled->second->addr;
+            if(ir_reg->type == vartype::FLOAT) {
+                ini.type = FLOAT;
+            }
+            else {
+                ini.type = INT;
+            }
+            int offset = cur_mapping->mem_var.find(ir_reg->id)->second;
+            offset = cur_func->stack_size - offset;
+            cur_block->instructions.push_back(std::make_shared<LoongArch::ld>(ini, Reg{fp}, -offset, ld::ld_w));
         }
         else {
             dimensions[i]->accept(*this);
@@ -1268,7 +1286,17 @@ void LoongArch::ProgramBuilder::visit(ir::get_element_ptr& node) {
         Reg ini;
         if(is_spilled != node.spilled_obj.end()) {
             ini = using_reg;
-            // TODO
+            // CHECK
+            auto ir_reg = is_spilled->second->addr;
+            if(ir_reg->type == vartype::FLOAT) {
+                ini.type = FLOAT;
+            }
+            else {
+                ini.type = INT;
+            }
+            int offset = cur_mapping->mem_var.find(ir_reg->id)->second;
+            offset = cur_func->stack_size - offset;
+            cur_block->instructions.push_back(std::make_shared<LoongArch::ld>(ini, Reg{fp}, -offset, ld::ld_w));
         }
         else {
             dimensions.back()->accept(*this);
@@ -1327,8 +1355,25 @@ void LoongArch::ProgramBuilder::visit(ir::func_call& node) {
         auto is_spilled = node.spilled_obj.find(par);
         Reg reg;
         if(is_spilled != node.spilled_obj.end()) {
-            // TODO：添加将spilled_obj中的obj加载到const_reg_l，然会为reg赋值为const_reg_l并配置Rtype的逻辑
-            continue;   // TODO
+            // CHECK：添加将spilled_obj中的obj加载到const_reg_l，然会为reg赋值为const_reg_l并配置Rtype的逻辑
+            auto ir_reg = is_spilled->second->addr;
+            auto par_reg = std::dynamic_pointer_cast<ir::ir_reg>(par);
+            assert(par_reg);
+            reg = const_reg_l;
+            if(par_reg->type == vartype::FLOAT) {
+                reg.type = FLOAT;
+            }
+            else {
+                reg.type = INT;
+            }
+            int offset = cur_mapping->mem_var.find(ir_reg->id)->second;
+            offset = cur_func->stack_size - offset;
+            if(par_reg->is_arr) {
+                cur_block->instructions.push_back(std::make_shared<LoongArch::ld>(reg, Reg{fp}, -offset, ld::ld_d));
+            }
+            else {
+                cur_block->instructions.push_back(std::make_shared<LoongArch::ld>(reg, Reg{fp}, -offset, reg.is_float() ? ld::fld_f : ld::ld_w));
+            }
         }
         else {
             par->accept(*this);
