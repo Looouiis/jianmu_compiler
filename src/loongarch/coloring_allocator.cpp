@@ -1,5 +1,6 @@
 #include "loongarch/coloring_allocator.hpp"
 #include "ir/ir.hpp"
+#include "loongarch/arch.hpp"
 #include "loongarch/register_allocator.hpp"
 #include "parser/SyntaxTree.hpp"
 #include <cassert>
@@ -154,7 +155,7 @@ bool LoongArch::ColoringAllocator::rewrite() {
                                                     else {                                      // 这个param已经被spill处理过了，应该有加载
                                                         auto par_obj = par_it->second;
                                                         assert(par_obj);
-                                                        auto middle = fun->new_spill_reg(reg_from);
+                                                        auto middle = fun->new_spill_reg(reg_from, par_obj);
                                                         entry->insert_after_phi(std::make_shared<ir::store>(spill_obj->get_addr(), middle));
                                                         entry->insert_after_phi(std::make_shared<ir::load>(middle, par_obj->get_addr()));
                                                     }
@@ -169,7 +170,8 @@ bool LoongArch::ColoringAllocator::rewrite() {
                                                         block_from->insert_before_jump(std::make_shared<ir::store>(spill_obj->get_addr(), value));
                                                     }
                                                     else {
-                                                        auto load_reg = fun->new_spill_reg(reg_from);
+                                                        auto par_obj = reg_in_spill->second;
+                                                        auto load_reg = fun->new_spill_reg(reg_from, par_obj);
                                                         block_from->insert_before_jump(std::make_shared<ir::load>(load_reg, reg_in_spill->second->get_addr()));
                                                         block_from->insert_before_jump(std::make_shared<ir::store>(spill_obj->get_addr(), load_reg));
                                                     }
@@ -196,7 +198,8 @@ bool LoongArch::ColoringAllocator::rewrite() {
                                                     else {
                                                         auto reg_in_spill = spill_map.find(reg_from);
                                                         assert(reg_in_spill != spill_map.end());
-                                                        auto load_reg = fun->new_spill_reg(reg_from);
+                                                        auto par_obj = reg_in_spill->second;
+                                                        auto load_reg = fun->new_spill_reg(reg_from, par_obj);
                                                         def_block->insert_before_jump(std::make_shared<ir::load>(load_reg, reg_in_spill->second->get_addr()));
                                                         def_block->insert_before_jump(std::make_shared<ir::store>(spill_obj->get_addr(), load_reg));
 
@@ -208,7 +211,8 @@ bool LoongArch::ColoringAllocator::rewrite() {
                                                         block_from->insert_before_jump(std::make_shared<ir::store>(spill_obj->get_addr(), value));
                                                     }
                                                     else {
-                                                        auto load_reg = fun->new_spill_reg(reg_from);
+                                                        auto par_obj = reg_in_spill->second;
+                                                        auto load_reg = fun->new_spill_reg(reg_from, par_obj);
                                                         block_from->insert_before_jump(std::make_shared<ir::load>(load_reg, reg_in_spill->second->get_addr()));
                                                         block_from->insert_before_jump(std::make_shared<ir::store>(spill_obj->get_addr(), load_reg));
                                                     }
@@ -379,21 +383,21 @@ bool LoongArch::ColoringAllocator::rewrite() {
                                     // }
                                 }
                                 else if(is_call) {
-                                    auto load_reg = fun->new_spill_reg(reg);    // 换成load_reg的作用是能够将rewrite的中间代码通过llvm的检查编译，如果直接转汇编可以不换
+                                    auto load_reg = fun->new_spill_reg(reg, spill_obj);    // 换成load_reg的作用是能够将rewrite的中间代码通过llvm的检查编译，如果直接转汇编可以不换
                                     load_reg->mark_local();                                  // 仅仅是用来绕过下一次的live分析，可能会因为冲突换成另一个标志
                                     is_call->insert_spilled_obj(load_reg, spill_obj);
                                     replace_map[reg] = load_reg;
                                     cur_ins->replace_reg(replace_map);
                                 }
                                 else if(is_get_element && reg != is_get_element->get_base()) {
-                                    auto load_reg = fun->new_spill_reg(reg);    // 换成load_reg的作用是能够将rewrite的中间代码通过llvm的检查编译，如果直接转汇编可以不换
+                                    auto load_reg = fun->new_spill_reg(reg, spill_obj);    // 换成load_reg的作用是能够将rewrite的中间代码通过llvm的检查编译，如果直接转汇编可以不换
                                     load_reg->mark_local();                                  // 仅仅是用来绕过下一次的live分析，可能会因为冲突换成另一个标志
                                     is_get_element->insert_spilled_obj(load_reg, spill_obj);
                                     replace_map[reg] = load_reg;
                                     cur_ins->replace_reg(replace_map);
                                 }
                                 else {
-                                    auto load_reg = fun->new_spill_reg(reg);
+                                    auto load_reg = fun->new_spill_reg(reg, spill_obj);
                                     load_vec.push_back({it, load_reg});
                                     replace_map.clear();
                                     replace_map[reg] = load_reg;
@@ -452,10 +456,19 @@ bool LoongArch::ColoringAllocator::kempe() {
     auto remove_ig = ig;
     bool need_spill = false;
     ptr_list<ir::ir_reg> stk;
+    int param_num = 0;
+    if(dealing == INT) {
+        for(auto reg : this->using_color) {
+            if(reg.id >= 5 && reg.id <= 11) {
+                param_num++;
+            }
+        }
+    }
     while(remove_ig.size()) {
+        // std::clog << remove_ig.size() << std::endl;
         ptr<ir::ir_reg> del_item = nullptr;
         for(auto [reg, vec] : remove_ig) {
-            if(vec.size() < this->using_color.size()) {
+            if(vec.size() < (this->using_color.size() - (reg->check_is_param() ? param_num : 0))) {
                 del_item = reg;
                 break;
             }
@@ -526,7 +539,17 @@ bool LoongArch::ColoringAllocator::kempe() {
 // }
 
 bool LoongArch::ColoringAllocator::assign_color(ptr<ir::ir_reg> node) {
-    auto available_color = using_color;
+    vector<Reg> available_color;
+    if(node->check_is_param() && dealing == INT) {
+        for(auto color : this->using_color) {
+            if(!(color.id >= 5 && color.id <= 11)) {
+                available_color.push_back(color);
+            }
+        }
+    }
+    else {
+        available_color = using_color;
+    }
     assert(!available_color.empty());
     for(auto reg : ig[node]) {
         auto colored_it = mapping_to_reg.find(reg);

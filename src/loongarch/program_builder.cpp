@@ -254,6 +254,9 @@ void LoongArch::ProgramBuilder::visit(ir::ir_userfunc &node) {
     
     for(auto obj : node.arrobj) {
         this->cur_mapping->mem_var.insert({obj->addr->id, this->cur_mapping->used_mem});
+        for(auto spilled_reg : obj->get_spilled_reg()) {
+            this->cur_mapping->mem_var.insert({spilled_reg->id, this->cur_mapping->used_mem});
+        }
         int total_cnt = obj->addr->size;
         if(obj->dim) {
             for(auto a : obj->dim->dimensions) {

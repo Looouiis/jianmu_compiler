@@ -99,6 +99,7 @@ private:
     bool is_global = false;
     bool is_const;
     bool is_arr = false;
+    bool is_addr = false;
     bool is_param = false;
     bool is_local = false;  // 似乎真的和is_global重复了   不重复！is_local表示的是sysy层面上的本地变量对应的reg，而is_global为假的reg不一定对应本地变量
     ptr<ir::ir_instr> def_at;
@@ -125,8 +126,10 @@ public:
     void mark_unspillable() {this->unspillable = true;}
     bool check_is_unspillable() {return this->unspillable;}
     void set_size(int size) {this->size = size;}
-    void mark_addr() {this->is_arr = true;}
+    void mark_arr() {this->is_arr = true;}
     bool check_is_arr() {return this->is_arr;}
+    void mark_addr() {this->is_addr = true;}
+    bool check_is_addr() {return this->is_addr;}
     void clone_attribute(ptr<ir::ir_reg> other);
     bool check_const() {return this->is_const;}
     int get_size() {return this->size;}
@@ -169,6 +172,7 @@ protected:
     int size;
     std::shared_ptr<ir_reg> addr;
     ptr<ast::var_dimension_syntax> dim;
+    std::unordered_set<ptr<ir::ir_reg>> attached_spilled_reg;
 public:
     ptr<ir_reg> get_addr() { return this->addr;};
     int get_size() {return this->size;}
@@ -178,6 +182,8 @@ public:
     virtual void accept(ir_visitor& visitor) override final;
     virtual void print(std::ostream & out = std::cout) override final;
     bool is_arr() {return this->addr->check_is_arr();}
+    void attach_spill(ptr<ir::ir_reg> spilled_reg) {this->attached_spilled_reg.insert(spilled_reg);}
+    std::unordered_set<ptr<ir::ir_reg>> get_spilled_reg() {return this->attached_spilled_reg;}
 };
 
 class ir_func_arg : public ir_memobj {
@@ -359,7 +365,7 @@ public:
     ptr<ir_memobj> new_obj(std::string name, vartype var_type);
     ptr<ir_memobj> new_spill_obj(std::string name, vartype var_type);
     ptr<ir_reg> new_reg(vartype type);//自动创建序号递增的寄存器
-    ptr<ir_reg> new_spill_reg(ptr<ir::ir_reg> reg);
+    ptr<ir_reg> new_spill_reg(ptr<ir::ir_reg> reg, ptr<ir::ir_memobj> obj);
     ptr<ir_basicblock> new_block();//创建BB
     virtual void accept(ir_visitor& visitor);
     virtual void print(std::ostream & out = std::cout) override;

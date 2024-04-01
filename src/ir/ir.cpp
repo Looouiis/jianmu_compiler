@@ -40,6 +40,7 @@ void ir::ir_reg::clone_attribute(ptr<ir::ir_reg> other) {
     this->is_global = other->check_global();
     this->is_const = other->check_const();
     this->is_arr = other->check_is_arr();
+    this->is_addr = other->check_is_addr();
     this->is_param = other->check_is_param();
     this->is_local = other->check_local();
     this->size = other->get_size();
@@ -242,6 +243,7 @@ ptr<ir::ir_memobj> ir::ir_userfunc::new_obj(std::string name, vartype var_type) 
     {vartype::INTADDR, vartype::INTADDR}, {vartype::FLOATADDR, vartype::FLOATADDR}, {vartype::BOOLADDR, vartype::BOOLADDR}, {vartype::FBOOLADDR, vartype::FBOOLADDR}};
     auto addr = this->new_reg(var_reg_trans[var_type]);
     addr->mark_local();
+    addr->mark_addr();
     auto obj = std::make_shared<ir_memobj>(name, addr, i32_size);
     this->scope->ir_objs.push_back(obj);
     return obj;
@@ -264,10 +266,13 @@ ptr<ir::ir_reg> ir::ir_userfunc::new_reg(vartype type)
     return std::make_shared<ir_reg>(max_reg++,type,reg_size, false);
 }
 
-ptr<ir::ir_reg> ir::ir_userfunc::new_spill_reg(ptr<ir::ir_reg> reg) {
+ptr<ir::ir_reg> ir::ir_userfunc::new_spill_reg(ptr<ir::ir_reg> reg, ptr<ir::ir_memobj> obj) {
     auto res = new_reg(reg->get_type());
     res->clone_attribute(reg);
     res->mark_unspillable();
+    if(reg->check_is_addr()) {
+        obj->attach_spill(res);
+    }
     return res;
 }
 
