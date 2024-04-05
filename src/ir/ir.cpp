@@ -86,7 +86,7 @@ void ir::ir_basicblock::push_front(ptr<ir_instr> inst) {
     this->instructions.push_front(inst);
 }
 
-void ir::ir_basicblock::insert_spill(std::list<ptr<ir::ir_instr>>::iterator it, ptr<ir::ir_instr> inst) {
+void ir::ir_basicblock::insert_spill(std::list<ptr<ir::ir_instr>>::iterator it, ptr<ir::ir_instr> inst, bool set_rank) {
     auto def_val = inst->def_reg();
     for(auto def : def_val) {
         if(def)
@@ -96,7 +96,9 @@ void ir::ir_basicblock::insert_spill(std::list<ptr<ir::ir_instr>>::iterator it, 
     assert(this->get_fun());
     inst->mark_block(this->get_block());
     inst->mark_fun(this->get_fun());
-    inst->set_rank((*it)->get_rank());
+    if(set_rank) {
+        inst->set_rank((*it)->get_rank());
+    }
     this->instructions.insert(it, inst);
 }
 

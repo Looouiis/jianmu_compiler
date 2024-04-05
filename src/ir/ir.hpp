@@ -236,7 +236,7 @@ public:
     ir_basicblock(int id) : id(id) { name = "bb"+std::to_string(id); };
     void push_back(ptr<ir_instr> inst);
     void push_front(ptr<ir_instr> inst);
-    void insert_spill(std::list<ptr<ir::ir_instr>>::iterator it, ptr<ir_instr> inst);
+    void insert_spill(std::list<ptr<ir::ir_instr>>::iterator it, ptr<ir_instr> inst, bool set_rank);
     void insert_phi_spill(ptr<ir_instr> inst, int rank);
     void erase(std::list<ptr<ir::ir_instr>>::iterator it) {this->instructions.erase(it);}
     void insert_after_phi(ptr<ir_instr> inst);

@@ -270,22 +270,23 @@ bool LoongArch::ColoringAllocator::rewrite() {
                                             // }
                                         }
                                         else {
-                                            def_it = block_from->get_ins_end();
-                                            auto begin = block_from->get_ins_begin();
-                                            while(def_it != begin) {
-                                                auto prev_it = std::prev(def_it);
-                                                auto is_jump = std::dynamic_pointer_cast<ir::jump>(*prev_it);
-                                                auto is_br = std::dynamic_pointer_cast<ir::br>(*prev_it);
-                                                auto is_bc = std::dynamic_pointer_cast<ir::break_or_continue>(*prev_it);
-                                                auto is_while_loop = std::dynamic_pointer_cast<ir::while_loop>(*prev_it);
-                                                if(is_jump == nullptr && is_br == nullptr && is_bc == nullptr && is_while_loop == nullptr) {
-                                                    break;
-                                                }
-                                                else {
-                                                    def_it = prev_it;
-                                                }
-                                            }
-                                            block_from->insert_spill(def_it, std::make_shared<ir::store>(spill_obj->get_addr(), value));
+                                            block_from->insert_phi_spill(std::make_shared<ir::store>(spill_obj->get_addr(), value), rank);
+                                            // def_it = block_from->get_ins_end();
+                                            // auto begin = block_from->get_ins_begin();
+                                            // while(def_it != begin) {
+                                            //     auto prev_it = std::prev(def_it);
+                                            //     auto is_jump = std::dynamic_pointer_cast<ir::jump>(*prev_it);
+                                            //     auto is_br = std::dynamic_pointer_cast<ir::br>(*prev_it);
+                                            //     auto is_bc = std::dynamic_pointer_cast<ir::break_or_continue>(*prev_it);
+                                            //     auto is_while_loop = std::dynamic_pointer_cast<ir::while_loop>(*prev_it);
+                                            //     if(is_jump == nullptr && is_br == nullptr && is_bc == nullptr && is_while_loop == nullptr) {
+                                            //         break;
+                                            //     }
+                                            //     else {
+                                            //         def_it = prev_it;
+                                            //     }
+                                            // }
+                                            // block_from->insert_spill(def_it, std::make_shared<ir::store>(spill_obj->get_addr(), value));
                                         }
                                     }
                                     auto del_it = it;
@@ -305,7 +306,7 @@ bool LoongArch::ColoringAllocator::rewrite() {
                                 spill_map[reg] = spill_obj;
                                 // it = std::find(ins.begin(), ins.end(), def_ins);
                                 auto store_it = std::next(it);
-                                block->insert_spill(store_it, std::make_shared<ir::store>(spill_obj->get_addr(), reg));
+                                block->insert_spill(store_it, std::make_shared<ir::store>(spill_obj->get_addr(), reg), false);
                                 it++;   // 此时指向插入的store语句
                                 it++;   // 此时指向原文的下一条语句
                             }
@@ -429,7 +430,7 @@ bool LoongArch::ColoringAllocator::rewrite() {
                     // auto &ins_ref = block->get_instructions_ref();
                     for(auto [load_it, load_reg] : load_vec) {
                         auto id = spill_obj->get_addr()->id;
-                        block->insert_spill(load_it, std::make_shared<ir::load>(load_reg, spill_obj->get_addr()));
+                        block->insert_spill(load_it, std::make_shared<ir::load>(load_reg, spill_obj->get_addr()), true);
                     }
 
                     // for(auto [phi_it, _load_reg] : change_vec) {
