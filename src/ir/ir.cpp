@@ -96,10 +96,11 @@ void ir::ir_basicblock::insert_spill(std::list<ptr<ir::ir_instr>>::iterator it, 
     assert(this->get_fun());
     inst->mark_block(this->get_block());
     inst->mark_fun(this->get_fun());
+    inst->set_rank((*it)->get_rank());
     this->instructions.insert(it, inst);
 }
 
-void ir::ir_basicblock::insert_before_jump(ptr<ir_instr> inst) {
+void ir::ir_basicblock::insert_phi_spill(ptr<ir_instr> inst, int rank) {
     auto it = this->instructions.end();
     auto begin = this->instructions.begin();
     while(it != begin) {
@@ -108,13 +109,14 @@ void ir::ir_basicblock::insert_before_jump(ptr<ir_instr> inst) {
         auto is_br = std::dynamic_pointer_cast<ir::br>(*prev_it);
         auto is_bc = std::dynamic_pointer_cast<ir::break_or_continue>(*prev_it);
         auto is_while_loop = std::dynamic_pointer_cast<ir::while_loop>(*prev_it);
-        if(is_jump == nullptr && is_br == nullptr && is_bc == nullptr && is_while_loop == nullptr) {
+        if(is_jump == nullptr && is_br == nullptr && is_bc == nullptr && is_while_loop == nullptr && (*prev_it)->get_rank() <= rank) {
             break;
         }
         else {
             it = prev_it;
         }
     }
+    inst->set_rank(rank);
     this->instructions.insert(it, inst);
 }
 

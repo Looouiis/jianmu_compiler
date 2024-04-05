@@ -132,6 +132,7 @@ bool LoongArch::ColoringAllocator::rewrite() {
                             auto is_phi = std::dynamic_pointer_cast<ir::phi>(def_ins);
                             // assert(it != block->get_ins_end());
                             if(is_phi) {
+                                int rank = def_block->get_phi_rank(is_phi);
                                 if(it != block->get_ins_end()) {            // 判断phi指令是否已经在上一轮循环中处理，处理后仍须执行rename操作
                                     auto spill_map_it = spill_map.find(reg);
                                     if(spill_map_it != spill_map.end()) {
@@ -167,13 +168,13 @@ bool LoongArch::ColoringAllocator::rewrite() {
                                                 else {
                                                     auto reg_in_spill = spill_map.find(reg_from);
                                                     if(reg_in_spill == spill_map.end()) {
-                                                        block_from->insert_before_jump(std::make_shared<ir::store>(spill_obj->get_addr(), value));
+                                                        block_from->insert_phi_spill(std::make_shared<ir::store>(spill_obj->get_addr(), value), rank);
                                                     }
                                                     else {
                                                         auto par_obj = reg_in_spill->second;
                                                         auto load_reg = fun->new_spill_reg(reg_from, par_obj);
-                                                        block_from->insert_before_jump(std::make_shared<ir::load>(load_reg, reg_in_spill->second->get_addr()));
-                                                        block_from->insert_before_jump(std::make_shared<ir::store>(spill_obj->get_addr(), load_reg));
+                                                        block_from->insert_phi_spill(std::make_shared<ir::load>(load_reg, reg_in_spill->second->get_addr()), rank);
+                                                        block_from->insert_phi_spill(std::make_shared<ir::store>(spill_obj->get_addr(), load_reg), rank);
                                                     }
                                                 }
                                             }
@@ -202,12 +203,12 @@ bool LoongArch::ColoringAllocator::rewrite() {
                                                         if(reg_in_spill != spill_map.end()) {
                                                             par_obj = reg_in_spill->second;
                                                             auto load_reg = fun->new_spill_reg(reg_from, par_obj);
-                                                            def_block->insert_before_jump(std::make_shared<ir::load>(load_reg, reg_in_spill->second->get_addr()));
-                                                            def_block->insert_before_jump(std::make_shared<ir::store>(spill_obj->get_addr(), load_reg));
+                                                            def_block->insert_phi_spill(std::make_shared<ir::load>(load_reg, reg_in_spill->second->get_addr()), rank);
+                                                            def_block->insert_phi_spill(std::make_shared<ir::store>(spill_obj->get_addr(), load_reg), rank);
                                                         }
                                                         else {
                                                             par_obj = spill_obj;
-                                                            def_block->insert_before_jump(std::make_shared<ir::store>(spill_obj->get_addr(), value));
+                                                            def_block->insert_phi_spill(std::make_shared<ir::store>(spill_obj->get_addr(), value), rank);
                                                         }
 
                                                     // }
@@ -215,13 +216,13 @@ bool LoongArch::ColoringAllocator::rewrite() {
                                                 else {
                                                     auto reg_in_spill = spill_map.find(reg_from);
                                                     if(reg_in_spill == spill_map.end()) {
-                                                        block_from->insert_before_jump(std::make_shared<ir::store>(spill_obj->get_addr(), value));
+                                                        block_from->insert_phi_spill(std::make_shared<ir::store>(spill_obj->get_addr(), value), rank);
                                                     }
                                                     else {
                                                         auto par_obj = reg_in_spill->second;
                                                         auto load_reg = fun->new_spill_reg(reg_from, par_obj);
-                                                        block_from->insert_before_jump(std::make_shared<ir::load>(load_reg, reg_in_spill->second->get_addr()));
-                                                        block_from->insert_before_jump(std::make_shared<ir::store>(spill_obj->get_addr(), load_reg));
+                                                        block_from->insert_phi_spill(std::make_shared<ir::load>(load_reg, reg_in_spill->second->get_addr()), rank);
+                                                        block_from->insert_phi_spill(std::make_shared<ir::store>(spill_obj->get_addr(), load_reg), rank);
                                                     }
                                                 }
                                             }

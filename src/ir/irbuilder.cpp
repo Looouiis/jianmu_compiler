@@ -201,6 +201,7 @@ void ir::IrBuilder::visit(ast::func_def_syntax &node){
             auto phi_inst = std::make_shared<ir::phi>(ret_dst);
             phi_inst->uses = return_value;
             return_bb->push_back(phi_inst);
+            return_bb->record_phi(phi_inst);
             return_bb->push_back(std::make_shared<ir::ret>(ret_dst,true));
         }
         break;

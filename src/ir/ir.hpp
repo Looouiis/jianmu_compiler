@@ -4,6 +4,7 @@
 #include "loongarch/arch.hpp"
 #include "parser/SyntaxTree.hpp"
 #include "passes/pass_type.hpp"
+#include <iterator>
 #include <memory>
 #include <set>
 #include <unordered_set>
@@ -203,6 +204,7 @@ class ir_instr : public printable {
 private:
     ptr<ir::ir_userfunc> map_to_fun;
     ptr<ir::ir_basicblock> map_to_block;
+    int rank = 0;
 public:
     void mark_fun(ptr<ir::ir_userfunc> fun) {map_to_fun = fun;}
     ptr<ir::ir_userfunc> get_fun() {return map_to_fun;}
@@ -213,6 +215,8 @@ public:
     virtual std::vector<ptr<ir::ir_reg>> use_reg() = 0;
     virtual std::vector<ptr<ir::ir_reg>> def_reg() = 0;     
     virtual void replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) = 0;
+    void set_rank(int rank) {this->rank = rank;}
+    int get_rank() {return rank;}
 };
 
 class ir_basicblock : public printable {
@@ -226,13 +230,14 @@ class ir_basicblock : public printable {
     bool is_return_bb = false;
     ptr<ir::ir_userfunc> cur_func;
     ptr<ir::ir_basicblock> cur_block_ptr;
+    ptr_list<ir::phi> phi_list;
 public:
     int id;
     ir_basicblock(int id) : id(id) { name = "bb"+std::to_string(id); };
     void push_back(ptr<ir_instr> inst);
     void push_front(ptr<ir_instr> inst);
     void insert_spill(std::list<ptr<ir::ir_instr>>::iterator it, ptr<ir_instr> inst);
-    void insert_before_jump(ptr<ir_instr> inst);
+    void insert_phi_spill(ptr<ir_instr> inst, int rank);
     void erase(std::list<ptr<ir::ir_instr>>::iterator it) {this->instructions.erase(it);}
     void insert_after_phi(ptr<ir_instr> inst);
     ptr<ir_instr> pop_back();
@@ -259,6 +264,8 @@ public:
     std::list<ptr<ir::ir_instr>>::iterator search(ptr<ir::ir_instr> ins);
     std::list<ptr<ir::ir_instr>>::iterator get_ins_begin() {return this->instructions.begin();}
     std::list<ptr<ir::ir_instr>>::iterator get_ins_end() {return this->instructions.end();}
+    void record_phi(ptr<ir::phi> ins) {this->phi_list.push_back(ins);}
+    int get_phi_rank(ptr<ir::phi> ins) {return std::distance( std::find(this->phi_list.begin(), this->phi_list.end(), ins), this->phi_list.end());}
 };
 
 

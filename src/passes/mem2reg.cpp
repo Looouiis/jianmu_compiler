@@ -147,6 +147,7 @@ std::unordered_map<ptr<ir::ir_reg>, ptr<ir::ir_memobj>> Passes::Mem2Reg::insert_
                     auto phi = std::make_shared<ir::phi>(reg);
                     phi_reg_2_mem[reg] = v;
                     y->push_front(phi);
+                    y->record_phi(phi);
                     f.insert(y);
                     bool find = false;
                     for(auto d : defs[v]) {
