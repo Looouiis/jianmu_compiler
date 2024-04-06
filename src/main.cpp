@@ -36,6 +36,6 @@ int main(){
     irbuilder->compunit->accept(*progbuilder);
     auto prog = progbuilder->prog;
 
-    // prog->get_asm(std::cout);
-    irbuilder->compunit->accept(*irprinter);
+    prog->get_asm(std::cout);
+    // irbuilder->compunit->accept(*irprinter);
 }
