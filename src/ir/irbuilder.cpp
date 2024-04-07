@@ -893,6 +893,13 @@ void ir::IrBuilder::visit(ast::return_stmt_syntax &node)
             ret_val = transed;
         }
         return_value.emplace_back(ret_val, cur_block);
+        auto is_call = std::dynamic_pointer_cast<ast::func_call_syntax>(node.exp);
+        if(is_call) {
+            auto arg_num = is_call->params.size();
+            if(arg_num < 9) {
+                return_bb->record_tail_call({ret_val, cur_block});
+            }
+        }
         cur_block->push_back(std::make_shared<ir::jump>(return_bb));
     }
     else//没有返回值

@@ -324,6 +324,7 @@ bool LoongArch::ColoringAllocator::rewrite() {
                         auto cur_ins = *it;
                         auto is_phi = std::dynamic_pointer_cast<ir::phi>(cur_ins);
                         auto is_call = std::dynamic_pointer_cast<ir::func_call>(cur_ins);
+                        auto is_tail = std::dynamic_pointer_cast<ir::tail_call>(cur_ins);
                         auto is_get_element = std::dynamic_pointer_cast<ir::get_element_ptr>(cur_ins);
                         
                         // if(live_in[cur_ins].find(reg) != live_in[cur_ins].end()) {    // 这个reg在当前指令处仍然活跃
@@ -395,6 +396,13 @@ bool LoongArch::ColoringAllocator::rewrite() {
                                     auto load_reg = fun->new_spill_reg(reg, spill_obj);    // 换成load_reg的作用是能够将rewrite的中间代码通过llvm的检查编译，如果直接转汇编可以不换
                                     load_reg->mark_local();                                  // 仅仅是用来绕过下一次的live分析，可能会因为冲突换成另一个标志
                                     is_call->insert_spilled_obj(load_reg, spill_obj);
+                                    replace_map[reg] = load_reg;
+                                    cur_ins->replace_reg(replace_map);
+                                }
+                                else if(is_tail) {
+                                    auto load_reg = fun->new_spill_reg(reg, spill_obj);    // 换成load_reg的作用是能够将rewrite的中间代码通过llvm的检查编译，如果直接转汇编可以不换
+                                    load_reg->mark_local();                                  // 仅仅是用来绕过下一次的live分析，可能会因为冲突换成另一个标志
+                                    is_tail->insert_spilled_obj(load_reg, spill_obj);
                                     replace_map[reg] = load_reg;
                                     cur_ins->replace_reg(replace_map);
                                 }
@@ -692,7 +700,7 @@ void LoongArch::ColoringAllocator::analyse_live() {
             if(block->is_ret()) {
                 work_lst.push_back(block);
                 visit[block] = true;
-                break;
+                // break;
             }
         }
         assert(!work_lst.empty());

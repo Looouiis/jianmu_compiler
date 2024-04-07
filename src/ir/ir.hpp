@@ -65,6 +65,7 @@ class get_element_ptr;
 class while_loop;
 class break_or_continue;
 class func_call;
+class tail_call;
 class global_def;
 class trans;
 class memset;
@@ -231,6 +232,7 @@ class ir_basicblock : public printable {
     ptr<ir::ir_userfunc> cur_func;
     ptr<ir::ir_basicblock> cur_block_ptr;
     ptr_list<ir::phi> phi_list;
+    std::vector<std::pair<ptr<ir::ir_value>,ptr<ir::ir_basicblock>>> tail_call_lst;
 public:
     int id;
     ir_basicblock(int id) : id(id) { name = "bb"+std::to_string(id); };
@@ -266,6 +268,8 @@ public:
     std::list<ptr<ir::ir_instr>>::iterator get_ins_end() {return this->instructions.end();}
     void record_phi(ptr<ir::phi> ins) {this->phi_list.push_back(ins);}
     int get_phi_rank(ptr<ir::phi> ins) {return std::distance( std::find(this->phi_list.begin(), this->phi_list.end(), ins), this->phi_list.end());}
+    void record_tail_call(std::pair<ptr<ir::ir_value>, ptr<ir::ir_basicblock>> reg_block_pair) {this->tail_call_lst.push_back(reg_block_pair);};
+    std::vector<std::pair<ptr<ir::ir_value>,ptr<ir::ir_basicblock>>> get_tail_call() {return this->tail_call_lst;}
 };
 
 
@@ -398,9 +402,11 @@ public:
     void mark_fun(ptr<ir::ir_userfunc> fun) {cur_fun_ptr = fun;}
     ptr<ir::ir_userfunc> get_fun() {return cur_fun_ptr;}
     void mark_analysed() {this->analysed_cfg = true;}
+    void clear_analysed() {this->analysed_cfg = false;}
     bool check_analysed() {return this->analysed_cfg;}
     void insert_spilled_args(ptr<ir::ir_reg> dst, ptr<ir::ir_memobj> obj) {this->spilled_args.insert({dst, obj});}
     void insert_phi_args(ptr<ir::ir_reg> dst, ptr<ir::ir_memobj> obj) {this->phi_args.insert({dst, obj});}
+    void del_ret_block(ptr<ir::ir_basicblock> block);
 };
 
 //below is instruction
@@ -450,6 +456,7 @@ public:
     virtual std::vector<ptr<ir::ir_reg>> def_reg() override final;
     ptr<ir::ir_basicblock> get_target();
     void replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) override;
+    void replace_target(ptr<ir_basicblock> target) {this->target = target;}
 };
 
 class br : public control_ins {
@@ -618,6 +625,7 @@ public:
     virtual void visit(while_loop &node) = 0;
     virtual void visit(break_or_continue &node) = 0;
     virtual void visit(func_call &node) = 0;
+    virtual void visit(tail_call &node) = 0;
     virtual void visit(global_def &node) = 0;
     virtual void visit(trans &node) = 0;
     virtual void visit(ir::memset &node) = 0;
@@ -700,6 +708,21 @@ public:
     void replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) override;
     ptr<ir::ir_func> get_callee() {return callee;}
     void insert_spilled_obj(ptr<ir::ir_reg> reg, ptr<ir::ir_memobj> obj) {this->spilled_obj.insert({reg, obj});}
+    ptr<ir_reg> get_ret_reg() {return this->ret_reg;}
+    ptr_list<ir_value> get_params() {return this->params;}
+};
+
+class tail_call : public control_ins {
+    ptr<ir::func_call> call_ins;
+public:
+    tail_call(ptr<ir::func_call> call_ins) : call_ins(call_ins) {}
+    virtual void accept(ir_visitor& visitor) override final;
+    virtual void print(std::ostream & out = std::cout) override final;
+    virtual std::vector<ptr<ir::ir_reg>> use_reg() override final;
+    virtual std::vector<ptr<ir::ir_reg>> def_reg() override final;
+    void replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) override;
+    ptr<ir::func_call> get_call_ins() {return this->call_ins;};
+    void insert_spilled_obj(ptr<ir::ir_reg> reg, ptr<ir::ir_memobj> obj) {this->call_ins->insert_spilled_obj(reg, obj);}
 };
 
 class global_def : public ir_instr {

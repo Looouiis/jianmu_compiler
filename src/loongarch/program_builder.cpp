@@ -299,7 +299,7 @@ void LoongArch::ProgramBuilder::visit(ir::ir_userfunc &node) {
     cur_func->stack_size += this->cur_mapping->used_mem;
 
     // if((cur_func->stack_size % 16) != 0) {
-        cur_func->stack_size += 16 - (cur_func->stack_size % 16);
+        // cur_func->stack_size += 16 - (cur_func->stack_size % 16);
     // }
     // cur_func->stack_size += this->cur_mapping->call_mem;
 
@@ -1521,4 +1521,114 @@ void LoongArch::ProgramBuilder::visit(ir::memset& node) {
     cur_block->instructions.push_back(std::make_shared<ld>(spill_use_1, Reg{sp}, 8, ld::ld_d));
     cur_block->instructions.push_back(std::make_shared<ld>(spill_use_2, Reg{sp}, 16, ld::ld_d));
     cur_block->instructions.push_back(std::make_shared<RegImmInst>(RegImmInst::addi_d, Reg{sp}, Reg{sp}, 24));
+}
+
+void LoongArch::ProgramBuilder::visit(ir::tail_call& node) {
+    auto call_ins = node.get_call_ins();
+    cur_block->instructions.push_back(std::make_shared<LoongArch::RegImmInst>(RegImmInst::addi_d, Reg{sp}, Reg{sp}, -(caller_save_regs.size() * 8)));
+    for(int i = 0; i < global_arg_regs.size(); i++) {
+        cur_block->instructions.push_back(std::make_shared<LoongArch::st>(global_arg_regs[i], Reg{sp}, 8 * i, global_arg_regs[i].is_float()? st::fst_f : st::st_d));
+    }
+
+    int i_pointer = 4;
+    int f_pointer = 0;
+    int cur_stk = 0;
+    for(auto par : call_ins->params) {
+        auto is_spilled = call_ins->spilled_obj.find(par);
+        Reg reg;
+        if(is_spilled != call_ins->spilled_obj.end()) {
+            // CHECK：添加将spilled_obj中的obj加载到const_reg_l，然会为reg赋值为const_reg_l并配置Rtype的逻辑
+            auto ir_reg = is_spilled->second->addr;
+            auto par_reg = std::dynamic_pointer_cast<ir::ir_reg>(par);
+            assert(par_reg);
+            reg = const_reg_l;
+            if(par_reg->type == vartype::FLOAT) {
+                reg.type = FLOAT;
+            }
+            else {
+                reg.type = INT;
+            }
+            int offset = cur_mapping->mem_var.find(ir_reg->id)->second;
+            offset = cur_func->stack_size - offset;
+            if(par_reg->is_arr) {
+                cur_block->instructions.push_back(std::make_shared<LoongArch::ld>(reg, Reg{fp}, -offset, ld::ld_d));
+            }
+            else {
+                cur_block->instructions.push_back(std::make_shared<LoongArch::ld>(reg, Reg{fp}, -offset, reg.is_float() ? ld::fld_f : ld::ld_w));
+            }
+        }
+        else {
+            par->accept(*this);
+            reg = pass_reg;   
+        }
+        if(reg.is_float()) {
+            if(f_pointer < 8) {
+                cur_block->instructions.push_back(std::make_shared<LoongArch::mov>(Reg{f_pointer++, FLOAT}, reg, mov::ftf_f));
+            }
+            else {
+                if(i_pointer < 12) {
+                    cur_block->instructions.push_back(std::make_shared<LoongArch::mov>(Reg{i_pointer++}, reg, mov::ftg));
+                }
+                else {
+                    auto par_reg = std::dynamic_pointer_cast<ir::ir_reg>(par);
+                    if(par_reg && par_reg->is_arr) {
+                        cur_block->instructions.push_back(std::make_shared<st>(reg, Reg{sp}, cur_stk, st::fst_d));
+                    }
+                    else {
+                        cur_block->instructions.push_back(std::make_shared<stptr>(reg, Reg{sp}, cur_stk, stptr::fst_d));
+                    }
+                    cur_stk += 8;
+                }
+            }
+        }
+        else {
+            if(i_pointer < 12) {
+                if(reg.id >= 5 && reg.id <= 11 && reg.type != FBOOL) {
+                    auto it = std::find(global_arg_regs.begin(), global_arg_regs.end(), reg);
+                    int offset = std::distance(global_arg_regs.begin(), it) * 8 + cur_mapping->call_mem;
+                    cur_block->instructions.push_back(std::make_shared<ld>(Reg{i_pointer++}, Reg{sp}, offset, ld::ld_d));
+                }
+                else
+                    cur_block->instructions.push_back(std::make_shared<RegRegInst>(RegRegInst::add_d, Reg{i_pointer++}, reg, Reg{0}));
+            }
+            else {
+                // cur_block->instructions.push_back(std::make_shared<stptr>(reg, Reg{sp}, 8 * (i_pointer++) - 12, stptr::st_d));
+                if(reg.id >= 5 && reg.id <= 11 && reg.type != FBOOL) {
+                    auto it = std::find(global_arg_regs.begin(), global_arg_regs.end(), reg);
+                    int offset = std::distance(global_arg_regs.begin(), it) * 8 + cur_mapping->call_mem;
+                    cur_block->instructions.push_back(std::make_shared<ld>(const_reg_r, Reg{sp}, offset, ld::ld_d));
+                    const_reg_r.type = reg.type;
+                    reg = const_reg_r;
+                }
+                auto par_reg = std::dynamic_pointer_cast<ir::ir_reg>(par);
+                if(par_reg && par_reg->is_arr) {
+                    cur_block->instructions.push_back(std::make_shared<st>(reg, Reg{sp}, cur_stk, st::st_d));
+                }
+                else {
+                    cur_block->instructions.push_back(std::make_shared<stptr>(reg, Reg{sp}, cur_stk, stptr::st_d));
+                }
+                cur_stk += 8;
+            }
+        }
+    }
+    assert(cur_stk == 0);
+
+    // 恢复栈
+    // cur_block->instructions.push_back(
+    //     std::make_shared<LoongArch::ld>(Reg{22},Reg{3},this->cur_func->stack_size - 16,ld::ld_d)
+    // );
+    // cur_block->instructions.push_back(std::make_shared<LoongArch::ld>(Reg{ra}, Reg{sp}, cur_func->stack_size - 8, ld::ld_d));
+    cur_block->instructions.push_back(std::make_shared<LoongArch::RegImmInst>(RegImmInst::addi_d, Reg{sp}, Reg{sp}, caller_save_regs.size() * 8));
+    cur_block->instructions.push_back(
+        std::make_shared<LoongArch::RegImmInst>(RegImmInst::addi_d,Reg{sp},Reg{sp},cur_func->stack_size - 16)   // 很可惜，还是需要保存返回地址以及fp，所以tail_call也不是可以一直递归调用
+    );
+
+    // cur_block->instructions.push_back(std::make_shared<LoongArch::st>(Reg{ra}, Reg{sp}, 0, st::st_d));  
+    auto func_name = node.get_call_ins()->func_name;
+    cur_block->instructions.push_back(std::make_shared<LoongArch::Bl>(func_name));
+
+    cur_block->instructions.push_back(std::make_shared<LoongArch::ld>(Reg{22},Reg{3}, 0,ld::ld_d));
+    cur_block->instructions.push_back(std::make_shared<LoongArch::ld>(Reg{ra}, Reg{sp}, 8, ld::ld_d));
+    cur_block->instructions.push_back(std::make_shared<LoongArch::RegImmInst>(RegImmInst::addi_d, Reg{sp}, Reg{sp}, 16));
+    cur_block->instructions.push_back(std::make_shared<LoongArch::jr>(true));
 }

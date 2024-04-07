@@ -6,7 +6,8 @@ namespace Passes {
 enum PassType {
     MEM2REG,
     FUNCTION_INFO,
-    DEAD_CODE_ELIMINATION
+    DEAD_CODE_ELIMINATION,
+    TAIL_CALL
 };
 
 };

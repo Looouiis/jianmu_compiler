@@ -405,6 +405,15 @@ void ir::ir_userfunc::del_alloc(ptr_list<ir::alloc> del_items) {
     }
 }
 
+void ir::ir_userfunc::del_ret_block(ptr<ir::ir_basicblock> block) {
+    if(block->is_ret()) {
+        auto it = std::find(this->bbs.begin(), this->bbs.end(), block);
+        if(it != bbs.end()) {
+            this->bbs.erase(it);
+        }
+    }
+}
+
 bool ir::ir_func::set_retype(vartype rettype)
 {
     this->rettype = rettype; 
@@ -1000,6 +1009,28 @@ void ir::func_call::replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir
             *it = map_it->second;
         }
     }
+}
+
+void ir::tail_call::accept(ir_visitor &visitor)
+{
+    visitor.visit(*this);
+}
+
+void ir::tail_call::print(std::ostream &out)
+{
+}
+
+std::vector<ptr<ir::ir_reg>> ir::tail_call::use_reg() {
+    return this->call_ins->use_reg();
+//   return {};
+}
+
+std::vector<ptr<ir::ir_reg>> ir::tail_call::def_reg() {
+    return this->call_ins->def_reg();
+}
+
+void ir::tail_call::replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) {
+    this->call_ins->replace_reg(replace_map);
 }
 
 void ir::global_def::accept(ir_visitor &visitor)

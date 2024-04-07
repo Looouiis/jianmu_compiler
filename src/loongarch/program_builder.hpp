@@ -29,6 +29,7 @@ public:
     virtual void visit(ir::while_loop& node) override final;
     virtual void visit(ir::break_or_continue& node) override final;
     virtual void visit(ir::func_call& node) override final;
+    virtual void visit(ir::tail_call& node) override final;
     virtual void visit(ir::global_def& node) override final;
     virtual void visit(ir::trans& node) override final;
     virtual void visit(ir::ir_libfunc& node) override final;
@@ -71,6 +72,10 @@ protected:
         Reg{5}, Reg{6}, Reg{7}, Reg{8}, Reg{9}, Reg{10}, Reg{11}, Reg{12}, Reg{13}, Reg{14}, Reg{15}, Reg{16}, Reg{17}, Reg{18}, Reg{19}, Reg{20},
         Reg{8, FLOAT}, Reg{9, FLOAT}, Reg{10, FLOAT}, Reg{11, FLOAT}, Reg{12, FLOAT}, Reg{13, FLOAT}, Reg{14, FLOAT}, Reg{15, FLOAT},
         Reg{16, FLOAT}, Reg{17, FLOAT}, Reg{18, FLOAT}, Reg{19, FLOAT}, Reg{20, FLOAT}, Reg{21, FLOAT}, Reg{22, FLOAT}, Reg{23, FLOAT}
+    };
+
+    vector<Reg> global_arg_regs = {
+        Reg{5}, Reg{6}, Reg{7}, Reg{8}, Reg{9}, Reg{10}, Reg{11}
     };
 
 };

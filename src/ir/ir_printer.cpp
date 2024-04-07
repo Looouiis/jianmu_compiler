@@ -400,6 +400,13 @@ void ir::IrPrinter::visit(ir::func_call &node) {
     out << std::endl;
 }
 
+void ir::IrPrinter::visit(ir::tail_call &node) {
+    auto call_ins = node.get_call_ins();
+    call_ins->accept(*this);
+    ir::ret r(call_ins->get_ret_reg(), true);
+    r.accept(*this);
+}
+
 void ir::IrPrinter::llvm(ptr<int> pointer, ptr_list<ir::ir_value> init_val, ptr_list<ast::expr_syntax> dimensions, string init_type, vartype type) {
     for(auto a : dimensions) {
         // if(dimensions.size() > 1)
