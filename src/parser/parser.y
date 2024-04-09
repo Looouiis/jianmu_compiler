@@ -2,6 +2,7 @@
     #include "SyntaxTree.hpp"
     #include "SyntaxAnalyse.hpp"
     #include <iostream>
+    #include <cstring>
 
     int yylex();
     int yyparse();
@@ -24,7 +25,7 @@
 %}
 
 %union {
-    char* current_symbol; //we can't use string or any other object with construct function in union. 
+    char current_symbol[30]; //we can't use string or any other object with construct function in union. 
     int symbol_size;
     struct ast::compunit_syntax *compunit ;
     struct ast::func_def_syntax *func_def;
@@ -426,13 +427,16 @@
     }
 
     UnaryOp:ADD{
-        $$=$1;
+        // $$=$1;
+        strcpy($$, $1);
     }
     | SUB{
-        $$=$1;
+        // $$=$1;
+        strcpy($$, $1);
     }
     | NOT{
-        $$=$1;
+        // $$=$1;
+        strcpy($$, $1);
     }
  /*--------------------*/
 

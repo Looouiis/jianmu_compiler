@@ -41,7 +41,7 @@ int handle_token(int token) {
     current_token = token;    
     column_start_number = column_end_number;
     yylval.symbol_size = strlen(yytext);
-    yylval.current_symbol = new char[yylval.symbol_size];
+    // yylval.current_symbol = new char[yylval.symbol_size];
     strcpy(yylval.current_symbol,yytext);
     column_end_number += strlen(yytext);//yytext是正则表达式匹配的部分
     // print_msg(std::cout);

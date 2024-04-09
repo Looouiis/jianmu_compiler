@@ -36,6 +36,12 @@ string ir::ir_reg::get_name() {
     return "g" + std::to_string(this->id);
 }
 
+ptr<ir::ir_instr> ir::ir_reg::get_def_loc() {
+    auto lock = this->def_at.lock();
+    assert(lock);
+    return lock;
+}
+
 void ir::ir_reg::clone_attribute(ptr<ir::ir_reg> other) {
     this->is_global = other->check_global();
     this->is_const = other->check_const();
@@ -59,6 +65,19 @@ void ir::ir_scope::accept(ir_visitor &visitor) {
 void ir::ir_scope::print(std::ostream & out )
 {
 }
+
+ptr<ir::ir_userfunc> ir::ir_instr::get_fun() {
+    auto lock = this->map_to_fun.lock();
+    assert(lock);
+    return lock;
+}
+
+ptr<ir::ir_basicblock> ir::ir_instr::get_block() {
+    auto lock = this->map_to_block.lock();
+    assert(lock);
+    return lock;
+}
+
 void ir::ir_basicblock::push_back(ptr<ir_instr> inst)
 {
     auto def_val = inst->def_reg();
@@ -177,6 +196,18 @@ void ir::ir_basicblock::del_ins_by_vec(ptr_list<ir::ir_instr> del_ins) {
     for(auto del_item : del_ins) {
         this->instructions.remove(del_item);
     }
+}
+
+ptr<ir::ir_userfunc> ir::ir_basicblock::get_fun() {
+    auto lock = this->cur_func.lock();
+    assert(lock);
+    return lock;
+}
+
+ptr<ir::ir_basicblock> ir::ir_basicblock::get_block() {
+    auto lock = this->cur_block_ptr.lock();
+    assert(lock);
+    return lock;
 }
 
 std::list<ptr<ir::ir_instr>>::iterator ir::ir_basicblock::search(ptr<ir::ir_instr> ins) {
@@ -403,6 +434,12 @@ void ir::ir_userfunc::del_alloc(ptr_list<ir::alloc> del_items) {
             this->alloc_list.erase(it);
         }
     }
+}
+
+ptr<ir::ir_userfunc> ir::ir_userfunc::get_fun() {
+    auto lock = this->cur_fun_ptr.lock();
+    assert(lock);
+    return lock;
 }
 
 void ir::ir_userfunc::del_ret_block(ptr<ir::ir_basicblock> block) {

@@ -104,7 +104,7 @@ private:
     bool is_addr = false;
     bool is_param = false;
     bool is_local = false;  // 似乎真的和is_global重复了   不重复！is_local表示的是sysy层面上的本地变量对应的reg，而is_global为假的reg不一定对应本地变量
-    ptr<ir::ir_instr> def_at;
+    std::weak_ptr<ir::ir_instr> def_at;
     bool unspillable = false;
 public:
     ir_reg(int id,vartype type,int size, bool is_global) : id(id) , type(type), size(size), is_global(is_global) {}
@@ -123,7 +123,7 @@ public:
     bool check_local() {return is_local;}
     bool check_global() {return is_global;}
     virtual void mark_def_loc(ptr<ir::ir_instr> loc) override final {def_at = loc;}
-    virtual ptr<ir::ir_instr> get_def_loc() override final {return def_at;}
+    virtual ptr<ir::ir_instr> get_def_loc() override final;
     int get_id() {return this->id;}
     void mark_unspillable() {this->unspillable = true;}
     bool check_is_unspillable() {return this->unspillable;}
@@ -203,14 +203,14 @@ public:
 
 class ir_instr : public printable {
 private:
-    ptr<ir::ir_userfunc> map_to_fun;
-    ptr<ir::ir_basicblock> map_to_block;
+    std::weak_ptr<ir::ir_userfunc> map_to_fun;
+    std::weak_ptr<ir::ir_basicblock> map_to_block;
     int rank = 0;
 public:
     void mark_fun(ptr<ir::ir_userfunc> fun) {map_to_fun = fun;}
-    ptr<ir::ir_userfunc> get_fun() {return map_to_fun;}
+    ptr<ir::ir_userfunc> get_fun();
     void mark_block(ptr<ir::ir_basicblock> block) {map_to_block = block;}
-    ptr<ir::ir_basicblock> get_block() {return map_to_block;}
+    ptr<ir::ir_basicblock> get_block();
     virtual void accept(ir_visitor& visitor) = 0;
     virtual void print(std::ostream & out = std::cout) = 0;
     virtual std::vector<ptr<ir::ir_reg>> use_reg() = 0;
@@ -229,8 +229,8 @@ class ir_basicblock : public printable {
     bool is_while_body = false;
     bool is_entry = false;
     bool is_return_bb = false;
-    ptr<ir::ir_userfunc> cur_func;
-    ptr<ir::ir_basicblock> cur_block_ptr;
+    std::weak_ptr<ir::ir_userfunc> cur_func;
+    std::weak_ptr<ir::ir_basicblock> cur_block_ptr;
     ptr_list<ir::phi> phi_list;
     std::vector<std::pair<ptr<ir::ir_value>,ptr<ir::ir_basicblock>>> tail_call_lst;
 public:
@@ -260,9 +260,9 @@ public:
     void mark_ret() {is_return_bb = true;}
     bool is_ret() {return is_return_bb;}
     void mark_fun(ptr<ir::ir_userfunc> fun) {cur_func = fun;}
-    ptr<ir::ir_userfunc> get_fun() {return cur_func;}
+    ptr<ir::ir_userfunc> get_fun();
     void mark_block(ptr<ir::ir_basicblock> block) {cur_block_ptr = block;}
-    ptr<ir::ir_basicblock> get_block() {return cur_block_ptr;}
+    ptr<ir::ir_basicblock> get_block();
     std::list<ptr<ir::ir_instr>>::iterator search(ptr<ir::ir_instr> ins);
     std::list<ptr<ir::ir_instr>>::iterator get_ins_begin() {return this->instructions.begin();}
     std::list<ptr<ir::ir_instr>>::iterator get_ins_end() {return this->instructions.end();}
@@ -366,7 +366,7 @@ private:
     std::unordered_map<ptr<ir::ir_basicblock>, ptr_list<ir::ir_basicblock>> nxt;
     // std::unordered_map<ptr<ir::ir_basicblock>, ptr_list<ir::ir_basicblock>> n_back_trace;
 
-    ptr<ir::ir_userfunc> cur_fun_ptr;
+    std::weak_ptr<ir::ir_userfunc> cur_fun_ptr;
     bool analysed_cfg = false;
     std::unordered_map<ptr<ir::ir_reg>, ptr<ir::ir_memobj>> spilled_args;
 
@@ -400,7 +400,7 @@ public:
     std::vector<ptr<ir::ir_memobj>> get_params() {return func_args;}
     // std::set<ptr<ir::ir_userfunc>> get_caller() {return caller;}
     void mark_fun(ptr<ir::ir_userfunc> fun) {cur_fun_ptr = fun;}
-    ptr<ir::ir_userfunc> get_fun() {return cur_fun_ptr;}
+    ptr<ir::ir_userfunc> get_fun();
     void mark_analysed() {this->analysed_cfg = true;}
     void clear_analysed() {this->analysed_cfg = false;}
     bool check_analysed() {return this->analysed_cfg;}
