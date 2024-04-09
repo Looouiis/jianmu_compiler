@@ -59,4 +59,5 @@ int main(int argc, char* argv[]){
     }
 
     // irbuilder->compunit->accept(*irprinter);
+    // delete (ast::compunit_syntax *)syntax_tree.root;    // double free or corruption (out)，即代表Bison也会释放这个root？
 }

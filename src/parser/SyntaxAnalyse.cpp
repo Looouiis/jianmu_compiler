@@ -28,7 +28,7 @@ void SyntaxAnalyseCompUnit(ast::compunit_syntax * &self, ast::compunit_syntax *c
         self->global_defs.emplace_back(def);
     }
     self->line = line_number + 1;
-    syntax_tree.root = self;
+    syntax_tree.root = self;                    // Bison所释放的应该就是这个self（comp_unit），所以我不需要释放syntax_tree.root了
 }
 
 void SyntaxAnalyseFuncDef(ast::func_def_syntax * &self, vartype var_type, char *Ident, ast::block_syntax *block)
