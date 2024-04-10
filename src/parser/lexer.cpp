@@ -576,13 +576,14 @@ int handle_token(int token) {
     column_start_number = column_end_number;
     yylval.symbol_size = strlen(yytext);
     // yylval.current_symbol = new char[yylval.symbol_size];
-    strcpy(yylval.current_symbol,yytext);
+    // strcpy(yylval.current_symbol,yytext);
+    yylval.current_symbol = strdup(yytext);
     column_end_number += strlen(yytext);//yytext是正则表达式匹配的部分
     // print_msg(std::cout);
     return token;
 }
-#line 584 "lexer.cpp"
 #line 585 "lexer.cpp"
+#line 586 "lexer.cpp"
 
 #define INITIAL 0
 
@@ -799,10 +800,10 @@ YY_DECL
 		}
 
 	{
-#line 52 "lexer.l"
+#line 53 "lexer.l"
 
 
-#line 805 "lexer.cpp"
+#line 806 "lexer.cpp"
 
 	while ( /*CONSTCOND*/1 )		/* loops until end-of-file is reached */
 		{
@@ -862,7 +863,7 @@ do_action:	/* This label is used only to access EOF actions. */
 case 1:
 /* rule 1 can match eol */
 YY_RULE_SETUP
-#line 54 "lexer.l"
+#line 55 "lexer.l"
 {
     column_start_number = column_end_number;
     for(int i = 0; i < strlen(yytext); i++) {
@@ -878,7 +879,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 2:
 YY_RULE_SETUP
-#line 67 "lexer.l"
+#line 68 "lexer.l"
 {
     column_start_number = column_end_number;
     column_end_number += strlen(yytext);
@@ -886,213 +887,213 @@ YY_RULE_SETUP
 	YY_BREAK
 case 3:
 YY_RULE_SETUP
-#line 72 "lexer.l"
+#line 73 "lexer.l"
 { return handle_token(FLOAT);}
 	YY_BREAK
 case 4:
 YY_RULE_SETUP
-#line 73 "lexer.l"
+#line 74 "lexer.l"
 { return handle_token(CONST);}
 	YY_BREAK
 case 5:
 YY_RULE_SETUP
-#line 75 "lexer.l"
+#line 76 "lexer.l"
 { return handle_token( INT);}
 	YY_BREAK
 case 6:
 YY_RULE_SETUP
-#line 76 "lexer.l"
+#line 77 "lexer.l"
 { return handle_token( VOID);}
 	YY_BREAK
 case 7:
 YY_RULE_SETUP
-#line 77 "lexer.l"
+#line 78 "lexer.l"
 { return handle_token( IF);}
 	YY_BREAK
 case 8:
 YY_RULE_SETUP
-#line 78 "lexer.l"
+#line 79 "lexer.l"
 { return handle_token( ELSE);}
 	YY_BREAK
 case 9:
 YY_RULE_SETUP
-#line 79 "lexer.l"
+#line 80 "lexer.l"
 {return handle_token(WHILE);}
 	YY_BREAK
 case 10:
 YY_RULE_SETUP
-#line 80 "lexer.l"
+#line 81 "lexer.l"
 {return handle_token(BREAK);}
 	YY_BREAK
 case 11:
 YY_RULE_SETUP
-#line 81 "lexer.l"
+#line 82 "lexer.l"
 {return handle_token(CONTINUE);}
 	YY_BREAK
 case 12:
 YY_RULE_SETUP
-#line 82 "lexer.l"
+#line 83 "lexer.l"
 { return handle_token(RETURN);}
 	YY_BREAK
 case 13:
 YY_RULE_SETUP
-#line 83 "lexer.l"
+#line 84 "lexer.l"
 { return handle_token( Ident);}
 	YY_BREAK
 case 14:
 YY_RULE_SETUP
-#line 84 "lexer.l"
+#line 85 "lexer.l"
 { return handle_token( IntConst);}
 	YY_BREAK
 case 15:
 YY_RULE_SETUP
-#line 85 "lexer.l"
+#line 86 "lexer.l"
 {return handle_token(IntConst);}
 	YY_BREAK
 case 16:
 YY_RULE_SETUP
-#line 86 "lexer.l"
+#line 87 "lexer.l"
 {return handle_token(IntConst);}
 	YY_BREAK
 case 17:
 YY_RULE_SETUP
-#line 87 "lexer.l"
+#line 88 "lexer.l"
 {return handle_token(FloatConst);}
 	YY_BREAK
 case 18:
 YY_RULE_SETUP
-#line 88 "lexer.l"
+#line 89 "lexer.l"
 {return handle_token(FloatConst);}
 	YY_BREAK
 case 19:
 YY_RULE_SETUP
-#line 89 "lexer.l"
+#line 90 "lexer.l"
 {return handle_token(FloatConst);}
 	YY_BREAK
 case 20:
 YY_RULE_SETUP
-#line 90 "lexer.l"
+#line 91 "lexer.l"
 {return handle_token(FloatConst);}
 	YY_BREAK
 case 21:
 YY_RULE_SETUP
-#line 91 "lexer.l"
+#line 92 "lexer.l"
 { return handle_token( ADD);}
 	YY_BREAK
 case 22:
 YY_RULE_SETUP
-#line 92 "lexer.l"
+#line 93 "lexer.l"
 { return handle_token( SUB); }
 	YY_BREAK
 case 23:
 YY_RULE_SETUP
-#line 93 "lexer.l"
+#line 94 "lexer.l"
 { return handle_token( MUL); }
 	YY_BREAK
 case 24:
 YY_RULE_SETUP
-#line 94 "lexer.l"
+#line 95 "lexer.l"
 { return handle_token( DIV);}
 	YY_BREAK
 case 25:
 YY_RULE_SETUP
-#line 95 "lexer.l"
+#line 96 "lexer.l"
 { return handle_token( MOD); }
 	YY_BREAK
 case 26:
 YY_RULE_SETUP
-#line 96 "lexer.l"
+#line 97 "lexer.l"
 { return handle_token( LPAREN);}
 	YY_BREAK
 case 27:
 YY_RULE_SETUP
-#line 97 "lexer.l"
+#line 98 "lexer.l"
 { return handle_token( RPAREN);}
 	YY_BREAK
 case 28:
 YY_RULE_SETUP
-#line 98 "lexer.l"
+#line 99 "lexer.l"
 { return handle_token( LBRACE); }
 	YY_BREAK
 case 29:
 YY_RULE_SETUP
-#line 99 "lexer.l"
+#line 100 "lexer.l"
 { return handle_token( RBRACE);}
 	YY_BREAK
 case 30:
 YY_RULE_SETUP
-#line 100 "lexer.l"
+#line 101 "lexer.l"
 { return handle_token( SEMICOLON); }
 	YY_BREAK
 case 31:
 YY_RULE_SETUP
-#line 101 "lexer.l"
+#line 102 "lexer.l"
 { return handle_token(ASSIGN); }
 	YY_BREAK
 case 32:
 YY_RULE_SETUP
-#line 102 "lexer.l"
+#line 103 "lexer.l"
 { return handle_token( LBRACKET); }
 	YY_BREAK
 case 33:
 YY_RULE_SETUP
-#line 103 "lexer.l"
+#line 104 "lexer.l"
 { return handle_token( RBRACKET); }
 	YY_BREAK
 case 34:
 YY_RULE_SETUP
-#line 104 "lexer.l"
+#line 105 "lexer.l"
 { return handle_token( LESS); }
 	YY_BREAK
 case 35:
 YY_RULE_SETUP
-#line 105 "lexer.l"
+#line 106 "lexer.l"
 { return handle_token( LESS_EQUAL); }
 	YY_BREAK
 case 36:
 YY_RULE_SETUP
-#line 106 "lexer.l"
+#line 107 "lexer.l"
 { return handle_token( GREATER); }
 	YY_BREAK
 case 37:
 YY_RULE_SETUP
-#line 107 "lexer.l"
+#line 108 "lexer.l"
 { return handle_token( GREATER_EQUAL); }
 	YY_BREAK
 case 38:
 YY_RULE_SETUP
-#line 108 "lexer.l"
+#line 109 "lexer.l"
 { return handle_token( EQUAL); }
 	YY_BREAK
 case 39:
 YY_RULE_SETUP
-#line 109 "lexer.l"
+#line 110 "lexer.l"
 { return handle_token( NOT_EQUAL); }
 	YY_BREAK
 case 40:
 YY_RULE_SETUP
-#line 110 "lexer.l"
+#line 111 "lexer.l"
 { return handle_token( AND); }
 	YY_BREAK
 case 41:
 YY_RULE_SETUP
-#line 111 "lexer.l"
+#line 112 "lexer.l"
 { return handle_token( OR); }
 	YY_BREAK
 case 42:
 YY_RULE_SETUP
-#line 112 "lexer.l"
+#line 113 "lexer.l"
 { return handle_token( NOT); }
 	YY_BREAK
 case 43:
 YY_RULE_SETUP
-#line 113 "lexer.l"
+#line 114 "lexer.l"
 { return handle_token( COMMA); }
 	YY_BREAK
 case 44:
 /* rule 44 can match eol */
 YY_RULE_SETUP
-#line 115 "lexer.l"
+#line 116 "lexer.l"
 {
     line_number++;
     column_start_number = 0;
@@ -1101,7 +1102,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 45:
 YY_RULE_SETUP
-#line 121 "lexer.l"
+#line 122 "lexer.l"
 {
     column_start_number = column_end_number;
     column_end_number += strlen(yytext);
@@ -1109,7 +1110,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 46:
 YY_RULE_SETUP
-#line 126 "lexer.l"
+#line 127 "lexer.l"
 {
     column_start_number = column_end_number;
     column_end_number += 4;
@@ -1117,15 +1118,15 @@ YY_RULE_SETUP
 	YY_BREAK
 case 47:
 YY_RULE_SETUP
-#line 131 "lexer.l"
+#line 132 "lexer.l"
 { return handle_token(ERROR); }
 	YY_BREAK
 case 48:
 YY_RULE_SETUP
-#line 133 "lexer.l"
+#line 134 "lexer.l"
 ECHO;
 	YY_BREAK
-#line 1128 "lexer.cpp"
+#line 1129 "lexer.cpp"
 case YY_STATE_EOF(INITIAL):
 	yyterminate();
 
@@ -2130,5 +2131,5 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 133 "lexer.l"
+#line 134 "lexer.l"
 

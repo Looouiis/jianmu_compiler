@@ -38,7 +38,7 @@ void SyntaxAnalyseFuncDef(ast::func_def_syntax * &self, vartype var_type, char *
     self->rettype = var_type;
     
     self->body = ptr<ast::block_syntax>(block);
-    // delete[] Ident;
+    free(Ident);
     self->line = line_number + 1;
 }
 
@@ -54,7 +54,7 @@ void SyntaxAnalyseFuncFDef(ast::func_f_param_syntax *&self, vartype var_type, ch
         syntax->dimension->has_first_dim = false;
     }
     self = syntax;
-    // delete[] ident;
+    free(ident);
     self->line = line_number + 1;
 }
 
@@ -87,7 +87,7 @@ void SyntaxAnalyseFuncFDeclGroup(ast::func_def_syntax* &self, ast::func_f_param_
 void SynataxAnalyseFuncType(vartype &self, char* type)
 {
     self = ( !strcmp(type,"int") ? vartype::INT : (!strcmp(type,"void") ? vartype::VOID : vartype::FLOAT));
-    // delete[] type;
+    free(type);
 }
 
 void SynataxAnalyseBlock(ast::block_syntax *&self, ast::block_syntax *block_items)
@@ -142,7 +142,7 @@ void SynataxAnalysePrimaryExpIntConst(ast::expr_syntax *&self, char *current_sym
     }
     syntax->restype = vartype::INT;
     self = static_cast<ast::expr_syntax*>(syntax);
-    // delete[] current_symbol;
+    free(current_symbol);
     self->line = line_number + 1;
 }
 
@@ -154,7 +154,7 @@ void SynataxAnalysePrimaryExpFloatConst(ast::expr_syntax *&self, char *current_s
     syntax->floatConst= std::stof(current_symbol);
     syntax->restype = vartype::FLOAT;
     self = static_cast<ast::expr_syntax*>(syntax);
-    // delete[] current_symbol;
+    free(current_symbol);
     self->line = line_number + 1;
 }
 //a-难度
@@ -171,13 +171,13 @@ void SynataxAnalysePrimaryExpVar(ast::expr_syntax* &self, char* current_symbol)
     syntax->name = current_symbol;
     syntax->restype = vartype::INT;
     self = static_cast<ast::expr_syntax*>(syntax);
-    // delete[] current_symbol;
+    free(current_symbol);
     self->line = line_number + 1;
 }
 
 void SynataxAnalyseVarType(vartype &self, char* type) {
     self = (!strcmp(type, "int") ? vartype::INT : vartype::FLOAT);
-    // delete[] type;
+    free(type);
 }
 
 void SynataxAnalyseVarDecl(ast::stmt_syntax *&self,vartype var_type, ast::var_def_stmt_syntax *var_def, ast::var_decl_stmt_syntax *var_def_group, bool is_const)
@@ -466,7 +466,7 @@ void SynataxAnalyseVarDef(ast::var_def_stmt_syntax *&self, char *ident, ast::var
     syntax->name = ident;
     // syntax->restype = var_type;
     self = syntax;
-    // delete[] ident;
+    free(ident);
     self->line = line_number + 1;
 }
 
@@ -483,7 +483,7 @@ void SynataxAnalyseAddExp(ast::expr_syntax *&self, ast::expr_syntax *exp1, char 
     syntax->rhs = ptr<ast::expr_syntax>(exp2);
     syntax->restype = vartype::INT;
     self = static_cast<ast::expr_syntax*>(syntax);
-    // delete[] op;
+    free(op);
     self->line = line_number + 1;
 }
 //a难度
@@ -503,7 +503,7 @@ void SynataxAnalyseMulExp(ast::expr_syntax *&self, ast::expr_syntax *exp1, char 
     syntax->rhs = ptr<ast::expr_syntax>(exp2);
     syntax->restype = vartype::INT;
     self = static_cast<ast::expr_syntax*>(syntax);
-    // delete[] op;
+    free(op);
     self->line = line_number + 1;
 }
 
@@ -526,7 +526,7 @@ void SynataxAnalyseLval(ast::lval_syntax *&self, char *ident, ast::var_dimension
     }
     syntax->restype = vartype::INT;
     self = syntax;
-    // delete[] ident;
+    free(ident);
     self->line = line_number + 1;
 }
 //a+难度
@@ -572,7 +572,7 @@ void SynataxAnalyseEqExp(ast::expr_syntax *&self, ast::expr_syntax *cond1, char 
     }
     syntax->rhs = ptr<ast::expr_syntax>(cond2);
     self = syntax;
-    // delete[] op;
+    free(op);
     self->line = line_number + 1;
 }
 
@@ -605,7 +605,7 @@ void SynataxAnalyseRelExp(ast::expr_syntax *&self, ast::expr_syntax *cond1, char
     }
     syntax->rhs = ptr<ast::expr_syntax>(exp);
     self = syntax;
-    // delete[] op;
+    free(op);
     self->line = line_number + 1;
 }
 
@@ -624,7 +624,7 @@ void SynataxAnalyseUnaryExp(ast::expr_syntax *&self, char *op, ast::expr_syntax 
     syntax->rhs = ptr<ast::expr_syntax>(exp);
     syntax->restype = vartype::INT;
     self = syntax;
-    // delete[] op;
+    free(op);
     self->line = line_number + 1;
 }
 
@@ -713,7 +713,7 @@ void SyntaxAnalyseFuncCall(ast::expr_syntax* &self, char* func_name, ast::expr_s
     }
     syntax->func_name = func_name;
     self = syntax;
-    // delete[] func_name;
+    free(func_name);
     self->line = line_number + 1;
 }
 

@@ -38,7 +38,7 @@ string ir::ir_reg::get_name() {
 
 ptr<ir::ir_instr> ir::ir_reg::get_def_loc() {
     auto lock = this->def_at.lock();
-    assert(lock);
+    assert((pointed && lock) || (!pointed && lock == nullptr));
     return lock;
 }
 

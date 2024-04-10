@@ -105,6 +105,7 @@ private:
     bool is_param = false;
     bool is_local = false;  // 似乎真的和is_global重复了   不重复！is_local表示的是sysy层面上的本地变量对应的reg，而is_global为假的reg不一定对应本地变量
     std::weak_ptr<ir::ir_instr> def_at;
+    bool pointed = false;   // 记录weak_ptr是否指向了一个share_ptr，是assert用的
     bool unspillable = false;
 public:
     ir_reg(int id,vartype type,int size, bool is_global) : id(id) , type(type), size(size), is_global(is_global) {}
@@ -122,7 +123,7 @@ public:
     void clear_local() {is_local = false;}
     bool check_local() {return is_local;}
     bool check_global() {return is_global;}
-    virtual void mark_def_loc(ptr<ir::ir_instr> loc) override final {def_at = loc;}
+    virtual void mark_def_loc(ptr<ir::ir_instr> loc) override final {def_at = loc; pointed = true;}
     virtual ptr<ir::ir_instr> get_def_loc() override final;
     int get_id() {return this->id;}
     void mark_unspillable() {this->unspillable = true;}
