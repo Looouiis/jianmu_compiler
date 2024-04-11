@@ -3,7 +3,11 @@ project(compiler CXX)
 file(GLOB_RECURSE DIR_SRC "src/*.cpp")
 file(GLOB_RECURSE DIR_SRC_E "include/*.cpp")
 # add_compile_options(-g -std=c++17 -O2)
-add_compile_options(-g -std=c++17)
+add_compile_options(-g -std=c++17
+    -fsanitize=address
+    -fno-omit-frame-pointer
+)
+add_link_options(-fsanitize=address)
 # link_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib)
 include_directories(src)
 # include_directories(src/antlr)

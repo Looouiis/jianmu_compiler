@@ -3,11 +3,12 @@
 
 #include "ir/ir.hpp"
 #include "passes/pass.hpp"
+#include <memory>
 namespace Passes {
 
 class TailCall : public Pass {
 private:
-    std::vector<std::pair<ptr<ir::ir_value>,ptr<ir::ir_basicblock>>> work_lst;
+    std::vector<std::pair<ptr<ir::ir_value>, std::weak_ptr<ir::ir_basicblock>>> work_lst;
     ptr<ir::ir_userfunc> dealing_fun;
 public:
     TailCall(ptr<ir::ir_module> compunit) : Pass(compunit) {}

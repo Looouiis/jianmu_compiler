@@ -256,7 +256,7 @@ LoongArch::RookieAllocator::RookieAllocator(std::shared_ptr<ir::ir_userfunc> _fu
       auto br_ins = std::dynamic_pointer_cast<ir::br>(instruction);
       auto while_ins = std::dynamic_pointer_cast<ir::while_loop>(instruction);
       if(jump_ins != nullptr) {
-        auto tar = jump_ins->target;
+        auto tar = jump_ins->get_target();
         predecessor[tar].push_back(block);
         nxt[block].push_back(tar);
       }
@@ -269,7 +269,7 @@ LoongArch::RookieAllocator::RookieAllocator(std::shared_ptr<ir::ir_userfunc> _fu
         nxt[block].push_back(tar);
       }
       if(while_ins != nullptr) {                                          // TODO: 检查分析逻辑
-        auto tar = while_ins->out_block;
+        auto tar = while_ins->get_out_block();
         predecessor[tar].push_back(block);
         nxt[block].push_back(tar);
       }

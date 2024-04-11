@@ -532,7 +532,9 @@ std::vector<ptr<ir::ir_reg>> ir::jump::def_reg() {
 }
 
 std::shared_ptr<ir::ir_basicblock> ir::jump::get_target() {
-  return this->target;
+    auto lock = this->target.lock();
+    assert(lock);
+    return lock;
 }
 
 void ir::jump::replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) {
@@ -988,6 +990,18 @@ std::vector<ptr<ir::ir_reg>> ir::while_loop::def_reg() {
   return {};
 }
 
+ptr<ir::ir_basicblock> ir::while_loop::get_out_block() {
+    auto lock = this->out_block.lock();
+    assert(lock);
+    return lock;
+}
+
+ptr<ir::ir_basicblock> ir::while_loop::get_cond_from() {
+    auto lock = this->cond_from.lock();
+    assert(lock);
+    return lock;
+}
+
 void ir::while_loop::replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) {}       // while回边，不用换
 
 void ir::break_or_continue::accept(ir_visitor &visitor)
@@ -1008,7 +1022,9 @@ std::vector<ptr<ir::ir_reg>> ir::break_or_continue::def_reg() {
 }
 
 ptr<ir::ir_basicblock> ir::break_or_continue::get_target() {
-    return this->target;
+    auto lock = this->target.lock();
+    assert(lock);
+    return lock;
 }
 
 void ir::break_or_continue::replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) {}    // while中的返回，不用换
@@ -1046,6 +1062,12 @@ void ir::func_call::replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir
             *it = map_it->second;
         }
     }
+}
+
+ptr<ir::ir_func> ir::func_call::get_callee() {
+    auto lock = this->callee.lock();
+    assert(lock);
+    return lock;
 }
 
 void ir::tail_call::accept(ir_visitor &visitor)

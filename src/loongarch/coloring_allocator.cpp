@@ -143,12 +143,13 @@ bool LoongArch::ColoringAllocator::rewrite() {
                                         spill_map[reg] = spill_obj;
                                     }
                                     for(auto [value, block_from] : is_phi->uses) {
+                                        assert(!block_from.expired());
                                         auto reg_from = std::dynamic_pointer_cast<ir::ir_reg>(value);
                                         std::list<ptr<ir::ir_instr>>::iterator def_it;
                                         if(reg_from) {
                                             if(reg_from->check_is_param()) {
                                                 auto entry = fun->get_entry();
-                                                if(entry == block_from) {
+                                                if(entry == block_from.lock()) {
                                                     auto par_it = spill_map.find(reg_from);
                                                     if(par_it == spill_map.end()) {             // 这个param还没有被处理spill或者不用被处理spill
                                                         entry->insert_after_phi(std::make_shared<ir::store>(spill_obj->get_addr(), value));
@@ -168,19 +169,19 @@ bool LoongArch::ColoringAllocator::rewrite() {
                                                 else {
                                                     auto reg_in_spill = spill_map.find(reg_from);
                                                     if(reg_in_spill == spill_map.end()) {
-                                                        block_from->insert_phi_spill(std::make_shared<ir::store>(spill_obj->get_addr(), value), rank);
+                                                        block_from.lock()->insert_phi_spill(std::make_shared<ir::store>(spill_obj->get_addr(), value), rank);
                                                     }
                                                     else {
                                                         auto par_obj = reg_in_spill->second;
                                                         auto load_reg = fun->new_spill_reg(reg_from, par_obj);
-                                                        block_from->insert_phi_spill(std::make_shared<ir::load>(load_reg, reg_in_spill->second->get_addr()), rank);
-                                                        block_from->insert_phi_spill(std::make_shared<ir::store>(spill_obj->get_addr(), load_reg), rank);
+                                                        block_from.lock()->insert_phi_spill(std::make_shared<ir::load>(load_reg, reg_in_spill->second->get_addr()), rank);
+                                                        block_from.lock()->insert_phi_spill(std::make_shared<ir::store>(spill_obj->get_addr(), load_reg), rank);
                                                     }
                                                 }
                                             }
                                             else {
                                                 auto def_block = reg_from->get_def_loc()->get_block();
-                                                if(def_block == block_from) {
+                                                if(def_block == block_from.lock()) {
                                                     def_it = def_block->search(reg_from->get_def_loc());
                                                     // if(def_it != def_block->get_ins_end()) {            // 表示的是如果def指令是除phi之外的指令或者是目前没被消解的phi指令
                                                     //     def_it = std::next(def_it);
@@ -216,13 +217,13 @@ bool LoongArch::ColoringAllocator::rewrite() {
                                                 else {
                                                     auto reg_in_spill = spill_map.find(reg_from);
                                                     if(reg_in_spill == spill_map.end()) {
-                                                        block_from->insert_phi_spill(std::make_shared<ir::store>(spill_obj->get_addr(), value), rank);
+                                                        block_from.lock()->insert_phi_spill(std::make_shared<ir::store>(spill_obj->get_addr(), value), rank);
                                                     }
                                                     else {
                                                         auto par_obj = reg_in_spill->second;
                                                         auto load_reg = fun->new_spill_reg(reg_from, par_obj);
-                                                        block_from->insert_phi_spill(std::make_shared<ir::load>(load_reg, reg_in_spill->second->get_addr()), rank);
-                                                        block_from->insert_phi_spill(std::make_shared<ir::store>(spill_obj->get_addr(), load_reg), rank);
+                                                        block_from.lock()->insert_phi_spill(std::make_shared<ir::load>(load_reg, reg_in_spill->second->get_addr()), rank);
+                                                        block_from.lock()->insert_phi_spill(std::make_shared<ir::store>(spill_obj->get_addr(), load_reg), rank);
                                                     }
                                                 }
                                             }
@@ -270,7 +271,7 @@ bool LoongArch::ColoringAllocator::rewrite() {
                                             // }
                                         }
                                         else {
-                                            block_from->insert_phi_spill(std::make_shared<ir::store>(spill_obj->get_addr(), value), rank);
+                                            block_from.lock()->insert_phi_spill(std::make_shared<ir::store>(spill_obj->get_addr(), value), rank);
                                             // def_it = block_from->get_ins_end();
                                             // auto begin = block_from->get_ins_begin();
                                             // while(def_it != begin) {

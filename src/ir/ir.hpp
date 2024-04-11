@@ -4,6 +4,7 @@
 #include "loongarch/arch.hpp"
 #include "parser/SyntaxTree.hpp"
 #include "passes/pass_type.hpp"
+#include <cassert>
 #include <iterator>
 #include <memory>
 #include <set>
@@ -273,6 +274,14 @@ public:
     std::vector<std::pair<ptr<ir::ir_value>,ptr<ir::ir_basicblock>>> get_tail_call() {return this->tail_call_lst;}
 };
 
+struct Weak2ShareComp {
+    bool operator()(const std::weak_ptr<ir::ir_userfunc> lhs, const std::weak_ptr<ir::ir_userfunc> rhs) const {
+        auto lhs_lock = lhs.lock();
+        auto rhs_lock = rhs.lock();
+        assert(lhs_lock && rhs_lock);
+        return lhs_lock < rhs_lock;
+    }
+};
 
 class ir_func : public printable {
 friend IrBuilder;
@@ -281,7 +290,7 @@ protected:
     vartype rettype;
     std::unordered_map<int,ir_func_arg> args;                   // TODO: 我没有采用这个args
     std::vector<vartype> arg_types;
-    std::set<ptr<ir::ir_userfunc>> caller;
+    std::set<std::weak_ptr<ir::ir_userfunc>, Weak2ShareComp> caller;
     bool is_pure = false;
 public:
     ir_func(std::string name, vector<vartype> arg_types) : name(name), arg_types(arg_types) {}
@@ -293,7 +302,8 @@ public:
     void mark_pure() {this->is_pure = true;}
     void clear_pure() {this->is_pure = false;}
     bool check_pure() {return this->is_pure;}
-    std::set<ptr<ir::ir_userfunc>> get_caller() {return caller;}
+    std::set<std::weak_ptr<ir::ir_userfunc>, Weak2ShareComp> get_caller() {return caller;}
+    void clear_caller() {this->caller.clear();}
 };
 
 class ir_module : public printable {
@@ -448,7 +458,7 @@ class jump : public control_ins {
     friend IrPrinter;
     friend LoongArch::ProgramBuilder;
     friend LoongArch::RookieAllocator;
-    ptr<ir_basicblock> target;
+    std::weak_ptr<ir_basicblock> target;
 public:
     jump(ptr<ir_basicblock> target):target(target){}
     virtual void accept(ir_visitor& visitor) override final;
@@ -529,7 +539,7 @@ class phi : public reg_write_ins {
 public:
     friend IrPrinter;    
     friend class IrBuilder;
-    std::vector<std::pair<ptr<ir_value>,ptr<ir_basicblock>>> uses;
+    std::vector<std::pair<ptr<ir_value>,std::weak_ptr<ir_basicblock>>> uses;
     ptr<ir_reg> dst;
 public:
     phi(ptr<ir_reg> dst): dst(dst) {}
@@ -659,17 +669,17 @@ class while_loop : public ir_instr {
     friend LoongArch::ProgramBuilder;
     friend LoongArch::RookieAllocator;
 private:
-    ptr<ir_basicblock> cond_from;
-    ptr<ir_basicblock> self;
-    ptr<ir_basicblock> out_block;
+    std::weak_ptr<ir_basicblock> cond_from;
+    std::weak_ptr<ir_basicblock> self;
+    std::weak_ptr<ir_basicblock> out_block;
 public:
     while_loop(ptr<ir_basicblock> cond_from, ptr<ir_basicblock> self, ptr<ir_basicblock> out_block) : cond_from(cond_from), self(self), out_block(out_block) {}
     virtual void accept(ir_visitor& visitor) override final;
     virtual void print(std::ostream & out = std::cout) override final;
     virtual std::vector<ptr<ir::ir_reg>> use_reg() override final;
     virtual std::vector<ptr<ir::ir_reg>> def_reg() override final;
-    ptr<ir_basicblock> get_out_block() {return out_block;}
-    ptr<ir_basicblock> get_cond_from() {return cond_from;}
+    ptr<ir_basicblock> get_out_block();
+    ptr<ir_basicblock> get_cond_from();
     void replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) override;
 };
 
@@ -677,7 +687,7 @@ class break_or_continue : public control_ins {
     friend IrPrinter;
     friend LoongArch::ProgramBuilder;
     friend LoongArch::RookieAllocator;
-    ptr<ir_basicblock> target;
+    std::weak_ptr<ir_basicblock> target;
 public:
     break_or_continue(ptr<ir_basicblock> target):target(target){}
     virtual void accept(ir_visitor& visitor) override final;
@@ -698,7 +708,7 @@ class func_call : public control_ins {
     ptr<ir_reg> ret_reg;
     vartype ret_type;
     bool is_lib = false;
-    ptr<ir::ir_func> callee;
+    std::weak_ptr<ir::ir_func> callee;
     std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_memobj>> spilled_obj;
 public:
     func_call(string func_name, ptr_list<ir_value> params, vartype ret_type, ptr<ir::ir_func> callee) : func_name(func_name), params(params), ret_type(ret_type), callee(callee) {}
@@ -707,7 +717,7 @@ public:
     virtual std::vector<ptr<ir::ir_reg>> use_reg() override final;
     virtual std::vector<ptr<ir::ir_reg>> def_reg() override final;
     void replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) override;
-    ptr<ir::ir_func> get_callee() {return callee;}
+    ptr<ir::ir_func> get_callee();
     void insert_spilled_obj(ptr<ir::ir_reg> reg, ptr<ir::ir_memobj> obj) {this->spilled_obj.insert({reg, obj});}
     ptr<ir_reg> get_ret_reg() {return this->ret_reg;}
     ptr_list<ir_value> get_params() {return this->params;}

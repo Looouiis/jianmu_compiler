@@ -515,7 +515,9 @@ void LoongArch::ProgramBuilder::visit(ir::ir_userfunc &node) {
         for(auto &inst : bb->instructions){
             if(auto *cur = dynamic_cast<ir::phi*>(inst.get())){
                 for(auto &prev : cur->uses){
-                    auto b = cur_mapping->blockmapping[prev.second];
+                    auto block_from = prev.second.lock();
+                    assert(block_from);
+                    auto b = cur_mapping->blockmapping[block_from];
                     std::shared_ptr<ir::ir_reg> use_reg = std::dynamic_pointer_cast<ir::ir_reg>(prev.first);
                     if(use_reg) {
 
@@ -946,7 +948,7 @@ void LoongArch::ProgramBuilder::visit(ir::store &node) {
 }
 
 void LoongArch::ProgramBuilder::visit(ir::jump &node) {
-    auto tar_b = node.target;
+    auto tar_b = node.get_target();
     auto target = cur_mapping->blockmapping[tar_b];
     // target->insert_before_jump(std::make_shared<ir::load>(Args &&args...))
     cur_block->instructions.push_back(std::make_shared<LoongArch::Jump>(target.get()));
@@ -1331,13 +1333,13 @@ void LoongArch::ProgramBuilder::visit(ir::get_element_ptr& node) {
 }
 
 void LoongArch::ProgramBuilder::visit(ir::while_loop& node) {
-    auto tar_b = node.cond_from;
+    auto tar_b = node.get_cond_from();
     auto target = cur_mapping->blockmapping[tar_b];
     cur_block->instructions.push_back(std::make_shared<LoongArch::Jump>(target.get()));
 }
 
 void LoongArch::ProgramBuilder::visit(ir::break_or_continue& node) {
-    auto tar_b = node.target;
+    auto tar_b = node.get_target();
     auto target = cur_mapping->blockmapping[tar_b];
     cur_block->instructions.push_back(std::make_shared<LoongArch::Jump>(target.get()));
 }

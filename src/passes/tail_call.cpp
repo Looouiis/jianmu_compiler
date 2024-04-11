@@ -19,9 +19,11 @@ void Passes::TailCall::run() {
 
 void Passes::TailCall::create_tail_call() {
     for(auto [reg, block] : this->work_lst) {
+        auto block_from = block.lock();
+        assert(block_from);
         auto tail_call_block = this->dealing_fun->new_block();
         tail_call_block->mark_ret();
-        auto jump = std::dynamic_pointer_cast<ir::jump>(block->get_instructions().back());
+        auto jump = std::dynamic_pointer_cast<ir::jump>(block_from->get_instructions().back());
         assert(jump);
         jump->replace_target(tail_call_block);
         auto ins = reg->get_def_loc();
@@ -41,7 +43,7 @@ void Passes::TailCall::create_tail_call() {
 }
 
 void Passes::TailCall::get_work_lst() {
-    std::vector<std::pair<ptr<ir::ir_value>,ptr<ir::ir_basicblock>>> del_lst;
+    std::vector<std::pair<ptr<ir::ir_value>, std::weak_ptr<ir::ir_basicblock>>> del_lst;
     ptr_list<ir::ir_basicblock> del_blocks;
     for(auto block : dealing_fun->get_bbs()) {
         if(block->is_ret()) {
@@ -76,7 +78,15 @@ void Passes::TailCall::get_work_lst() {
                 auto is_phi = std::dynamic_pointer_cast<ir::phi>(ins);
                 if(is_phi) {
                     while(!del_lst.empty()) {
-                        auto it = std::find(is_phi->uses.begin(), is_phi->uses.end(), del_lst.back());
+                        auto other = del_lst.back();
+                        auto it = std::find_if(is_phi->uses.begin(), is_phi->uses.end(), [other] (std::pair<ptr<ir::ir_value>, std::weak_ptr<ir::ir_basicblock>> &target){
+                            if(target.first == other.first) {
+                                auto tar_lck = target.second.lock();
+                                auto oth_lck = other.second.lock();
+                                return tar_lck == oth_lck;
+                            }
+                            return false;
+                        });
                         if(it != is_phi->uses.end()) {
                             is_phi->uses.erase(it);
                         }
