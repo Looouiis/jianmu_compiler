@@ -3,7 +3,7 @@ project(compiler CXX)
 file(GLOB_RECURSE DIR_SRC "src/*.cpp")
 file(GLOB_RECURSE DIR_SRC_E "include/*.cpp")
 set(CMAKE_EXE_LINKER_FLAGS "-static")
-add_compile_options(-g -std=c++17)
+add_compile_options(-g -std=c++17 -O2)
 # add_compile_options(-g -std=c++17
 #     -fsanitize=address
 #     -fno-omit-frame-pointer

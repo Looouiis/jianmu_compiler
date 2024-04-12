@@ -100,7 +100,7 @@ private:
     int size;                                                   //some byte
     string global_name;
     bool is_global = false;
-    bool is_const;
+    bool is_const = false;
     bool is_arr = false;
     bool is_addr = false;
     bool is_param = false;
