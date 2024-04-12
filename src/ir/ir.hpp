@@ -331,7 +331,7 @@ public:
     ptr<global_def> new_global(std::string name, vartype type);
     virtual void accept(ir_visitor& visitor) override final;
     virtual void print(std::ostream & out = std::cout) override final;
-    virtual void reg_allocate(int base_reg, ptr_list<global_def> global_var, ptr<ir_visitor> printer);
+    virtual void reg_allocate(int base_reg, ptr_list<global_def> global_var);
     void mark_passes_completed(Passes::PassType tar) {processed_passes.insert(tar);};
     bool check_passes_completed(Passes::PassType tar) {return processed_passes.find(tar) != processed_passes.end();}
 };

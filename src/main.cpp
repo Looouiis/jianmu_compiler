@@ -51,7 +51,7 @@ int main(int argc, char* argv[]){
     }
     else if(arg.emitasm) {
         //下面是后端的部分
-        std::shared_ptr<LoongArch::ProgramBuilder> progbuilder= std::make_shared<LoongArch::ProgramBuilder>(nullptr);
+        std::shared_ptr<LoongArch::ProgramBuilder> progbuilder= std::make_shared<LoongArch::ProgramBuilder>();
         irbuilder->compunit->accept(*progbuilder);
         auto prog = progbuilder->prog;
 

@@ -246,11 +246,10 @@ void ir::ir_module::print(std::ostream & out)
 {
 }
 
-void ir::ir_module::reg_allocate(int base_reg, ptr_list<global_def> global_var, ptr<ir::ir_visitor> printer) {
+void ir::ir_module::reg_allocate(int base_reg, ptr_list<global_def> global_var) {
     if(this->init_block) {
         // LoongArch::RookieAllocator allocator(this->global_init_func, base_reg, global_var);
         LoongArch::ColoringAllocator allocator(this->global_init_func, base_reg, global_var);
-        allocator.printer = printer;
         // auto ret = allocator.run();
         this->global_init_func->reg_allocate(allocator);
 
@@ -260,7 +259,6 @@ void ir::ir_module::reg_allocate(int base_reg, ptr_list<global_def> global_var, 
     for(auto & [name, func] : this->usrfuncs){
         // LoongArch::RookieAllocator allocator(func, base_reg, global_var);     // 我修改了allocator的构造函数
         LoongArch::ColoringAllocator allocator(func, base_reg, global_var);
-        allocator.printer = printer;
         // auto ret = allocator.run();                                 // 我也修改了run方法的返回值
         func->reg_allocate(allocator);
 

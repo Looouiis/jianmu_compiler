@@ -52,7 +52,6 @@ LoongArch::alloc_res LoongArch::ColoringAllocator::run(Rtype target) {
         build_ig();
         if(kempe()) {
             rewrite();
-            // fun->accept(*printer);
             rewrite_cnt++;
             continue;
         }
@@ -524,8 +523,8 @@ bool LoongArch::ColoringAllocator::kempe() {
         stk.pop_back();
         assert(assign_color(reg));
     }
-    if(!spill_set.empty())
-        std::clog << spill_set.size() << std::endl;
+    // if(!spill_set.empty())
+    //     std::clog << spill_set.size() << std::endl;
     return need_spill;
 }
 

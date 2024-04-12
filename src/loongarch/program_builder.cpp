@@ -194,7 +194,7 @@ void LoongArch::ProgramBuilder::visit(ir::ir_module &node) {
     }
 
     //可以调用寄存器分配函数进行寄存器分配
-    node.reg_allocate(cur_mapping->regn, prog->global_var, printer);       // 新增了传入分配起始地址的信息，方便分配
+    node.reg_allocate(cur_mapping->regn, prog->global_var);       // 新增了传入分配起始地址的信息，方便分配
 
     for(auto & [name, func] : node.libfuncs) {
         prog->lib_funcs.push_back(std::make_shared<LoongArch::Function>(name));
