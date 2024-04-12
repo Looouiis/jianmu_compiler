@@ -36,6 +36,12 @@ string ir::ir_reg::get_name() {
     return "g" + std::to_string(this->id);
 }
 
+ptr<ir::ir_instr> ir::ir_reg::get_def_loc() {
+    auto lock = this->def_at.lock();
+    assert((pointed && lock) || (!pointed && lock == nullptr));
+    return lock;
+}
+
 void ir::ir_reg::clone_attribute(ptr<ir::ir_reg> other) {
     this->is_global = other->check_global();
     this->is_const = other->check_const();
@@ -59,6 +65,19 @@ void ir::ir_scope::accept(ir_visitor &visitor) {
 void ir::ir_scope::print(std::ostream & out )
 {
 }
+
+ptr<ir::ir_userfunc> ir::ir_instr::get_fun() {
+    auto lock = this->map_to_fun.lock();
+    assert(lock);
+    return lock;
+}
+
+ptr<ir::ir_basicblock> ir::ir_instr::get_block() {
+    auto lock = this->map_to_block.lock();
+    assert(lock);
+    return lock;
+}
+
 void ir::ir_basicblock::push_back(ptr<ir_instr> inst)
 {
     auto def_val = inst->def_reg();
@@ -86,7 +105,7 @@ void ir::ir_basicblock::push_front(ptr<ir_instr> inst) {
     this->instructions.push_front(inst);
 }
 
-void ir::ir_basicblock::insert_spill(std::list<ptr<ir::ir_instr>>::iterator it, ptr<ir::ir_instr> inst) {
+void ir::ir_basicblock::insert_spill(std::list<ptr<ir::ir_instr>>::iterator it, ptr<ir::ir_instr> inst, bool set_rank) {
     auto def_val = inst->def_reg();
     for(auto def : def_val) {
         if(def)
@@ -96,7 +115,9 @@ void ir::ir_basicblock::insert_spill(std::list<ptr<ir::ir_instr>>::iterator it, 
     assert(this->get_fun());
     inst->mark_block(this->get_block());
     inst->mark_fun(this->get_fun());
-    inst->set_rank((*it)->get_rank());
+    if(set_rank) {
+        inst->set_rank((*it)->get_rank());
+    }
     this->instructions.insert(it, inst);
 }
 
@@ -177,6 +198,18 @@ void ir::ir_basicblock::del_ins_by_vec(ptr_list<ir::ir_instr> del_ins) {
     }
 }
 
+ptr<ir::ir_userfunc> ir::ir_basicblock::get_fun() {
+    auto lock = this->cur_func.lock();
+    assert(lock);
+    return lock;
+}
+
+ptr<ir::ir_basicblock> ir::ir_basicblock::get_block() {
+    auto lock = this->cur_block_ptr.lock();
+    assert(lock);
+    return lock;
+}
+
 std::list<ptr<ir::ir_instr>>::iterator ir::ir_basicblock::search(ptr<ir::ir_instr> ins) {
     auto it = std::find(this->instructions.begin(), this->instructions.end(), ins);
     // assert(it != this->instructions.end());         // TODO：在确保没有其他出现=end（）的情况后对coloring_allocator中的def_it逻辑进行重构
@@ -213,11 +246,10 @@ void ir::ir_module::print(std::ostream & out)
 {
 }
 
-void ir::ir_module::reg_allocate(int base_reg, ptr_list<global_def> global_var, ptr<ir::ir_visitor> printer) {
+void ir::ir_module::reg_allocate(int base_reg, ptr_list<global_def> global_var) {
     if(this->init_block) {
         // LoongArch::RookieAllocator allocator(this->global_init_func, base_reg, global_var);
         LoongArch::ColoringAllocator allocator(this->global_init_func, base_reg, global_var);
-        allocator.printer = printer;
         // auto ret = allocator.run();
         this->global_init_func->reg_allocate(allocator);
 
@@ -227,7 +259,6 @@ void ir::ir_module::reg_allocate(int base_reg, ptr_list<global_def> global_var, 
     for(auto & [name, func] : this->usrfuncs){
         // LoongArch::RookieAllocator allocator(func, base_reg, global_var);     // 我修改了allocator的构造函数
         LoongArch::ColoringAllocator allocator(func, base_reg, global_var);
-        allocator.printer = printer;
         // auto ret = allocator.run();                                 // 我也修改了run方法的返回值
         func->reg_allocate(allocator);
 
@@ -403,6 +434,21 @@ void ir::ir_userfunc::del_alloc(ptr_list<ir::alloc> del_items) {
     }
 }
 
+ptr<ir::ir_userfunc> ir::ir_userfunc::get_fun() {
+    auto lock = this->cur_fun_ptr.lock();
+    assert(lock);
+    return lock;
+}
+
+void ir::ir_userfunc::del_ret_block(ptr<ir::ir_basicblock> block) {
+    if(block->is_ret()) {
+        auto it = std::find(this->bbs.begin(), this->bbs.end(), block);
+        if(it != bbs.end()) {
+            this->bbs.erase(it);
+        }
+    }
+}
+
 bool ir::ir_func::set_retype(vartype rettype)
 {
     this->rettype = rettype; 
@@ -484,7 +530,9 @@ std::vector<ptr<ir::ir_reg>> ir::jump::def_reg() {
 }
 
 std::shared_ptr<ir::ir_basicblock> ir::jump::get_target() {
-  return this->target;
+    auto lock = this->target.lock();
+    assert(lock);
+    return lock;
 }
 
 void ir::jump::replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) {
@@ -940,6 +988,18 @@ std::vector<ptr<ir::ir_reg>> ir::while_loop::def_reg() {
   return {};
 }
 
+ptr<ir::ir_basicblock> ir::while_loop::get_out_block() {
+    auto lock = this->out_block.lock();
+    assert(lock);
+    return lock;
+}
+
+ptr<ir::ir_basicblock> ir::while_loop::get_cond_from() {
+    auto lock = this->cond_from.lock();
+    assert(lock);
+    return lock;
+}
+
 void ir::while_loop::replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) {}       // while回边，不用换
 
 void ir::break_or_continue::accept(ir_visitor &visitor)
@@ -960,7 +1020,9 @@ std::vector<ptr<ir::ir_reg>> ir::break_or_continue::def_reg() {
 }
 
 ptr<ir::ir_basicblock> ir::break_or_continue::get_target() {
-    return this->target;
+    auto lock = this->target.lock();
+    assert(lock);
+    return lock;
 }
 
 void ir::break_or_continue::replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) {}    // while中的返回，不用换
@@ -998,6 +1060,34 @@ void ir::func_call::replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir
             *it = map_it->second;
         }
     }
+}
+
+ptr<ir::ir_func> ir::func_call::get_callee() {
+    auto lock = this->callee.lock();
+    assert(lock);
+    return lock;
+}
+
+void ir::tail_call::accept(ir_visitor &visitor)
+{
+    visitor.visit(*this);
+}
+
+void ir::tail_call::print(std::ostream &out)
+{
+}
+
+std::vector<ptr<ir::ir_reg>> ir::tail_call::use_reg() {
+    return this->call_ins->use_reg();
+//   return {};
+}
+
+std::vector<ptr<ir::ir_reg>> ir::tail_call::def_reg() {
+    return this->call_ins->def_reg();
+}
+
+void ir::tail_call::replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) {
+    this->call_ins->replace_reg(replace_map);
 }
 
 void ir::global_def::accept(ir_visitor &visitor)

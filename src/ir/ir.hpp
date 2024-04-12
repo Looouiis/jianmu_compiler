@@ -4,6 +4,7 @@
 #include "loongarch/arch.hpp"
 #include "parser/SyntaxTree.hpp"
 #include "passes/pass_type.hpp"
+#include <cassert>
 #include <iterator>
 #include <memory>
 #include <set>
@@ -65,6 +66,7 @@ class get_element_ptr;
 class while_loop;
 class break_or_continue;
 class func_call;
+class tail_call;
 class global_def;
 class trans;
 class memset;
@@ -98,12 +100,13 @@ private:
     int size;                                                   //some byte
     string global_name;
     bool is_global = false;
-    bool is_const;
+    bool is_const = false;
     bool is_arr = false;
     bool is_addr = false;
     bool is_param = false;
     bool is_local = false;  // 似乎真的和is_global重复了   不重复！is_local表示的是sysy层面上的本地变量对应的reg，而is_global为假的reg不一定对应本地变量
-    ptr<ir::ir_instr> def_at;
+    std::weak_ptr<ir::ir_instr> def_at;
+    bool pointed = false;   // 记录weak_ptr是否指向了一个share_ptr，是assert用的
     bool unspillable = false;
 public:
     ir_reg(int id,vartype type,int size, bool is_global) : id(id) , type(type), size(size), is_global(is_global) {}
@@ -121,8 +124,8 @@ public:
     void clear_local() {is_local = false;}
     bool check_local() {return is_local;}
     bool check_global() {return is_global;}
-    virtual void mark_def_loc(ptr<ir::ir_instr> loc) override final {def_at = loc;}
-    virtual ptr<ir::ir_instr> get_def_loc() override final {return def_at;}
+    virtual void mark_def_loc(ptr<ir::ir_instr> loc) override final {def_at = loc; pointed = true;}
+    virtual ptr<ir::ir_instr> get_def_loc() override final;
     int get_id() {return this->id;}
     void mark_unspillable() {this->unspillable = true;}
     bool check_is_unspillable() {return this->unspillable;}
@@ -202,14 +205,14 @@ public:
 
 class ir_instr : public printable {
 private:
-    ptr<ir::ir_userfunc> map_to_fun;
-    ptr<ir::ir_basicblock> map_to_block;
+    std::weak_ptr<ir::ir_userfunc> map_to_fun;
+    std::weak_ptr<ir::ir_basicblock> map_to_block;
     int rank = 0;
 public:
     void mark_fun(ptr<ir::ir_userfunc> fun) {map_to_fun = fun;}
-    ptr<ir::ir_userfunc> get_fun() {return map_to_fun;}
+    ptr<ir::ir_userfunc> get_fun();
     void mark_block(ptr<ir::ir_basicblock> block) {map_to_block = block;}
-    ptr<ir::ir_basicblock> get_block() {return map_to_block;}
+    ptr<ir::ir_basicblock> get_block();
     virtual void accept(ir_visitor& visitor) = 0;
     virtual void print(std::ostream & out = std::cout) = 0;
     virtual std::vector<ptr<ir::ir_reg>> use_reg() = 0;
@@ -228,15 +231,16 @@ class ir_basicblock : public printable {
     bool is_while_body = false;
     bool is_entry = false;
     bool is_return_bb = false;
-    ptr<ir::ir_userfunc> cur_func;
-    ptr<ir::ir_basicblock> cur_block_ptr;
+    std::weak_ptr<ir::ir_userfunc> cur_func;
+    std::weak_ptr<ir::ir_basicblock> cur_block_ptr;
     ptr_list<ir::phi> phi_list;
+    std::vector<std::pair<ptr<ir::ir_value>,ptr<ir::ir_basicblock>>> tail_call_lst;
 public:
     int id;
     ir_basicblock(int id) : id(id) { name = "bb"+std::to_string(id); };
     void push_back(ptr<ir_instr> inst);
     void push_front(ptr<ir_instr> inst);
-    void insert_spill(std::list<ptr<ir::ir_instr>>::iterator it, ptr<ir_instr> inst);
+    void insert_spill(std::list<ptr<ir::ir_instr>>::iterator it, ptr<ir_instr> inst, bool set_rank);
     void insert_phi_spill(ptr<ir_instr> inst, int rank);
     void erase(std::list<ptr<ir::ir_instr>>::iterator it) {this->instructions.erase(it);}
     void insert_after_phi(ptr<ir_instr> inst);
@@ -258,16 +262,26 @@ public:
     void mark_ret() {is_return_bb = true;}
     bool is_ret() {return is_return_bb;}
     void mark_fun(ptr<ir::ir_userfunc> fun) {cur_func = fun;}
-    ptr<ir::ir_userfunc> get_fun() {return cur_func;}
+    ptr<ir::ir_userfunc> get_fun();
     void mark_block(ptr<ir::ir_basicblock> block) {cur_block_ptr = block;}
-    ptr<ir::ir_basicblock> get_block() {return cur_block_ptr;}
+    ptr<ir::ir_basicblock> get_block();
     std::list<ptr<ir::ir_instr>>::iterator search(ptr<ir::ir_instr> ins);
     std::list<ptr<ir::ir_instr>>::iterator get_ins_begin() {return this->instructions.begin();}
     std::list<ptr<ir::ir_instr>>::iterator get_ins_end() {return this->instructions.end();}
     void record_phi(ptr<ir::phi> ins) {this->phi_list.push_back(ins);}
     int get_phi_rank(ptr<ir::phi> ins) {return std::distance( std::find(this->phi_list.begin(), this->phi_list.end(), ins), this->phi_list.end());}
+    void record_tail_call(std::pair<ptr<ir::ir_value>, ptr<ir::ir_basicblock>> reg_block_pair) {this->tail_call_lst.push_back(reg_block_pair);};
+    std::vector<std::pair<ptr<ir::ir_value>,ptr<ir::ir_basicblock>>> get_tail_call() {return this->tail_call_lst;}
 };
 
+struct Weak2ShareComp {
+    bool operator()(const std::weak_ptr<ir::ir_userfunc> lhs, const std::weak_ptr<ir::ir_userfunc> rhs) const {
+        auto lhs_lock = lhs.lock();
+        auto rhs_lock = rhs.lock();
+        assert(lhs_lock && rhs_lock);
+        return lhs_lock < rhs_lock;
+    }
+};
 
 class ir_func : public printable {
 friend IrBuilder;
@@ -276,7 +290,7 @@ protected:
     vartype rettype;
     std::unordered_map<int,ir_func_arg> args;                   // TODO: 我没有采用这个args
     std::vector<vartype> arg_types;
-    std::set<ptr<ir::ir_userfunc>> caller;
+    std::set<std::weak_ptr<ir::ir_userfunc>, Weak2ShareComp> caller;
     bool is_pure = false;
 public:
     ir_func(std::string name, vector<vartype> arg_types) : name(name), arg_types(arg_types) {}
@@ -288,7 +302,8 @@ public:
     void mark_pure() {this->is_pure = true;}
     void clear_pure() {this->is_pure = false;}
     bool check_pure() {return this->is_pure;}
-    std::set<ptr<ir::ir_userfunc>> get_caller() {return caller;}
+    std::set<std::weak_ptr<ir::ir_userfunc>, Weak2ShareComp> get_caller() {return caller;}
+    void clear_caller() {this->caller.clear();}
 };
 
 class ir_module : public printable {
@@ -316,7 +331,7 @@ public:
     ptr<global_def> new_global(std::string name, vartype type);
     virtual void accept(ir_visitor& visitor) override final;
     virtual void print(std::ostream & out = std::cout) override final;
-    virtual void reg_allocate(int base_reg, ptr_list<global_def> global_var, ptr<ir_visitor> printer);
+    virtual void reg_allocate(int base_reg, ptr_list<global_def> global_var);
     void mark_passes_completed(Passes::PassType tar) {processed_passes.insert(tar);};
     bool check_passes_completed(Passes::PassType tar) {return processed_passes.find(tar) != processed_passes.end();}
 };
@@ -362,7 +377,7 @@ private:
     std::unordered_map<ptr<ir::ir_basicblock>, ptr_list<ir::ir_basicblock>> nxt;
     // std::unordered_map<ptr<ir::ir_basicblock>, ptr_list<ir::ir_basicblock>> n_back_trace;
 
-    ptr<ir::ir_userfunc> cur_fun_ptr;
+    std::weak_ptr<ir::ir_userfunc> cur_fun_ptr;
     bool analysed_cfg = false;
     std::unordered_map<ptr<ir::ir_reg>, ptr<ir::ir_memobj>> spilled_args;
 
@@ -396,11 +411,13 @@ public:
     std::vector<ptr<ir::ir_memobj>> get_params() {return func_args;}
     // std::set<ptr<ir::ir_userfunc>> get_caller() {return caller;}
     void mark_fun(ptr<ir::ir_userfunc> fun) {cur_fun_ptr = fun;}
-    ptr<ir::ir_userfunc> get_fun() {return cur_fun_ptr;}
+    ptr<ir::ir_userfunc> get_fun();
     void mark_analysed() {this->analysed_cfg = true;}
+    void clear_analysed() {this->analysed_cfg = false;}
     bool check_analysed() {return this->analysed_cfg;}
     void insert_spilled_args(ptr<ir::ir_reg> dst, ptr<ir::ir_memobj> obj) {this->spilled_args.insert({dst, obj});}
     void insert_phi_args(ptr<ir::ir_reg> dst, ptr<ir::ir_memobj> obj) {this->phi_args.insert({dst, obj});}
+    void del_ret_block(ptr<ir::ir_basicblock> block);
 };
 
 //below is instruction
@@ -441,7 +458,7 @@ class jump : public control_ins {
     friend IrPrinter;
     friend LoongArch::ProgramBuilder;
     friend LoongArch::RookieAllocator;
-    ptr<ir_basicblock> target;
+    std::weak_ptr<ir_basicblock> target;
 public:
     jump(ptr<ir_basicblock> target):target(target){}
     virtual void accept(ir_visitor& visitor) override final;
@@ -450,6 +467,7 @@ public:
     virtual std::vector<ptr<ir::ir_reg>> def_reg() override final;
     ptr<ir::ir_basicblock> get_target();
     void replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) override;
+    void replace_target(ptr<ir_basicblock> target) {this->target = target;}
 };
 
 class br : public control_ins {
@@ -521,7 +539,7 @@ class phi : public reg_write_ins {
 public:
     friend IrPrinter;    
     friend class IrBuilder;
-    std::vector<std::pair<ptr<ir_value>,ptr<ir_basicblock>>> uses;
+    std::vector<std::pair<ptr<ir_value>,std::weak_ptr<ir_basicblock>>> uses;
     ptr<ir_reg> dst;
 public:
     phi(ptr<ir_reg> dst): dst(dst) {}
@@ -618,6 +636,7 @@ public:
     virtual void visit(while_loop &node) = 0;
     virtual void visit(break_or_continue &node) = 0;
     virtual void visit(func_call &node) = 0;
+    virtual void visit(tail_call &node) = 0;
     virtual void visit(global_def &node) = 0;
     virtual void visit(trans &node) = 0;
     virtual void visit(ir::memset &node) = 0;
@@ -650,17 +669,17 @@ class while_loop : public ir_instr {
     friend LoongArch::ProgramBuilder;
     friend LoongArch::RookieAllocator;
 private:
-    ptr<ir_basicblock> cond_from;
-    ptr<ir_basicblock> self;
-    ptr<ir_basicblock> out_block;
+    std::weak_ptr<ir_basicblock> cond_from;
+    std::weak_ptr<ir_basicblock> self;
+    std::weak_ptr<ir_basicblock> out_block;
 public:
     while_loop(ptr<ir_basicblock> cond_from, ptr<ir_basicblock> self, ptr<ir_basicblock> out_block) : cond_from(cond_from), self(self), out_block(out_block) {}
     virtual void accept(ir_visitor& visitor) override final;
     virtual void print(std::ostream & out = std::cout) override final;
     virtual std::vector<ptr<ir::ir_reg>> use_reg() override final;
     virtual std::vector<ptr<ir::ir_reg>> def_reg() override final;
-    ptr<ir_basicblock> get_out_block() {return out_block;}
-    ptr<ir_basicblock> get_cond_from() {return cond_from;}
+    ptr<ir_basicblock> get_out_block();
+    ptr<ir_basicblock> get_cond_from();
     void replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) override;
 };
 
@@ -668,7 +687,7 @@ class break_or_continue : public control_ins {
     friend IrPrinter;
     friend LoongArch::ProgramBuilder;
     friend LoongArch::RookieAllocator;
-    ptr<ir_basicblock> target;
+    std::weak_ptr<ir_basicblock> target;
 public:
     break_or_continue(ptr<ir_basicblock> target):target(target){}
     virtual void accept(ir_visitor& visitor) override final;
@@ -689,7 +708,7 @@ class func_call : public control_ins {
     ptr<ir_reg> ret_reg;
     vartype ret_type;
     bool is_lib = false;
-    ptr<ir::ir_func> callee;
+    std::weak_ptr<ir::ir_func> callee;
     std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_memobj>> spilled_obj;
 public:
     func_call(string func_name, ptr_list<ir_value> params, vartype ret_type, ptr<ir::ir_func> callee) : func_name(func_name), params(params), ret_type(ret_type), callee(callee) {}
@@ -698,8 +717,23 @@ public:
     virtual std::vector<ptr<ir::ir_reg>> use_reg() override final;
     virtual std::vector<ptr<ir::ir_reg>> def_reg() override final;
     void replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) override;
-    ptr<ir::ir_func> get_callee() {return callee;}
+    ptr<ir::ir_func> get_callee();
     void insert_spilled_obj(ptr<ir::ir_reg> reg, ptr<ir::ir_memobj> obj) {this->spilled_obj.insert({reg, obj});}
+    ptr<ir_reg> get_ret_reg() {return this->ret_reg;}
+    ptr_list<ir_value> get_params() {return this->params;}
+};
+
+class tail_call : public control_ins {
+    ptr<ir::func_call> call_ins;
+public:
+    tail_call(ptr<ir::func_call> call_ins) : call_ins(call_ins) {}
+    virtual void accept(ir_visitor& visitor) override final;
+    virtual void print(std::ostream & out = std::cout) override final;
+    virtual std::vector<ptr<ir::ir_reg>> use_reg() override final;
+    virtual std::vector<ptr<ir::ir_reg>> def_reg() override final;
+    void replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) override;
+    ptr<ir::func_call> get_call_ins() {return this->call_ins;};
+    void insert_spilled_obj(ptr<ir::ir_reg> reg, ptr<ir::ir_memobj> obj) {this->call_ins->insert_spilled_obj(reg, obj);}
 };
 
 class global_def : public ir_instr {

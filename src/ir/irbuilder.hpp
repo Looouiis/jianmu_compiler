@@ -1,6 +1,7 @@
 #ifndef IR_BUILDER_HPP
 #define IR_BUILDER_HPP
 
+#include <memory>
 #include <vector>
 #include <utility>
 #include <variant>
@@ -35,7 +36,7 @@ class IrBuilder : public ast::syntax_tree_visitor {
     vartype pass_type;
     ptr_list<ir::ir_basicblock> break_list;
     ptr_list<ir::ir_basicblock> continue_list;
-    std::vector<std::pair<ptr<ir::ir_value>, ptr<ir::ir_basicblock >>> return_value;//可能的返回值和对应的BB
+    std::vector<std::pair<ptr<ir::ir_value>, std::weak_ptr<ir::ir_basicblock >>> return_value;//可能的返回值和对应的BB
     ptr<ir::ir_memobj> ir_value;
     bool found_main;//是否找到了主函数
     Mode mode;

@@ -11,8 +11,6 @@
 namespace LoongArch {
 
 class ColoringAllocator : public RegisterAllocator {
-public:
-    ptr<ir::ir_visitor> printer;
 private:
     ptr<ir::ir_userfunc> fun;
     std::unordered_map<ptr<ir::ir_instr>, std::unordered_set<ptr<ir::ir_reg>>> live_in;

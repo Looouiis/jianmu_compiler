@@ -52,7 +52,6 @@ LoongArch::alloc_res LoongArch::ColoringAllocator::run(Rtype target) {
         build_ig();
         if(kempe()) {
             rewrite();
-            // fun->accept(*printer);
             rewrite_cnt++;
             continue;
         }
@@ -143,12 +142,13 @@ bool LoongArch::ColoringAllocator::rewrite() {
                                         spill_map[reg] = spill_obj;
                                     }
                                     for(auto [value, block_from] : is_phi->uses) {
+                                        assert(!block_from.expired());
                                         auto reg_from = std::dynamic_pointer_cast<ir::ir_reg>(value);
                                         std::list<ptr<ir::ir_instr>>::iterator def_it;
                                         if(reg_from) {
                                             if(reg_from->check_is_param()) {
                                                 auto entry = fun->get_entry();
-                                                if(entry == block_from) {
+                                                if(entry == block_from.lock()) {
                                                     auto par_it = spill_map.find(reg_from);
                                                     if(par_it == spill_map.end()) {             // 这个param还没有被处理spill或者不用被处理spill
                                                         entry->insert_after_phi(std::make_shared<ir::store>(spill_obj->get_addr(), value));
@@ -168,19 +168,19 @@ bool LoongArch::ColoringAllocator::rewrite() {
                                                 else {
                                                     auto reg_in_spill = spill_map.find(reg_from);
                                                     if(reg_in_spill == spill_map.end()) {
-                                                        block_from->insert_phi_spill(std::make_shared<ir::store>(spill_obj->get_addr(), value), rank);
+                                                        block_from.lock()->insert_phi_spill(std::make_shared<ir::store>(spill_obj->get_addr(), value), rank);
                                                     }
                                                     else {
                                                         auto par_obj = reg_in_spill->second;
                                                         auto load_reg = fun->new_spill_reg(reg_from, par_obj);
-                                                        block_from->insert_phi_spill(std::make_shared<ir::load>(load_reg, reg_in_spill->second->get_addr()), rank);
-                                                        block_from->insert_phi_spill(std::make_shared<ir::store>(spill_obj->get_addr(), load_reg), rank);
+                                                        block_from.lock()->insert_phi_spill(std::make_shared<ir::load>(load_reg, reg_in_spill->second->get_addr()), rank);
+                                                        block_from.lock()->insert_phi_spill(std::make_shared<ir::store>(spill_obj->get_addr(), load_reg), rank);
                                                     }
                                                 }
                                             }
                                             else {
                                                 auto def_block = reg_from->get_def_loc()->get_block();
-                                                if(def_block == block_from) {
+                                                if(def_block == block_from.lock()) {
                                                     def_it = def_block->search(reg_from->get_def_loc());
                                                     // if(def_it != def_block->get_ins_end()) {            // 表示的是如果def指令是除phi之外的指令或者是目前没被消解的phi指令
                                                     //     def_it = std::next(def_it);
@@ -216,13 +216,13 @@ bool LoongArch::ColoringAllocator::rewrite() {
                                                 else {
                                                     auto reg_in_spill = spill_map.find(reg_from);
                                                     if(reg_in_spill == spill_map.end()) {
-                                                        block_from->insert_phi_spill(std::make_shared<ir::store>(spill_obj->get_addr(), value), rank);
+                                                        block_from.lock()->insert_phi_spill(std::make_shared<ir::store>(spill_obj->get_addr(), value), rank);
                                                     }
                                                     else {
                                                         auto par_obj = reg_in_spill->second;
                                                         auto load_reg = fun->new_spill_reg(reg_from, par_obj);
-                                                        block_from->insert_phi_spill(std::make_shared<ir::load>(load_reg, reg_in_spill->second->get_addr()), rank);
-                                                        block_from->insert_phi_spill(std::make_shared<ir::store>(spill_obj->get_addr(), load_reg), rank);
+                                                        block_from.lock()->insert_phi_spill(std::make_shared<ir::load>(load_reg, reg_in_spill->second->get_addr()), rank);
+                                                        block_from.lock()->insert_phi_spill(std::make_shared<ir::store>(spill_obj->get_addr(), load_reg), rank);
                                                     }
                                                 }
                                             }
@@ -270,22 +270,23 @@ bool LoongArch::ColoringAllocator::rewrite() {
                                             // }
                                         }
                                         else {
-                                            def_it = block_from->get_ins_end();
-                                            auto begin = block_from->get_ins_begin();
-                                            while(def_it != begin) {
-                                                auto prev_it = std::prev(def_it);
-                                                auto is_jump = std::dynamic_pointer_cast<ir::jump>(*prev_it);
-                                                auto is_br = std::dynamic_pointer_cast<ir::br>(*prev_it);
-                                                auto is_bc = std::dynamic_pointer_cast<ir::break_or_continue>(*prev_it);
-                                                auto is_while_loop = std::dynamic_pointer_cast<ir::while_loop>(*prev_it);
-                                                if(is_jump == nullptr && is_br == nullptr && is_bc == nullptr && is_while_loop == nullptr) {
-                                                    break;
-                                                }
-                                                else {
-                                                    def_it = prev_it;
-                                                }
-                                            }
-                                            block_from->insert_spill(def_it, std::make_shared<ir::store>(spill_obj->get_addr(), value));
+                                            block_from.lock()->insert_phi_spill(std::make_shared<ir::store>(spill_obj->get_addr(), value), rank);
+                                            // def_it = block_from->get_ins_end();
+                                            // auto begin = block_from->get_ins_begin();
+                                            // while(def_it != begin) {
+                                            //     auto prev_it = std::prev(def_it);
+                                            //     auto is_jump = std::dynamic_pointer_cast<ir::jump>(*prev_it);
+                                            //     auto is_br = std::dynamic_pointer_cast<ir::br>(*prev_it);
+                                            //     auto is_bc = std::dynamic_pointer_cast<ir::break_or_continue>(*prev_it);
+                                            //     auto is_while_loop = std::dynamic_pointer_cast<ir::while_loop>(*prev_it);
+                                            //     if(is_jump == nullptr && is_br == nullptr && is_bc == nullptr && is_while_loop == nullptr) {
+                                            //         break;
+                                            //     }
+                                            //     else {
+                                            //         def_it = prev_it;
+                                            //     }
+                                            // }
+                                            // block_from->insert_spill(def_it, std::make_shared<ir::store>(spill_obj->get_addr(), value));
                                         }
                                     }
                                     auto del_it = it;
@@ -305,7 +306,7 @@ bool LoongArch::ColoringAllocator::rewrite() {
                                 spill_map[reg] = spill_obj;
                                 // it = std::find(ins.begin(), ins.end(), def_ins);
                                 auto store_it = std::next(it);
-                                block->insert_spill(store_it, std::make_shared<ir::store>(spill_obj->get_addr(), reg));
+                                block->insert_spill(store_it, std::make_shared<ir::store>(spill_obj->get_addr(), reg), false);
                                 it++;   // 此时指向插入的store语句
                                 it++;   // 此时指向原文的下一条语句
                             }
@@ -323,6 +324,7 @@ bool LoongArch::ColoringAllocator::rewrite() {
                         auto cur_ins = *it;
                         auto is_phi = std::dynamic_pointer_cast<ir::phi>(cur_ins);
                         auto is_call = std::dynamic_pointer_cast<ir::func_call>(cur_ins);
+                        auto is_tail = std::dynamic_pointer_cast<ir::tail_call>(cur_ins);
                         auto is_get_element = std::dynamic_pointer_cast<ir::get_element_ptr>(cur_ins);
                         
                         // if(live_in[cur_ins].find(reg) != live_in[cur_ins].end()) {    // 这个reg在当前指令处仍然活跃
@@ -397,6 +399,13 @@ bool LoongArch::ColoringAllocator::rewrite() {
                                     replace_map[reg] = load_reg;
                                     cur_ins->replace_reg(replace_map);
                                 }
+                                else if(is_tail) {
+                                    auto load_reg = fun->new_spill_reg(reg, spill_obj);    // 换成load_reg的作用是能够将rewrite的中间代码通过llvm的检查编译，如果直接转汇编可以不换
+                                    load_reg->mark_local();                                  // 仅仅是用来绕过下一次的live分析，可能会因为冲突换成另一个标志
+                                    is_tail->insert_spilled_obj(load_reg, spill_obj);
+                                    replace_map[reg] = load_reg;
+                                    cur_ins->replace_reg(replace_map);
+                                }
                                 else if(is_get_element && reg != is_get_element->get_base()) {
                                     auto load_reg = fun->new_spill_reg(reg, spill_obj);    // 换成load_reg的作用是能够将rewrite的中间代码通过llvm的检查编译，如果直接转汇编可以不换
                                     load_reg->mark_local();                                  // 仅仅是用来绕过下一次的live分析，可能会因为冲突换成另一个标志
@@ -429,7 +438,7 @@ bool LoongArch::ColoringAllocator::rewrite() {
                     // auto &ins_ref = block->get_instructions_ref();
                     for(auto [load_it, load_reg] : load_vec) {
                         auto id = spill_obj->get_addr()->id;
-                        block->insert_spill(load_it, std::make_shared<ir::load>(load_reg, spill_obj->get_addr()));
+                        block->insert_spill(load_it, std::make_shared<ir::load>(load_reg, spill_obj->get_addr()), true);
                     }
 
                     // for(auto [phi_it, _load_reg] : change_vec) {
@@ -514,8 +523,8 @@ bool LoongArch::ColoringAllocator::kempe() {
         stk.pop_back();
         assert(assign_color(reg));
     }
-    if(!spill_set.empty())
-        std::clog << spill_set.size() << std::endl;
+    // if(!spill_set.empty())
+    //     std::clog << spill_set.size() << std::endl;
     return need_spill;
 }
 
@@ -691,7 +700,7 @@ void LoongArch::ColoringAllocator::analyse_live() {
             if(block->is_ret()) {
                 work_lst.push_back(block);
                 visit[block] = true;
-                break;
+                // break;
             }
         }
         assert(!work_lst.empty());

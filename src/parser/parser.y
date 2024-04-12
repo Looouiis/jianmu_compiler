@@ -2,6 +2,7 @@
     #include "SyntaxTree.hpp"
     #include "SyntaxAnalyse.hpp"
     #include <iostream>
+    #include <cstring>
 
     int yylex();
     int yyparse();
@@ -24,7 +25,7 @@
 %}
 
 %union {
-    char* current_symbol; //we can't use string or any other object with construct function in union. 
+    char *current_symbol; //we can't use string or any other object with construct function in union. 
     int symbol_size;
     struct ast::compunit_syntax *compunit ;
     struct ast::func_def_syntax *func_def;
@@ -114,15 +115,29 @@
     |FuncDef { SyntaxAnalyseCompUnit($$,nullptr,$1); }
     |Decl {SyntaxAnalyseCompUnit($$, nullptr, $1);}
 
-    FuncDef: BType Ident LPAREN RPAREN Block { SyntaxAnalyseFuncDef($$,$1,$2,$5);}
-    | VOID Ident LPAREN RPAREN Block {SyntaxAnalyseFuncDef($$, vartype::VOID, $2, $5);}
+    FuncDef: BType Ident LPAREN RPAREN Block {
+        SyntaxAnalyseFuncDef($$,$1,$2,$5);
+        free($3);
+        free($4);
+    }
+    | VOID Ident LPAREN RPAREN Block {
+        SyntaxAnalyseFuncDef($$, vartype::VOID, $2, $5);
+        free($1);
+        free($3);
+        free($4);
+    }
     | BType Ident LPAREN FuncFParam FuncFParamsGroup RPAREN Block {
         SyntaxAnalyseFuncDef($$, $1, $2, $7);
         SyntaxAnalyseFuncFDecl($$, $4, $5);
+        free($3);
+        free($6);
     }
     | VOID Ident LPAREN FuncFParam FuncFParamsGroup RPAREN Block {
         SyntaxAnalyseFuncDef($$, vartype::VOID, $2, $7);
         SyntaxAnalyseFuncFDecl($$, $4, $5);
+        free($1);
+        free($3);
+        free($6);
     }
 
     FuncFParam: BType Ident {
@@ -130,10 +145,14 @@
     }
     | BType Ident LBRACKET RBRACKET ExpGroup {
         SyntaxAnalyseFuncFDef($$, $1, $2, $5, true);
+        free($3);
+        free($4);
     }             // !!! Sysy上写明数组形参的第一维长度省去，即第一个[]应省略
 
     ExpGroup: LBRACKET Exp RBRACKET ExpGroup {
         SyntaxAnalyseVarDimension($$, $2, $4);
+        free($1);
+        free($3);
     }
     | %empty {
         $$ = nullptr;
@@ -141,6 +160,7 @@
 
     FuncFParamsGroup: COMMA FuncFParam FuncFParamsGroup {
         SyntaxAnalyseFuncFDeclGroup($$, $2, $3);
+        free($1);
     }
     | %empty {
         $$ = nullptr;
@@ -152,7 +172,11 @@
     // FuncType: BType {}
     // | VOID {}
 
-    Block: LBRACE BlockItems RBRACE { SynataxAnalyseBlock($$,$2);}
+    Block: LBRACE BlockItems RBRACE {
+        SynataxAnalyseBlock($$,$2);
+        free($1);
+        free($3);
+    }
 
     BlockItems: BlockItems Stmt { SynataxAnalyseBlockItems($$,$1,$2);}
     | %empty { SynataxAnalyseBlockItems($$,nullptr,nullptr);}
@@ -162,44 +186,68 @@
     }
  /*--------------------*/
 
-    Stmt: RETURN Exp SEMICOLON { SynataxAnalyseStmtReturn($$,$2);}
+    Stmt: RETURN Exp SEMICOLON {
+        SynataxAnalyseStmtReturn($$,$2);
+        free($1);
+        free($3);
+    }
  /*a-难度---------------*/
     | Block{
         SynataxAnalyseStmtBlock($$,$1);
     }
     |RETURN SEMICOLON{
         SynataxAnalyseStmtReturn($$,nullptr);
+        free($1);
+        free($2);
     }
  /*--------------------*/
  /*a难度---------------*/
     | Lval ASSIGN Exp SEMICOLON{
         SynataxAnalyseStmtAssign($$,$1,$3);
+        free($2);
+        free($4);
     }
  /*--------------------*/
  /*a+难度---------------*/
     | IF LPAREN Cond RPAREN Stmt {
         SynataxAnalyseStmtIf($$,$3,$5,nullptr);
+        free($1);
+        free($2);
+        free($4);
     }
     | IF LPAREN Cond RPAREN Stmt ELSE Stmt{
         SynataxAnalyseStmtIf($$,$3,$5,$7);
+        free($1);
+        free($2);
+        free($4);
+        free($6);
     }
     | Exp SEMICOLON {
         SynataxAnalyseStmtExp($$, $1);
+        free($2);
     }
     | SEMICOLON{
         // SynataxAnalyseStmtEmpty($$);
         $$ = new ast::empty_stmt_syntax;
+        free($1);
     }
     | WHILE LPAREN Cond RPAREN Stmt {
         SynataxAnalyseStmtWhile($$, $3, $5);
+        free($1);
+        free($2);
+        free($4);
     }
     | BREAK SEMICOLON {
         // SynataxAnalyseStmtBoC(&&, $1);
         $$ = new ast::break_stmt_syntax;
+        free($1);
+        free($2);
     }
     | CONTINUE SEMICOLON {
         // SynataxAnalyseStmtBoC(&&, $1);
         $$ = new ast::continue_stmt_syntax;
+        free($1);
+        free($2);
     }
  /*--------------------*/
 
@@ -222,6 +270,8 @@
     // | FloatConst { SynataxAnalysePrimaryExpFloatConst($$,$1); }
     | LPAREN Exp RPAREN{
         $$=$2;
+        free($1);
+        free($3);
     }
 
     Number: IntConst {SynataxAnalysePrimaryExpIntConst($$,$1);}
@@ -238,10 +288,12 @@
 
     VarDecl: BType VarDef VarDefGroup SEMICOLON{
         SynataxAnalyseVarDecl($$, $1, $2, $3, false);
+        free($4);
     }
 
     VarDefGroup:  COMMA VarDef VarDefGroup{
         SynataxAnalyseVarDefGroup($$,$2,$3);
+        free($1);
     }
     | %empty {
         $$=nullptr;
@@ -252,12 +304,14 @@
     }
     | Ident ASSIGN InitVal{
         SynataxAnalyseVarDef($$,$1, nullptr,$3);
+        free($2);
     }
     | Ident ConstExpGroup {
         SynataxAnalyseVarDef($$,$1, $2, nullptr);
     }
     | Ident ConstExpGroup ASSIGN InitVal {
         SynataxAnalyseVarDef($$,$1, $2, $4);
+        free($3);
     }
 
     InitVal: Exp{
@@ -265,13 +319,18 @@
     }
     | LBRACE InitVal InitValGroup RBRACE {
         SynataxAnalyseInitVal($$, nullptr, $2, $3);
+        free($1);
+        free($4);
     }
     | LBRACE RBRACE {
         SynataxAnalyseInitVal($$, nullptr, nullptr, nullptr);
+        free($1);
+        free($2);
     }
 
     InitValGroup: COMMA InitVal InitValGroup {
         SynataxAnalyseInitValGroup($$, $2, $3);
+        free($1);
     }
     | %empty {
         $$ = nullptr;
@@ -279,10 +338,13 @@
 
     ConstDecl: CONST BType ConstDef ConstDefGroup SEMICOLON {
         SynataxAnalyseVarDecl($$, $2, $3, $4, true);
+        free($1);
+        free($5);
     }
 
     ConstDefGroup: COMMA ConstDef ConstDefGroup {
         SynataxAnalyseVarDefGroup($$, $2, $3);
+        free($1);
     }
     | %empty {
         $$ = nullptr;
@@ -290,6 +352,7 @@
 
     ConstDef: Ident ConstExpGroup ASSIGN ConstInitVal {
         SynataxAnalyseVarDef($$, $1, $2, $4);
+        free($3);
     }
 
     ConstInitVal: ConstExp {
@@ -297,13 +360,18 @@
     }
     | LBRACE ConstInitVal ConstInitValGroup RBRACE {
         SynataxAnalyseInitVal($$, nullptr, $2, $3);
+        free($1);
+        free($4);
     }
     | LBRACE RBRACE {
         SynataxAnalyseInitVal($$, nullptr, nullptr, nullptr);
+        free($1);
+        free($2);
     }
 
     ConstInitValGroup: COMMA ConstInitVal ConstInitValGroup {
         SynataxAnalyseInitValGroup($$, $2, $3);
+        free($1);
     }
     | %empty {
         $$ = nullptr;
@@ -311,6 +379,8 @@
 
     ConstExpGroup: LBRACKET ConstExp RBRACKET ConstExpGroup {
         SyntaxAnalyseVarDimension($$, $2, $4);
+        free($1);
+        free($3);
     }
     | %empty {
         $$ = nullptr;
@@ -367,6 +437,7 @@
    }
    |LOrExp OR LAndExp{
     SynataxAnalyseLOrExp($$,$1,$3);
+    free($2);
    }
 
     LAndExp: EqExp{
@@ -374,6 +445,7 @@
     }
     | LAndExp AND EqExp {
         SynataxAnalyseLAndExp($$,$1,$3);
+        free($2);
     }
 
     EqExp: RelExp{
@@ -413,13 +485,18 @@
     }
     | Ident LPAREN Exp FuncRParamsGroup RPAREN {
         SyntaxAnalyseFuncCall($$, $1, $3, $4);
+        free($2);
+        free($5);
     }
     | Ident LPAREN RPAREN {
         SyntaxAnalyseFuncCall($$, $1, nullptr, nullptr);
+        free($2);
+        free($3);
     }
 
     FuncRParamsGroup: COMMA Exp FuncRParamsGroup {
         SyntaxAnalyseFuncCallGroup($$, $2, $3);
+        free($1);
     }
     | %empty {
         $$ = nullptr;
@@ -427,12 +504,15 @@
 
     UnaryOp:ADD{
         $$=$1;
+        // strcpy($$, $1);
     }
     | SUB{
         $$=$1;
+        // strcpy($$, $1);
     }
     | NOT{
         $$=$1;
+        // strcpy($$, $1);
     }
  /*--------------------*/
 

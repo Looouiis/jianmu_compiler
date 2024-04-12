@@ -1,6 +1,7 @@
 #include "passes/function_info.hpp"
 #include "ir/ir.hpp"
 #include "passes/pass_type.hpp"
+#include <cassert>
 #include <memory>
 
 void Passes::FunctionInfo::run() {
@@ -32,9 +33,11 @@ void Passes::FunctionInfo::run() {
 void Passes::FunctionInfo::judge_caller(ptr<ir::ir_func> fun) {
     auto caller = fun->get_caller();
     for(auto tar : caller) {
-        if(tar->check_pure()) {
-            tar->clear_pure();
-            work_lst.push(tar);
+        auto lock = tar.lock();
+        assert(lock);
+        if(lock->check_pure()) {
+            lock->clear_pure();
+            work_lst.push(lock);
         }
     }
 }

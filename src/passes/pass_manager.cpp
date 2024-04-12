@@ -5,6 +5,7 @@
 #include "passes/dead_code_elimination.hpp"
 #include "passes/mem2reg.hpp"
 #include "passes/pass.hpp"
+#include "passes/tail_call.hpp"
 #include <memory>
 
 void Passes::PassManager::add_pass(PassType pass_type) {
@@ -19,6 +20,10 @@ void Passes::PassManager::add_pass(PassType pass_type) {
         }
         case FUNCTION_INFO: {
             scheduled_passes.push_back(std::make_shared<Passes::FunctionInfo>(this->compunit));
+            break;
+        }
+        case TAIL_CALL: {
+            scheduled_passes.push_back(std::make_shared<Passes::TailCall>(this->compunit));
             break;
         }
     }

@@ -112,7 +112,7 @@ class SyntaxTreePrinter {
 
 class SyntaxTree {
   public:
-    syntax_tree_node *root;
+    syntax_tree_node *root;             // 上一次提交（61aa8eab52c2379c9ed58462c70bb47a7f7a4fda）已经检测过了，换为智能指针后会有double_free错误，应该是Bison会释放
     void print() { //
         this->root->print();
     }

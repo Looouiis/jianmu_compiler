@@ -14,18 +14,22 @@ extern int line_number;
 
 void SyntaxAnalyseCompUnit(ast::compunit_syntax * &self, ast::compunit_syntax *compunit, ast::syntax_tree_node *def)
 {
+    // self->print();
+    // def->print();
     if(compunit){
         self = new ast::compunit_syntax;
         for(auto  i : compunit->global_defs){
-            self->global_defs.emplace_back(ptr<ast::syntax_tree_node>(i));
+            // self->global_defs.emplace_back(ptr<ast::syntax_tree_node>(i));
+            self->global_defs.push_back(i);
         }
         self->global_defs.emplace_back(def);
+        delete compunit;
     }else{
         self = new ast::compunit_syntax;
         self->global_defs.emplace_back(def);
     }
     self->line = line_number + 1;
-    syntax_tree.root = self;
+    syntax_tree.root = self;                    // Bison所释放的应该就是这个self（comp_unit），所以我不需要释放syntax_tree.root了
 }
 
 void SyntaxAnalyseFuncDef(ast::func_def_syntax * &self, vartype var_type, char *Ident, ast::block_syntax *block)
@@ -35,6 +39,7 @@ void SyntaxAnalyseFuncDef(ast::func_def_syntax * &self, vartype var_type, char *
     self->rettype = var_type;
     
     self->body = ptr<ast::block_syntax>(block);
+    free(Ident);
     self->line = line_number + 1;
 }
 
@@ -50,6 +55,7 @@ void SyntaxAnalyseFuncFDef(ast::func_f_param_syntax *&self, vartype var_type, ch
         syntax->dimension->has_first_dim = false;
     }
     self = syntax;
+    free(ident);
     self->line = line_number + 1;
 }
 
@@ -58,6 +64,7 @@ void SyntaxAnalyseFuncFDecl(ast::func_def_syntax* &self, ast::func_f_param_synta
     if(var_def_group) {
         self->params = var_def_group->params;
         self->arg_types = var_def_group->arg_types;
+        delete var_def_group;
     }
     self->params.insert(self->params.begin(), ptr<ast::func_f_param_syntax>(var_def));
     std::unordered_map<vartype, vartype> toaddr = {{vartype::INT, vartype::INTADDR}, {vartype::FLOAT, vartype::FLOATADDR}};
@@ -71,6 +78,7 @@ void SyntaxAnalyseFuncFDeclGroup(ast::func_def_syntax* &self, ast::func_f_param_
     if(var_def_group) {
         syntax->params = var_def_group->params;
         syntax->arg_types = var_def_group->arg_types;
+        delete var_def_group;
     }
     syntax->params.insert(syntax->params.begin(), ptr<ast::func_f_param_syntax>(var_def));
     std::unordered_map<vartype, vartype> toaddr = {{vartype::INT, vartype::INTADDR}, {vartype::FLOAT, vartype::FLOATADDR}};
@@ -82,6 +90,7 @@ void SyntaxAnalyseFuncFDeclGroup(ast::func_def_syntax* &self, ast::func_f_param_
 void SynataxAnalyseFuncType(vartype &self, char* type)
 {
     self = ( !strcmp(type,"int") ? vartype::INT : (!strcmp(type,"void") ? vartype::VOID : vartype::FLOAT));
+    free(type);
 }
 
 void SynataxAnalyseBlock(ast::block_syntax *&self, ast::block_syntax *block_items)
@@ -89,24 +98,28 @@ void SynataxAnalyseBlock(ast::block_syntax *&self, ast::block_syntax *block_item
     self = new ast::block_syntax;
     if(block_items){
         for(auto  i : block_items->body){
-            self->body.emplace_back(i);
+            self->body.push_back(i);
         }
+        delete block_items;
     }
     self->line = line_number + 1;
 }    
 
 void SynataxAnalyseBlockItems(ast::block_syntax *&self, ast::block_syntax *block_items, ast::stmt_syntax *stmt)
 {
-    self = new ast::block_syntax;
-    self->line = line_number + 1;
     if(block_items && stmt){
+        self = new ast::block_syntax;
+        self->line = line_number + 1;
         for(auto  i : block_items->body){
-            self->body.emplace_back(i);
+            self->body.push_back(i);
         }
         self->body.emplace_back(stmt);
+        delete block_items;
     }else if(!stmt && !block_items){
         self = nullptr;
     }else {
+        self = new ast::block_syntax;
+        self->line = line_number + 1;
         self->body.emplace_back(stmt);
     }
 }
@@ -136,15 +149,19 @@ void SynataxAnalysePrimaryExpIntConst(ast::expr_syntax *&self, char *current_sym
     }
     syntax->restype = vartype::INT;
     self = static_cast<ast::expr_syntax*>(syntax);
+    free(current_symbol);
     self->line = line_number + 1;
 }
 
 void SynataxAnalysePrimaryExpFloatConst(ast::expr_syntax *&self, char *current_symbol)
 {
     auto syntax = new ast::literal_syntax;
+    // std::cout << current_symbol << std::endl;
+    // std::string str(current_symbol);
     syntax->floatConst= std::stof(current_symbol);
     syntax->restype = vartype::FLOAT;
     self = static_cast<ast::expr_syntax*>(syntax);
+    free(current_symbol);
     self->line = line_number + 1;
 }
 //a-难度
@@ -161,11 +178,13 @@ void SynataxAnalysePrimaryExpVar(ast::expr_syntax* &self, char* current_symbol)
     syntax->name = current_symbol;
     syntax->restype = vartype::INT;
     self = static_cast<ast::expr_syntax*>(syntax);
+    free(current_symbol);
     self->line = line_number + 1;
 }
 
 void SynataxAnalyseVarType(vartype &self, char* type) {
     self = (!strcmp(type, "int") ? vartype::INT : vartype::FLOAT);
+    free(type);
 }
 
 void SynataxAnalyseVarDecl(ast::stmt_syntax *&self,vartype var_type, ast::var_def_stmt_syntax *var_def, ast::var_decl_stmt_syntax *var_def_group, bool is_const)
@@ -173,6 +192,7 @@ void SynataxAnalyseVarDecl(ast::stmt_syntax *&self,vartype var_type, ast::var_de
     auto syntax = new ast::var_decl_stmt_syntax;
     if(var_def_group) {
         syntax->var_def_list = var_def_group->var_def_list;
+        delete var_def_group;
     }
     syntax->var_def_list.insert(syntax->var_def_list.begin(), ptr<ast::var_def_stmt_syntax>(var_def));
     for(auto a : syntax->var_def_list) {
@@ -196,6 +216,7 @@ void SynataxAnalyseVarDefGroup(ast::var_decl_stmt_syntax *&self, ast::var_def_st
     auto syntax = new ast::var_decl_stmt_syntax;
     if(var_def_group) {
         syntax->var_def_list = var_def_group->var_def_list;
+        delete var_def_group;
     }
     syntax->var_def_list.insert(syntax->var_def_list.begin(), ptr<ast::var_def_stmt_syntax>(var_def));
     self = syntax;
@@ -454,6 +475,7 @@ void SynataxAnalyseVarDef(ast::var_def_stmt_syntax *&self, char *ident, ast::var
     syntax->name = ident;
     // syntax->restype = var_type;
     self = syntax;
+    free(ident);
     self->line = line_number + 1;
 }
 
@@ -470,6 +492,7 @@ void SynataxAnalyseAddExp(ast::expr_syntax *&self, ast::expr_syntax *exp1, char 
     syntax->rhs = ptr<ast::expr_syntax>(exp2);
     syntax->restype = vartype::INT;
     self = static_cast<ast::expr_syntax*>(syntax);
+    free(op);
     self->line = line_number + 1;
 }
 //a难度
@@ -489,6 +512,7 @@ void SynataxAnalyseMulExp(ast::expr_syntax *&self, ast::expr_syntax *exp1, char 
     syntax->rhs = ptr<ast::expr_syntax>(exp2);
     syntax->restype = vartype::INT;
     self = static_cast<ast::expr_syntax*>(syntax);
+    free(op);
     self->line = line_number + 1;
 }
 
@@ -511,6 +535,7 @@ void SynataxAnalyseLval(ast::lval_syntax *&self, char *ident, ast::var_dimension
     }
     syntax->restype = vartype::INT;
     self = syntax;
+    free(ident);
     self->line = line_number + 1;
 }
 //a+难度
@@ -556,6 +581,7 @@ void SynataxAnalyseEqExp(ast::expr_syntax *&self, ast::expr_syntax *cond1, char 
     }
     syntax->rhs = ptr<ast::expr_syntax>(cond2);
     self = syntax;
+    free(op);
     self->line = line_number + 1;
 }
 
@@ -588,6 +614,7 @@ void SynataxAnalyseRelExp(ast::expr_syntax *&self, ast::expr_syntax *cond1, char
     }
     syntax->rhs = ptr<ast::expr_syntax>(exp);
     self = syntax;
+    free(op);
     self->line = line_number + 1;
 }
 
@@ -606,6 +633,7 @@ void SynataxAnalyseUnaryExp(ast::expr_syntax *&self, char *op, ast::expr_syntax 
     syntax->rhs = ptr<ast::expr_syntax>(exp);
     syntax->restype = vartype::INT;
     self = syntax;
+    free(op);
     self->line = line_number + 1;
 }
 
@@ -613,6 +641,7 @@ void SyntaxAnalyseVarDimension(ast::var_dimension_syntax* &self, ast::expr_synta
     auto syntax = new ast::var_dimension_syntax;
     if(current_dim) {
         syntax->dimensions = current_dim->dimensions;
+        delete current_dim;
     }
     syntax->dimensions.insert(syntax->dimensions.begin(), ptr<ast::expr_syntax>(new_dimension));
     self = syntax;
@@ -644,7 +673,8 @@ void SynataxAnalyseInitVal(ast::init_syntax* &self, ast::expr_syntax* exp, ast::
     if(exp) {
         syntax->is_array = false;
         // syntax->initializer.push_back(ptr<ast::expr_syntax>(exp));
-        syntax->initializer.insert(syntax->initializer.begin(), ptr<ast::expr_syntax>(exp));
+        auto exp_ptr = ptr<ast::expr_syntax>(exp);
+        syntax->initializer.insert(syntax->initializer.begin(), exp_ptr);
     }
     else if(new_init) {
         syntax->is_array = true;
@@ -654,6 +684,7 @@ void SynataxAnalyseInitVal(ast::init_syntax* &self, ast::expr_syntax* exp, ast::
             // else {
                 if(init_group) {
                     syntax->initializer = init_group->initializer;
+                    delete init_group;
                 }
             // }
         syntax->initializer.insert(syntax->initializer.begin(), ptr<ast::init_syntax>(new_init));
@@ -672,6 +703,7 @@ void SynataxAnalyseInitValGroup(ast::init_syntax* &self, ast::init_syntax* new_i
         syntax->is_array = false;
         if(init_group) {
             syntax->initializer = init_group->initializer;
+            delete init_group;
         }
         syntax->initializer.insert(syntax->initializer.begin(), ptr<ast::init_syntax>(new_init));
     // }
@@ -687,12 +719,14 @@ void SyntaxAnalyseFuncCall(ast::expr_syntax* &self, char* func_name, ast::expr_s
     auto syntax = new ast::func_call_syntax;
     if(param_group) {
         syntax->params = param_group->params;
+        delete param_group;
     }
     if(param) {
         syntax->params.insert(syntax->params.begin(), ptr<ast::expr_syntax>(param));
     }
     syntax->func_name = func_name;
     self = syntax;
+    free(func_name);
     self->line = line_number + 1;
 }
 
@@ -700,6 +734,7 @@ void SyntaxAnalyseFuncCallGroup(ast::func_call_syntax* &self, ast::expr_syntax* 
     auto syntax = new ast::func_call_syntax;
     if(param_group) {
         syntax->params = param_group->params;
+        delete param_group;
     }
     syntax->params.insert(syntax->params.begin(), ptr<ast::expr_syntax>(param));
     self = syntax;

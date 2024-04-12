@@ -130,7 +130,7 @@ void ir::IrPrinter::visit(store &node)
 
 void ir::IrPrinter::visit(jump &node)
 {
-    out<<"\t"<<"br "<<"label "<<"%"<<node.target->name<<std::endl;
+    out<<"\t"<<"br "<<"label "<<"%"<<node.get_target()->name<<std::endl;
 }
 
 void ir::IrPrinter::visit(br &node)
@@ -200,7 +200,7 @@ void ir::IrPrinter::visit(phi &node)
         out << "[" << " ";
         out << this->get_value(a);
         out << "," ;
-        out << "%" << b->name << " " << "]" ;
+        out << "%" << b.lock()->name << " " << "]" ;
         if(i != node.uses.size() - 1) out << ", ";
     }
     out << std::endl;
@@ -370,11 +370,11 @@ void ir::IrPrinter::visit(get_element_ptr &node) {
 }
 
 void ir::IrPrinter::visit(ir::while_loop &node) {
-    out<<"\t"<<"br "<<"label "<<"%"<<node.cond_from->name<<std::endl;
+    out<<"\t"<<"br "<<"label "<<"%"<<node.get_cond_from()->name<<std::endl;
 }
 
 void ir::IrPrinter::visit(ir::break_or_continue &node) {
-    out<<"\t"<<"br "<<"label "<<"%"<<node.target->name<<std::endl;
+    out<<"\t"<<"br "<<"label "<<"%"<<node.get_target()->name<<std::endl;
 }
 
 void ir::IrPrinter::visit(ir::func_call &node) {
@@ -398,6 +398,13 @@ void ir::IrPrinter::visit(ir::func_call &node) {
     }
     out << ")";
     out << std::endl;
+}
+
+void ir::IrPrinter::visit(ir::tail_call &node) {
+    auto call_ins = node.get_call_ins();
+    call_ins->accept(*this);
+    ir::ret r(call_ins->get_ret_reg(), true);
+    r.accept(*this);
 }
 
 void ir::IrPrinter::llvm(ptr<int> pointer, ptr_list<ir::ir_value> init_val, ptr_list<ast::expr_syntax> dimensions, string init_type, vartype type) {

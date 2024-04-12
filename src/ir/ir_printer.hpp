@@ -85,6 +85,7 @@ public:
    virtual void visit(while_loop &node) override final;
    virtual void visit(break_or_continue &node) override final;
    virtual void visit(func_call &node) override final;
+   virtual void visit(tail_call &node) override final;
    virtual void visit(global_def &node) override final;
    virtual void visit(trans &node) override final;
    virtual void visit(ir::memset &node) override final;
