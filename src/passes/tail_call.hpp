@@ -12,6 +12,7 @@ private:
     ptr<ir::ir_userfunc> dealing_fun;
 public:
     TailCall(ptr<ir::ir_module> compunit) : Pass(compunit) {}
+    virtual std::string get_name() override final {return "TAIL_CALL";}
     virtual void run() override final;
     void get_work_lst();
     void create_tail_call();

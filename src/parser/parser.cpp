@@ -1887,7 +1887,7 @@ yyreduce:
   case 71: /* MulExp: MulExp MOD UnaryExp  */
 #line 421 "parser.y"
                           {
-        SynataxAnalyseMulExp((yyval.expr), (yyvsp[-2].expr), (yyvsp[-1].current_symbol), (yyvsp[0].expr)); // TODO
+        SynataxAnalyseMulExp((yyval.expr), (yyvsp[-2].expr), (yyvsp[-1].current_symbol), (yyvsp[0].expr));
     }
 #line 1893 "parser.cpp"
     break;

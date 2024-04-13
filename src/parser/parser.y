@@ -419,7 +419,7 @@
          SynataxAnalyseMulExp($$,$1,$2,$3);
     }
     | MulExp MOD UnaryExp {
-        SynataxAnalyseMulExp($$, $1, $2, $3); // TODO
+        SynataxAnalyseMulExp($$, $1, $2, $3);
     }
 
     Lval: Ident ExpGroup{

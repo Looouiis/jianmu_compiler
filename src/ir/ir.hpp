@@ -161,8 +161,8 @@ class jumpList : public ir_value {
     std::vector<ptr<ir_basicblock>*> trueList;
     std::vector<ptr<ir_basicblock>*> falseList;
 public:
-    virtual void accept(ir_visitor& visitor);
-    virtual void print(std::ostream & out = std::cout);
+    virtual void accept(ir_visitor& visitor) override;
+    virtual void print(std::ostream & out = std::cout) override;
     virtual string get_val() override final;
 };
 
@@ -288,7 +288,7 @@ friend IrBuilder;
 protected:
     std::string name;
     vartype rettype;
-    std::unordered_map<int,ir_func_arg> args;                   // TODO: 我没有采用这个args
+    std::unordered_map<int,ir_func_arg> args;
     std::vector<vartype> arg_types;
     std::set<std::weak_ptr<ir::ir_userfunc>, Weak2ShareComp> caller;
     bool is_pure = false;
@@ -389,7 +389,7 @@ public:
     ptr<ir_reg> new_reg(vartype type);//自动创建序号递增的寄存器
     ptr<ir_reg> new_spill_reg(ptr<ir::ir_reg> reg, ptr<ir::ir_memobj> obj);
     ptr<ir_basicblock> new_block();//创建BB
-    virtual void accept(ir_visitor& visitor);
+    virtual void accept(ir_visitor& visitor) override;
     virtual void print(std::ostream & out = std::cout) override;
     std::unordered_map<ptr<ir::ir_value>,Pass::LiveInterval> GetLiveInterval();
     std::vector<std::shared_ptr<ir_basicblock>> GetLinerSequence();
@@ -423,16 +423,16 @@ public:
 //below is instruction
 class reg_write_ins : public ir_instr {
 
-    virtual void accept(ir_visitor& visitor) = 0;
-    virtual void print(std::ostream & out = std::cout) = 0;
+    virtual void accept(ir_visitor& visitor) override = 0;
+    virtual void print(std::ostream & out = std::cout) override = 0;
     virtual std::vector<ptr<ir::ir_reg>> use_reg() override;
     virtual std::vector<ptr<ir::ir_reg>> def_reg() override;
     void replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) override;
 };
 
 class control_ins : public ir_instr {
-    virtual void accept(ir_visitor& visitor) = 0;
-    virtual void print(std::ostream & out = std::cout) = 0;
+    virtual void accept(ir_visitor& visitor) override = 0;
+    virtual void print(std::ostream & out = std::cout) override = 0;
     virtual std::vector<ptr<ir::ir_reg>> use_reg() override;
     virtual std::vector<ptr<ir::ir_reg>> def_reg() override;
     void replace_reg(std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map) override;

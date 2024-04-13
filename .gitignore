@@ -6,3 +6,5 @@ test/expected_output
 test/app
 test/actual.out
 test/testcases
+test/last_case.sy
+test/time

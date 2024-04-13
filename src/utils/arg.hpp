@@ -13,7 +13,8 @@ struct Config {
     bool emitasm{false};
     bool optimise{false};
 	
-	bool show_pass{false};
+	bool show_passes{false};
+    bool rookie_allocator{false};
 
     Config(int argc, char **argv) : argc(argc), argv(argv) {
         parse_cmd_line();

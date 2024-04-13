@@ -35,7 +35,7 @@ void Passes::PassManager::run() {
     }
     for(auto pass : scheduled_passes) {
         if(printer) {
-            std::cout << "-----------------------" << "PASS" <<" ----------------------" << std::endl;
+            std::cout << "----------------------- " << pass->get_name() << "↓ -----------------------" << std::endl;
         }
         pass->run();
         if(printer) {

@@ -34,9 +34,6 @@ void Passes::TailCall::create_tail_call() {
         assert(del_it != def_block->get_ins_end());
         def_block->erase(del_it);
 
-        // TODO：使用tail_call来替代
-        // tail_call_block->push_back(ins);
-        // tail_call_block->push_back(std::make_shared<ir::ret>(reg, true));
         auto tail_ins = std::make_shared<ir::tail_call>(func_call);
         tail_call_block->push_back(tail_ins);
     }
