@@ -12,9 +12,14 @@
 #include <memory>
 #include <stdlib.h>
 
+bool using_rookie = false;
+
 ast::SyntaxTree syntax_tree;
 int main(int argc, char* argv[]){
     Config arg(argc, argv);
+    if(arg.rookie_allocator) {
+        using_rookie = true;
+    }
 
     auto infile = std::ifstream(arg.input_file);
     auto outfile = std::ofstream(arg.output_file);
@@ -32,7 +37,7 @@ int main(int argc, char* argv[]){
         pass_manager.add_pass(Passes::PassType::MEM2REG);
         pass_manager.add_pass(Passes::PassType::DEAD_CODE_ELIMINATION);
         pass_manager.add_pass(Passes::PassType::TAIL_CALL);
-        if(arg.show_pass) {
+        if(arg.show_passes) {
             std::shared_ptr<ir::IrPrinter> irprinter = std::make_shared<ir::IrPrinter>();
             pass_manager.enable_printer(irprinter);
         }

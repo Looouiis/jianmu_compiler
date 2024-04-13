@@ -12,7 +12,6 @@ ptr<ir::ir_func> symbol_table::FunctionTable::find_func(std::string name)
     auto item=this->table.find(name);
     assert(item!=this->table.end());//没找到函数,出错
     return item->second;
-    // TODO: insert return statement here
 }
 
 void symbol_table::Scope::enter()
@@ -55,5 +54,4 @@ ptr<ir::ir_memobj> symbol_table::Scope::find_var(std::string name)
     }
     assert(0);//不通过说明没有定义变量
     return nullptr;
-    // TODO: insert return statement here
 }

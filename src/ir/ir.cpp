@@ -15,6 +15,9 @@
 #include "loongarch/register_allocator.hpp"
 #include "parser/SyntaxTree.hpp"
 #include <functional>
+
+extern bool using_rookie;
+
 void ir::ir_reg::accept(ir_visitor &visitor)
 {
     visitor.visit(*this);
@@ -212,7 +215,6 @@ ptr<ir::ir_basicblock> ir::ir_basicblock::get_block() {
 
 std::list<ptr<ir::ir_instr>>::iterator ir::ir_basicblock::search(ptr<ir::ir_instr> ins) {
     auto it = std::find(this->instructions.begin(), this->instructions.end(), ins);
-    // assert(it != this->instructions.end());         // TODO：在确保没有其他出现=end（）的情况后对coloring_allocator中的def_it逻辑进行重构
     return it;
 }
 
@@ -248,19 +250,32 @@ void ir::ir_module::print(std::ostream & out)
 
 void ir::ir_module::reg_allocate(int base_reg, ptr_list<global_def> global_var) {
     if(this->init_block) {
-        // LoongArch::RookieAllocator allocator(this->global_init_func, base_reg, global_var);
-        LoongArch::ColoringAllocator allocator(this->global_init_func, base_reg, global_var);
+        if(using_rookie) {
+            LoongArch::RookieAllocator rookie_allocator(this->global_init_func, base_reg, global_var);
+            this->global_init_func->reg_allocate(rookie_allocator);
+        }
+        else {
+            LoongArch::ColoringAllocator coloring_allocator(this->global_init_func, base_reg, global_var);
+            this->global_init_func->reg_allocate(coloring_allocator);
+        }
         // auto ret = allocator.run();
-        this->global_init_func->reg_allocate(allocator);
 
         // LoongArch::ColoringAllocator all(this->global_init_func, base_reg, global_var);
         // all.run(LoongArch::INT);
     }
     for(auto & [name, func] : this->usrfuncs){
-        // LoongArch::RookieAllocator allocator(func, base_reg, global_var);     // 我修改了allocator的构造函数
-        LoongArch::ColoringAllocator allocator(func, base_reg, global_var);
+        LoongArch::RegisterAllocator *allocator;
+        if(using_rookie) {
+            LoongArch::RookieAllocator rookie_allocator(func, base_reg, global_var);     // 我修改了allocator的构造函数
+            allocator = &rookie_allocator;
+            func->reg_allocate(rookie_allocator);
+        }
+        else{
+            LoongArch::ColoringAllocator coloring_allocator(func, base_reg, global_var);
+            allocator = &coloring_allocator;
+            func->reg_allocate(coloring_allocator);
+        }
         // auto ret = allocator.run();                                 // 我也修改了run方法的返回值
-        func->reg_allocate(allocator);
 
         // LoongArch::ColoringAllocator all(func, base_reg, global_var);
         // all.run(LoongArch::INT);
@@ -342,12 +357,12 @@ void ir::ir_libfunc::print(std::ostream & out)
 
 std::unordered_map<ptr<ir::ir_value>,Pass::LiveInterval> ir::ir_userfunc::GetLiveInterval() 
 {
-    
+    return std::unordered_map<ptr<ir::ir_value>,Pass::LiveInterval>();
 }
 
 std::vector<ptr<ir::ir_basicblock>> ir::ir_userfunc::GetLinerSequence() 
 {
-   
+    return std::vector<ptr<ir::ir_basicblock>>();
 }
 
 void ir::ir_userfunc::reg_allocate(LoongArch::RegisterAllocator &allocator) {

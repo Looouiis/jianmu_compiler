@@ -14,6 +14,7 @@ private:
     std::unordered_map<ptr<ir::ir_instr>, bool> marked;
 public:
     DeadCodeElimination(ptr<ir::ir_module> compunit) : Pass(compunit) {}
+    virtual std::string get_name() override final {return "DCE";}
     virtual void run() override final;
     void mark_by_fun(ptr<ir::ir_userfunc> fun);
     bool check_critical(ptr<ir::ir_instr> tar);

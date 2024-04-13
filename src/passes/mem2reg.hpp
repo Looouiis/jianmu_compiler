@@ -26,6 +26,7 @@ class Mem2Reg : public Pass {
     void rename(ptr<ir::ir_userfunc> fun, ptr<ir::ir_basicblock> block, std::unordered_map<ptr<ir::ir_memobj>, ptr_list<ir::ir_value>> &stack, std::unordered_map<ptr<ir::ir_reg>, ptr<ir::ir_memobj>> phi_r_m, std::unordered_map<ptr<ir::ir_reg>, ptr<ir::ir_memobj>> var_mem, std::unordered_map<ptr<ir::ir_value>, ptr<ir::ir_value>> replace_map, std::unordered_map<ptr<ir::ir_basicblock>, bool> &visited);
 public:
     Mem2Reg(ptr<ir::ir_module> compunit) : Pass(compunit) {}
+    virtual std::string get_name() override final {return "MEM2REG";}
     virtual void run() override final;
 };
 

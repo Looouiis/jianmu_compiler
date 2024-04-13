@@ -658,7 +658,7 @@ void ir::IrBuilder::visit(ast::var_def_stmt_syntax &node)       // self5
                 compunit->enable_mem_set = true;
                 cur_block->push_back(std::make_shared<ir::memset>(obj->get_addr(), 0, node.initializer->child_cnt * node.initializer->designed_size->calc_res(), false));
             }
-            node.initializer->accept(*this);                        // TODO：为zero_initializer添加memset逻辑
+            node.initializer->accept(*this);
             // if(pass_list.empty()) {
             //     auto ini_value = pass_value;
             //     cur_block->push_back(std::make_shared<ir::store>(obj->get_addr(), ini_value));

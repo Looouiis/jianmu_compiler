@@ -25,9 +25,11 @@ void Config::parse_cmd_line() {
             emitasm = true;
         } else if (argv[i] == "-optimise"s) {
             optimise = true;
-        } else if(argv[i] == "-show_pass"s) {
-			show_pass = true;
-		} else {
+        } else if(argv[i] == "-show-passes"s) {
+			show_passes = true;
+		} else if(argv[i] == "-rookie-allocator"s) {
+            rookie_allocator = true;
+        } else {
             if (input_file.empty()) {
                 input_file = argv[i];
             } else {
@@ -52,7 +54,7 @@ void Config::check() {
     if (not emitllvm and not emitasm) {
         print_err("not supported: generate executable file directly");
     }
-	if(show_pass and not optimise) {
+	if(show_passes and not optimise) {
 		print_err("optimise hasn't activate yet");
 	}
     if (output_file.empty()) {
@@ -63,12 +65,21 @@ void Config::check() {
             output_file.replace_extension(".s");
         }
     }
+    if(rookie_allocator) {
+        std::clog << "Experimental: Now we are using rookie allocator to allocate registers, and it may make mistakes." << std::endl;
+    }
 }
 
 void Config::print_help() const {
     std::cout << "Usage: " << exe_name
-              << " [-h|--help] [-o <target-file>] [-optimise] [-emit-llvm] [-S] "
+              << " [-h|--help] [-o <target-file>] [-optimise] [-show-passes] [-rookie-allocator] [-emit-llvm] [-S] "
                  "<input-file>"
+              << std::endl;
+    std::cout << "\t-optimise\t\t启用所有实现的优化"
+              << std::endl
+              << "\t-show-passes\t\t展示每一遍优化的过程，需要先启用优化"
+              << std::endl
+              << "\t-rookie-allocator\t采用之前（中期答辩前）实现的菜鸟寄存器分配算法，否则默认采用后来（中期答辩后）实现的简陋的但相对更为标准的图染色分配算法"
               << std::endl;
     exit(0);
 }

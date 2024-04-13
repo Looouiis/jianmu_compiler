@@ -897,7 +897,7 @@ void LoongArch::ProgramBuilder::visit(ir::store &node) {
         sttype = stptr::fst_f;
     }
     auto val_is_reg = std::dynamic_pointer_cast<ir::ir_reg>(node.value);
-    if(val_is_reg && val_is_reg->check_is_arr()) {             // CHECK：根据node.dst决定为ld_w还是ld_d
+    if(val_is_reg && val_is_reg->check_is_arr()) {
         type = st::st_d;
         sttype = stptr::st_d;
     }
@@ -936,7 +936,7 @@ void LoongArch::ProgramBuilder::visit(ir::store &node) {
     //             float val = std::get<float>(variant_val);
     //             cur_block->instructions.push_back(std::make_shared<LoongArch::RegImmInst>(RegImmInst::addi_w, reg, Reg{0}, val));
     //         }
-    //         // cur_block->instructions.push_back(std::make_shared<LoongArch::st>(Reg{reg}, Reg{fp}, this->cur_mapping->objoffset_mapping, st::st_w)); // TODO：添加区分字长逻辑
+    //         // cur_block->instructions.push_back(std::make_shared<LoongArch::st>(Reg{reg}, Reg{fp}, this->cur_mapping->objoffset_mapping, st::st_w));
     //     }
     //     // cur_block->instructions.push_back(std::make_shared<LoongArch::RegImmInst>(RegImmInst::addi_w, Reg{reg}, Reg{0}, value));
     // }
@@ -1010,7 +1010,7 @@ void LoongArch::ProgramBuilder::visit(ir::load &node) {
         ldtype = ldptr::fld_f;
     }
     if(node.dst->check_is_arr()) {
-        ldtype = ldptr::ld_d;        // CHECK：根据node.dst决定为ld_w还是ld_d
+        ldtype = ldptr::ld_d;
     }
     // cur_block->instructions.push_back(std::make_shared<LoongArch::RegImmInst>(RegImmInst::addi_w, dst, src, 0));
     if(node.addr->is_arr) {
@@ -1252,7 +1252,6 @@ void LoongArch::ProgramBuilder::visit(ir::get_element_ptr& node) {
         Reg ini;
         if(is_spilled != node.spilled_obj.end()) {
             ini = using_reg;
-            // CHECK
             auto ir_reg = is_spilled->second->addr;
             if(ir_reg->type == vartype::FLOAT) {
                 ini.type = FLOAT;
@@ -1291,7 +1290,6 @@ void LoongArch::ProgramBuilder::visit(ir::get_element_ptr& node) {
         Reg ini;
         if(is_spilled != node.spilled_obj.end()) {
             ini = using_reg;
-            // CHECK
             auto ir_reg = is_spilled->second->addr;
             if(ir_reg->type == vartype::FLOAT) {
                 ini.type = FLOAT;
@@ -1360,7 +1358,6 @@ void LoongArch::ProgramBuilder::visit(ir::func_call& node) {
         auto is_spilled = node.spilled_obj.find(par);
         Reg reg;
         if(is_spilled != node.spilled_obj.end()) {
-            // CHECK：添加将spilled_obj中的obj加载到const_reg_l，然会为reg赋值为const_reg_l并配置Rtype的逻辑
             auto ir_reg = is_spilled->second->addr;
             auto par_reg = std::dynamic_pointer_cast<ir::ir_reg>(par);
             assert(par_reg);
@@ -1539,7 +1536,6 @@ void LoongArch::ProgramBuilder::visit(ir::tail_call& node) {
         auto is_spilled = call_ins->spilled_obj.find(par);
         Reg reg;
         if(is_spilled != call_ins->spilled_obj.end()) {
-            // CHECK：添加将spilled_obj中的obj加载到const_reg_l，然会为reg赋值为const_reg_l并配置Rtype的逻辑
             auto ir_reg = is_spilled->second->addr;
             auto par_reg = std::dynamic_pointer_cast<ir::ir_reg>(par);
             assert(par_reg);

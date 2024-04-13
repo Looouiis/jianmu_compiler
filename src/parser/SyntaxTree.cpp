@@ -536,9 +536,13 @@ int ast::literal_syntax::calc_res() {
         case vartype::FLOAT: return this->floatConst;
         case vartype::VOID:
         case vartype::FLOATADDR:
-        case vartype::INTADDR: std::abort(); // calc_res只是用来计算常量表达式
+        case vartype::INTADDR:
+        case vartype::FBOOL:
+        case vartype::FBOOLADDR:
+        case vartype::BOOL:
+        case vartype::BOOLADDR: std::abort(); // calc_res只是用来计算常量表达式
         break;
-    }
+        }
     return -1;
 }
 
